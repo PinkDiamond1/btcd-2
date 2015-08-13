@@ -2443,14 +2443,21 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
     {
         if (wallet.CreateCoinStake(wallet, nBits, nSearchTime-nLastCoinStakeSearchTime, nFees, txCoinStake, key))
         {
+            #ifdef PEGGY
+            if (txCoinStake.nTime >= max(pindexBest->GetPastTimeLimit()+1, PastDrift(pindexBest->IsPeggyTime(), pindexBest->GetBlockTime())))
+            #else
             if (txCoinStake.nTime >= max(pindexBest->GetPastTimeLimit()+1, PastDrift(pindexBest->GetBlockTime())))
+            #endif
             {
                 // make sure coinstake would meet timestamp protocol
                 //    as it would be the same as the block timestamp
                 vtx[0].nTime = nTime = txCoinStake.nTime;
                 nTime = max(pindexBest->GetPastTimeLimit()+1, GetMaxTransactionTime());
+                #ifdef PEGGY
+                nTime = max(GetBlockTime(), PastDrift(pindexBest->IsPeggyTime(), pindexBest->GetBlockTime()));
+                #else
                 nTime = max(GetBlockTime(), PastDrift(pindexBest->GetBlockTime()));
-                
+                #endif
                 // we have to make sure that we have no future timestamps in
                 //    our transactions set
                 for (vector<CTransaction>::iterator it = vtx.begin(); it != vtx.end();)

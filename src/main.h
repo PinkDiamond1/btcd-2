@@ -59,7 +59,21 @@ inline bool IsPoSV2(int nHeight){ /*return nHeight > 777777;*/ return false; }
 static const unsigned int nMinPeggyHeight = 670500;
 #endif
 
+#ifdef PEGGY
+inline int64_t PastDrift(bool isPeggy, int64_t nTime)
+{
+    if(isPeggy)
+    {
+        return nTime + 1; //peggy blocks must be sequential
+    }
+    else
+    {
+        return nTime - 10 * 60; // up to 10 minutes from the past
+    }
+}
+#else
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
+#endif
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
 
 extern CScript COINBASE_FLAGS;
