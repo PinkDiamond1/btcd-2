@@ -55,6 +55,9 @@ static const uint256 hashGenesisBlockTestNet("0x0000a3af4d553378169e82ac59a767b3
 
 inline bool IsPoSV2(int nHeight){ /*return nHeight > 777777;*/ return false; }
 
+#ifdef PEGGY
+static const unsigned int nMinPeggyHeight = 670500;
+#endif
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
@@ -958,6 +961,13 @@ public:
         return !IsProofOfStake();
     }
 
+    #ifdef PEGGY
+    bool IsPeggyTime() const
+    {
+        return (IsProofOfStake() && vtx.size() > 2 && vtx[2].IsPeggyBase());
+    }
+    #endif
+
     std::pair<COutPoint, unsigned int> GetProofOfStake() const
     {
         return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
@@ -1301,6 +1311,13 @@ public:
     {
         nFlags |= BLOCK_PROOF_OF_STAKE;
     }
+
+    #ifdef PEGGY
+    bool IsPeggyTime() const
+    {
+        return (nHeight >= nMinPeggyHeight && IsProofOfStake());
+    }
+    #endif
 
     unsigned int GetStakeEntropyBit() const
     {
