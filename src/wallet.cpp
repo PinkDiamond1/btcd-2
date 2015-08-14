@@ -11,6 +11,7 @@
 #include "base58.h"
 #include "kernel.h"
 #include "coincontrol.h"
+#include "../libjl777/plugins/includes/cJSON.h"
 #include <boost/algorithm/string/replace.hpp>
 
 using namespace std;
@@ -2438,11 +2439,10 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
 
 #ifdef PEGGY
 //bitcoindark: create a peggy base transaction
-//TODO: this dummy just pays 1 btcd to paymentScript.
-bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, uint32_t numOutputs)
+//paymentScript looks like "{\"addr1\":amount1, \"addr2\":amount2,...}"
+bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript)
 {
     peggyTx.vin.resize(2);
-    peggyTx.vout.resize(numOutputs);
 
     peggyTx.vin[0].prevout.SetNull();
     peggyTx.vin[0].scriptSig.clear();
@@ -2450,15 +2450,22 @@ bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, uint32
     peggyTx.vin[1].prevout.SetNull();
     peggyTx.vin[1].scriptSig.clear();
 
+    cJSON *json = cJSON_Parse(paymentScript);
 
-    int i;
+    int numOutputs = cJSON_GetArraySize(json);
+    peggyTx.vout.resize(numOutputs);
+
     CBitcoinAddress address;
     CScript outScript;
-    for(i = 0; i < numOutputs; i++)
+
+    cJSON *item;
+    int i;
+    for(i=0; i<numOutputs; i++)
     {
-        address = CBitcoinAddress(paymentScript);
+        item = cJSON_GetArrayItem(json,i);
+        address = CBitcoinAddress(item->string);
         outScript.SetDestination(address.Get());
-        CTxOut out(1, outScript);
+        CTxOut out((uint64_t)(jdouble(item, 0) * SATOSHIDEN), outScript);
         peggyTx.vout.push_back(out);
     }
     return true;

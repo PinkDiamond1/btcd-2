@@ -208,7 +208,7 @@ public:
 
     #ifdef PEGGY
     //bitcoindark
-    bool CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, uint32_t numOutputs);
+    bool CreatePeggyBase(CTransaction &peggyTx, char *paymentScript);
     #endif
 
     std::set< std::set<CTxDestination> > GetAddressGroupings();
