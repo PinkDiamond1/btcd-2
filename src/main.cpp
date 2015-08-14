@@ -556,12 +556,24 @@ bool CTransaction::CheckTransaction() const
     set<COutPoint> vInOutPoints;
     BOOST_FOREACH(const CTxIn& txin, vin)
     {
+        #ifdef PEGGY
+        if (!IsPeggyBase())
+        {
+            if (vInOutPoints.count(txin.prevout))
+                return false;
+            vInOutPoints.insert(txin.prevout);
+        }
+        #else
         if (vInOutPoints.count(txin.prevout))
             return false;
         vInOutPoints.insert(txin.prevout);
+        #endif
     }
-    
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
     {
         if (vin[0].scriptSig.size() < 2 || vin[0].scriptSig.size() > 100)
             return DoS(100, error("CTransaction::CheckTransaction() : coinbase script size is invalid"));
