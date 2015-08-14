@@ -593,6 +593,16 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
     return(jsonstr);
 }
 
+char *InstantDEX_quote(struct prices777 *prices,int32_t dir,double price,double volume,uint64_t orderid,uint32_t minperc,uint32_t automatch,uint32_t duration)
+{
+    //extern queue_t InstantDEXQ;
+    //queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
+    //free_json(json);
+    char retbuf[1024];
+    sprintf(retbuf,"{\"result\":\"success\",\"exchange\":\"%s\",\"name\":\"%s\",\"base\":\"%s\",\"rel\":%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"trade\":\"%s\",\"price\":%.8f,\"volume\":%.8f,\"orderid\":\"%llu\",\"minperc\":%d,\"automatch\":%d,\"duration\":%d}",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,dir>0?"buy":"sell",price,volume,(long long)orderid,minperc,automatch,duration);
+    return(clonestr(retbuf));
+}
+
 char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     uint64_t baseamount,relamount,nxt64bits,baseid,relid,quoteid = 0; double price,volume,minbasevol,minrelvol; uint32_t timestamp,nonce;

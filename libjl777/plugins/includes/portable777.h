@@ -196,7 +196,7 @@ struct prices777
 {
     char url[512],exchange[64],base[64],rel[64],lbase[64],lrel[64],key[512],oppokey[512],contract[64],origbase[64],origrel[64];
     uint64_t contractnum,ap_mult,baseid,relid; int32_t keysize,oppokeysize; double lastupdate,decay,oppodecay,lastprice,lastbid,lastask;
-    uint32_t pollnxtblock,exchangeid,numquotes,updated,lasttimestamp,RTflag;
+    uint32_t pollnxtblock,exchangeid,numquotes,updated,lasttimestamp,RTflag,disabled;
     portable_mutex_t mutex;
     char *orderbook_jsonstrs[2][2];
     struct prices777_basketinfo O,O2; double groupwts[MAX_GROUPS + 1];

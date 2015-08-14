@@ -85,3 +85,14 @@ int32_t OS_init()
     }
     return(0);
 }
+
+struct tm *gmtime_r(const time_t *timep, struct tm *result)
+{
+	struct tm *p = gmtime(timep);
+	memset(result, 0, sizeof(*result));
+	if (p) {
+        *result = *p;
+        p = result;
+	}
+	return p;
+}

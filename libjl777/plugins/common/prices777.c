@@ -927,7 +927,7 @@ void prices777_exchangeloop(void *ptr)
     {
         for (i=n=0; i<BUNDLE.num; i++)
         {
-            if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->basketsize == 0 && prices->exchangeid == exchange->exchangeid )
+            if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->basketsize == 0 && prices->exchangeid == exchange->exchangeid )
             {
                 if ( isnxtae == 0 )
                     pollflag = milliseconds() > (exchange->lastupdate + exchange->pollgap*1000) && milliseconds() > (prices->lastupdate + 1000*SUPERNET.idlegap);

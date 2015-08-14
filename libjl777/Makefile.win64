@@ -84,7 +84,7 @@ PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/u
 
 _echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) agents/echodemo.c $(PLIBS)
 
-_api := rm cgi/*; $(CC) -o cgi/api.exe -O2 $(PINCLUDES) api_main.c ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api.exe cgi/nxt.exe; ln cgi/api.exe cgi/nxts.exe; ln cgi/api.exe cgi/port.exe; ln cgi/api.exe cgi/ports.exe; ln cgi/api.exe cgi/InstantDEX.exe; ln cgi/api.exe cgi/echodemo.exe 
+_api := rm cgi/*; $(CC) -o cgi/api.exe -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api.exe cgi/nxt.exe; ln cgi/api.exe cgi/nxts.exe; ln cgi/api.exe cgi/port.exe; ln cgi/api.exe cgi/ports.exe; ln cgi/api.exe cgi/stringified.exe; ln cgi/api.exe cgi/InstantDEX.exe; ln cgi/api.exe cgi/echodemo.exe
 
 _msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) agents/two/msc.c $(PLIBS)
 
@@ -99,7 +99,6 @@ _stockfish := cd agents/stockfish; rm stockfish; make build ARCH=x86-64-modern; 
 agents: plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
 	cd plugins; \
     $(_echodemo); \
-    $(_stockfish); \
     $(_api); \
     cd ..
 
@@ -349,14 +348,13 @@ plugins/agents/sophia: plugins/sophia/sophia.c plugins/sophia/sophia_main.c
 plugins/agents/echodemo: plugins/agents/echodemo.c
 #plugins/nonportable/$(OS)/files.o: plugins/nonportable/$(OS)/files.c
 #plugins/nonportable/$(OS)/random.o: plugins/nonportable/$(OS)/random.c
+plugins/agents/rps: plugins/common/rps777.c
 plugins/agents/eth: plugins/agents/two/eth.c
 plugins/agents/msc: plugins/agents/two/msc.c
 plugins/agents/nxt: plugins/agents/two/nxt.c
 plugins/agents/two: plugins/agents/two/two.c
-plugins/InstantDEX/InstantDEX_main.o: plugins/InstantDEX/InstantDEX_main.c plugins/InstantDEX/assetids.h plugins/InstantDEX/atomic.h plugins/InstantDEX/bars.h plugins/InstantDEX/exchangepairs.h plugins/InstantDEX/exchanges.h plugins/InstantDEX/feeds.h plugins/InstantDEX/NXT_tx.h plugins/InstantDEX/orderbooks.h plugins/InstantDEX/quotes.h plugins/InstantDEX/rambooks.h plugins/InstantDEX/signals.h plugins/InstantDEX/tradebot.h plugins/InstantDEX/trades.h plugins/InstantDEX/InstantDEX.h
+plugins/InstantDEX/InstantDEX_main.o: plugins/InstantDEX/InstantDEX_main.c plugins/InstantDEX/assetids.h plugins/InstantDEX/atomic.h plugins/InstantDEX/bars.h plugins/InstantDEX/exchangepairs.h plugins/InstantDEX/feeds.h plugins/InstantDEX/NXT_tx.h plugins/InstantDEX/orderbooks.h plugins/InstantDEX/quotes.h plugins/InstantDEX/rambooks.h plugins/InstantDEX/signals.h plugins/InstantDEX/tradebot.h plugins/InstantDEX/trades.h plugins/InstantDEX/InstantDEX.h
 
-plugins/cgi/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
+plugins/cgi/api: plugins/agents/api_main.c plugins/ccgi/ccgi.c plugins/ccgi/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/kv777.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
-
-

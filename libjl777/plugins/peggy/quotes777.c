@@ -676,11 +676,41 @@ struct peggy_info *peggy_genesis(int32_t lookbacks[OPRETURNS_CONTEXTS],struct pe
     return(PEGS);
 }
 
+char *peggybase(uint32_t blocknum,uint32_t blocktimestamp)
+{
+    int32_t nonz; struct peggy_info *PEGS = opreturns_context("peggy",0);
+    if ( PEGS != 0 )
+        return(peggy_emitprices(&nonz,PEGS,blocktimestamp,PEGS->genesis != 0 ? 0 : PEGGY_MAXLOCKDAYS));
+    return(0);
+}
+
+char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp)
+{
+    int32_t peggy_payments(queue_t *PaymentsQ,struct opreturn_payment *payments,int32_t max,uint32_t currentblocknum,uint32_t blocknum,uint32_t blocktimestamp);
+    struct opreturn_payment payments[8192]; cJSON *json;
+    int32_t i,n; struct peggy_info *PEGS = opreturns_context("peggy",0);
+    memset(payments,0,sizeof(payments));
+    if ( PEGS != 0 && PEGS->accts != 0 && (n= peggy_payments(&PEGS->accts->PaymentsQ,payments,sizeof(payments)/sizeof(*payments),blocknum,blocknum,blocktimestamp)) > 0 )
+    {
+        json = cJSON_CreateObject();
+        for (i=0; i<n; i++)
+            jaddnum(json,payments[i].coinaddr,payments[i].value);
+        return(jprint(json,1));
+    }
+    return(clonestr("{}"));
+}
+
+int32_t peggyblock(char *jsonstr)
+{
+    printf("got peggyblock.(%s)\n",jsonstr);
+    return(0);
+}
+
 void peggy()
 {
     int32_t lookbacks[OPRETURNS_CONTEXTS],nonz,num,peggylen; uint32_t timestamp = (uint32_t)time(0);
     FILE *fp; uint8_t opret[8192]; char fname[512],*opreturnstr; struct peggy_info *PEGS = opreturns_context("peggy",0);
-    if ( PEGS != 0 )
+    if ( 0 && PEGS != 0 )
     {
         opreturnstr = peggy_emitprices(&nonz,PEGS,timestamp,PEGS->genesis != 0 ? 0 : PEGGY_MAXLOCKDAYS);
         if ( opreturnstr != 0 )
@@ -783,7 +813,7 @@ void *peggy_replay(char *path,struct txinds777_info *opreturns,void *_PEGS,uint3
     int32_t lookbacks[OPRETURNS_CONTEXTS]; uint64_t allocsize,len; int32_t n,signedcount,valid=0; long offset;
     char fname[512]; uint8_t opret[8192]; struct peggy_tx Ptx; struct peggy_info *PEGS = _PEGS;
     if ( blocknum == 0 )
-        opreturnstr = PEGGY_GENESIS;
+        opreturnstr = 0;//PEGGY_GENESIS;
     if ( data == 0 )
     {
         data = opret;
