@@ -245,63 +245,6 @@ cJSON *InstantDEX_lottostats()
     return(cJSON_Parse(buf));
 }
 
-char *InstantDEX_dotrades(struct prices777_order *trades,int32_t numtrades,int32_t dotrade)
-{
-    cJSON *retjson,*retarray,*item; int32_t i;
-    retjson = cJSON_CreateObject(), retarray = cJSON_CreateArray();
-    for (i=0; i<numtrades; i++)
-    {
-        item = InstantDEX_tradejson(&trades[i],dotrade);
-        //printf("GOT%d.(%s)\n",i,jprint(item,0));
-        jaddi(retarray,item);
-    }
-    jadd(retjson,"traderesults",retarray);
-    return(jprint(retjson,1));
-}
-
-char *InstantDEX_tradesequence(cJSON *json)
-{
-    //"trades":[[{"basket":"bid","rootwt":-1,"groupwt":1,"wt":-1,"price":40000,"volume":0.00015000,"group":0,"trade":"buy","exchange":"nxtae","asset":"17554243582654188572","base":"BTC","rel":"NXT","orderid":"3545444239044461477","orderprice":40000,"ordervolume":0.00015000}], [{"basket":"bid","rootwt":-1,"groupwt":1,"wt":1,"price":0.00376903,"volume":1297.41480000,"group":10,"trade":"sell","exchange":"coinbase","name":"BTC/USD","base":"BTC","rel":"USD","orderid":"1","orderprice":265.32000000,"ordervolume":4.89000000}]]}
-    cJSON *array,*item; int32_t i,n,dir; char *tradestr,*exchangestr,base[512],rel[512],name[512]; struct prices777_order trades[16],*order;
-    uint64_t orderid,assetid,currency,baseid,relid; double orderprice,ordervolume; struct prices777 *prices; uint32_t timestamp;
-    memset(trades,0,sizeof(trades));
-    if ( (array= jarray(&n,json,"trades")) != 0 )
-    {
-        if ( n > sizeof(trades)/sizeof(*trades) )
-            return(clonestr("{\"error\":\"exceeded max trades possible in a tradesequence\"}"));
-        timestamp = (uint32_t)time(NULL);
-        for (i=0; i<n; i++)
-        {
-            item = jitem(array,i);
-            tradestr = jstr(item,"trade"), exchangestr = jstr(item,"exchange");
-            copy_cJSON(base,jobj(item,"base")), copy_cJSON(rel,jobj(item,"rel")), copy_cJSON(name,jobj(item,"name"));
-            orderid = j64bits(item,"orderid"), assetid = j64bits(item,"asset"), currency = j64bits(item,"currency");
-            baseid = j64bits(item,"baseid"), relid = j64bits(item,"relid");
-            orderprice = jdouble(item,"orderprice"), ordervolume = jdouble(item,"ordervolume");
-            if ( tradestr != 0 )
-            {
-                if ( strcmp(tradestr,"buy") == 0 )
-                    dir = 1;
-                else if ( strcmp(tradestr,"sell") == 0 )
-                    dir = -1;
-                else if ( strcmp(tradestr,"swap") == 0 )
-                    dir = 0;
-                else return(clonestr("{\"error\":\"invalid trade direction\"}"));
-                if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
-                {
-                    order = &trades[i];
-                    order->source = prices;
-                    order->id = orderid, order->assetid = assetid != 0 ? assetid : currency;
-                    order->wt = dir, order->price = orderprice, order->vol = ordervolume;
-                } else return(clonestr("{\"error\":\"invalid exchange or contract pair\"}"));
-            } else return(clonestr("{\"error\":\"no trade specified\"}"));
-        }
-        return(InstantDEX_dotrades(trades,n,juint(json,"dotrade")));
-    }
-    printf("error parsing.(%s)\n",jprint(json,0));
-    return(clonestr("{\"error\":\"couldnt process trades\"}"));
-}
-
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 {
     char *prices777_allorderbooks();
@@ -458,9 +401,10 @@ char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32
     char offerNXT[MAX_JSON_FIELD];
     copy_cJSON(offerNXT,objs[12]);
     printf("bid_func %s vs offerNXT %s\n",SUPERNET.NXTADDR,offerNXT);
-    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
-        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,1,sender,valid,objs,numobjs,origargstr));
-    else return(0);
+    //if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
+    //    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,1,sender,valid,objs,numobjs,origargstr));
+    //else
+    return(0);
 }
 
 char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -468,9 +412,10 @@ char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32
     char offerNXT[MAX_JSON_FIELD];
     copy_cJSON(offerNXT,objs[12]);
     printf("ask_func %s vs offerNXT %s\n",SUPERNET.NXTADDR,offerNXT);
-    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
-        return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,-1,sender,valid,objs,numobjs,origargstr));
-    else return(0);
+    //if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
+    //    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,-1,sender,valid,objs,numobjs,origargstr));
+    //else
+    return(0);
 }
 
 char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origargstr,cJSON *origargjson)

@@ -1070,6 +1070,11 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
     struct applicant_info apply,*ptr;
     int32_t sentflag,datalen,sendlen = 0; char plugin[512],destplugin[512],*data,*retstr,*submethod; cJSON *json;
     json = cJSON_Parse(jsonstr);
+    if ( json == 0 )
+    {
+        printf("busdata_sync couldnt parse.(%s)\n",jsonstr);
+        return(0);
+    }
     copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
     copy_cJSON(destplugin,cJSON_GetObjectItem(json,"destplugin"));
     if ( destplugin[0] == 0 )

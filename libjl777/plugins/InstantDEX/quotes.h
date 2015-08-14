@@ -478,92 +478,109 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
     return(0);
 }
 
-char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ) // called by placequote, should autofill
+char *InstantDEX_dotrades(struct prices777_order *trades,int32_t numtrades,int32_t dotrade)
 {
-    return(0);
-}
-
-int32_t match_unconfirmed(void **obooks,int32_t numbooks,char *account,uint64_t quoteid)
-{
-    return(-1);
-}
-
-void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
-{
-    char *retstr;
-    return;
-    printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d | expires in %ld\n",(long long)iQ->quoteid,numtx,updateNXT,iQ->timestamp+iQ->duration-time(NULL));
-    if ( (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
+    cJSON *retjson,*retarray,*item; int32_t i;
+    retjson = cJSON_CreateObject(), retarray = cJSON_CreateArray();
+    for (i=0; i<numtrades; i++)
     {
-        printf("automatched order!\n");
-        free(retstr);
+        item = InstantDEX_tradejson(&trades[i],dotrade);
+        //printf("GOT%d.(%s)\n",i,jprint(item,0));
+        jaddi(retarray,item);
     }
+    jadd(retjson,"traderesults",retarray);
+    return(jprint(retjson,1));
 }
 
-void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
+char *InstantDEX_tradesequence(cJSON *json)
 {
-    /*static uint32_t prevNXTblock; static double lastmilli;
-    struct InstantDEX_quote *iQ; cJSON *json,*array,*item; struct NXT_tx *txptrs[MAX_TXPTRS]; void *ptrs[2];
-    int32_t i,n,numtx,NXTblock; uint64_t quoteid,baseid,relid; char *jsonstr;
-    ptrs[0] = NXTACCTSECRET, ptrs[1] = txptrs;
-    if ( milliseconds() < (lastmilli + 5000) )
-        return;
-    NXTblock = _get_NXTheight(0);
-    memset(txptrs,0,sizeof(txptrs));
-    if ( (numtx= update_iQ_flags(txptrs,(sizeof(txptrs)/sizeof(*txptrs))-1,0)) > 0 && (jsonstr= InstantDEX_openorders(NXTaddr)) != 0 )
+    //"trades":[[{"basket":"bid","rootwt":-1,"groupwt":1,"wt":-1,"price":40000,"volume":0.00015000,"group":0,"trade":"buy","exchange":"nxtae","asset":"17554243582654188572","base":"BTC","rel":"NXT","orderid":"3545444239044461477","orderprice":40000,"ordervolume":0.00015000}], [{"basket":"bid","rootwt":-1,"groupwt":1,"wt":1,"price":0.00376903,"volume":1297.41480000,"group":10,"trade":"sell","exchange":"coinbase","name":"BTC/USD","base":"BTC","rel":"USD","orderid":"1","orderprice":265.32000000,"ordervolume":4.89000000}]]}
+    cJSON *array,*item; int32_t i,n,dir; char *tradestr,*exchangestr,base[512],rel[512],name[512]; struct prices777_order trades[16],*order;
+    uint64_t orderid,assetid,currency,baseid,relid; double orderprice,ordervolume; struct prices777 *prices; uint32_t timestamp;
+    memset(trades,0,sizeof(trades));
+    if ( (array= jarray(&n,json,"trades")) != 0 )
     {
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        if ( n > sizeof(trades)/sizeof(*trades) )
+            return(clonestr("{\"error\":\"exceeded max trades possible in a tradesequence\"}"));
+        timestamp = (uint32_t)time(NULL);
+        for (i=0; i<n; i++)
         {
-            if ( (array= cJSON_GetObjectItem(json,"openorders")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            item = jitem(array,i);
+            tradestr = jstr(item,"trade"), exchangestr = jstr(item,"exchange");
+            copy_cJSON(base,jobj(item,"base")), copy_cJSON(rel,jobj(item,"rel")), copy_cJSON(name,jobj(item,"name"));
+            orderid = j64bits(item,"orderid"), assetid = j64bits(item,"asset"), currency = j64bits(item,"currency");
+            baseid = j64bits(item,"baseid"), relid = j64bits(item,"relid");
+            orderprice = jdouble(item,"orderprice"), ordervolume = jdouble(item,"ordervolume");
+            if ( tradestr != 0 )
             {
-                for (i=0; i<n; i++)
+                if ( strcmp(tradestr,"buy") == 0 )
+                    dir = 1;
+                else if ( strcmp(tradestr,"sell") == 0 )
+                    dir = -1;
+                else if ( strcmp(tradestr,"swap") == 0 )
+                    dir = 0;
+                else return(clonestr("{\"error\":\"invalid trade direction\"}"));
+                if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
                 {
-                    item = cJSON_GetArrayItem(array,i);
-                    if ( (quoteid= get_API_nxt64bits(cJSON_GetObjectItem(item,"quoteid"))) != 0 )
-                    {
-                        baseid = get_API_nxt64bits(cJSON_GetObjectItem(item,"baseid"));
-                        relid = get_API_nxt64bits(cJSON_GetObjectItem(item,"relid"));
-                        iQ = (struct InstantDEX_quote *)get_API_nxt64bits(cJSON_GetObjectItem(item,"iQ"));
-                        if ( iQ->closed == 0 && iQ->baseid == baseid && iQ->relid == relid && calc_quoteid(iQ) == quoteid )
-                            update_openorder(iQ,quoteid,txptrs,numtx,NXTblock == prevNXTblock);
-                    }
-                }
-            }
-            free_json(json);
+                    order = &trades[i];
+                    order->source = prices;
+                    order->id = orderid, order->assetid = assetid != 0 ? assetid : currency;
+                    order->wt = dir, order->price = orderprice, order->vol = ordervolume;
+                } else return(clonestr("{\"error\":\"invalid exchange or contract pair\"}"));
+            } else return(clonestr("{\"error\":\"no trade specified\"}"));
         }
-        process_pingpong_queue(&Pending_offersQ,ptrs);
-        free_txptrs(txptrs,numtx);
-    }*/
-}
-
-/*
-memset(txptrs,0,sizeof(txptrs));
-if ( (numtx= update_iQ_flags(txptrs,(sizeof(txptrs)/sizeof(*txptrs))-1,0)) > 0 && (jsonstr= InstantDEX_openorders(NXTaddr)) != 0 )
-{
-    if ( (json= cJSON_Parse(jsonstr)) != 0 )
-    {
-        if ( (array= cJSON_GetObjectItem(json,"openorders")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-        {
-            for (i=0; i<n; i++)
-            {
-                item = cJSON_GetArrayItem(array,i);
-                if ( (quoteid= get_API_nxt64bits(cJSON_GetObjectItem(item,"quoteid"))) != 0 )
-                {
-                    baseid = get_API_nxt64bits(cJSON_GetObjectItem(item,"baseid"));
-                    relid = get_API_nxt64bits(cJSON_GetObjectItem(item,"relid"));
-                    iQ = (struct InstantDEX_quote *)get_API_nxt64bits(cJSON_GetObjectItem(item,"iQ"));
-                    if ( iQ->closed == 0 && iQ->baseid == baseid && iQ->relid == relid && calc_quoteid(iQ) == quoteid )
-                        update_openorder(iQ,quoteid,txptrs,numtx,NXTblock == prevNXTblock);
-                        }
-            }
-        }
-        free_json(json);
+        return(InstantDEX_dotrades(trades,n,juint(json,"dotrade")));
     }
-    process_pingpong_queue(&Pending_offersQ,ptrs);
-    free_txptrs(txptrs,numtx);
-}*/
+    printf("error parsing.(%s)\n",jprint(json,0));
+    return(clonestr("{\"error\":\"couldnt process trades\"}"));
+}
 
-char *placequote_str(struct InstantDEX_quote *iQ)
+char *prices777_trade(char *exchangestr,char *base,char *rel,int32_t dir,double price,double volume)
+{
+    char *retstr; struct exchange_info *exchange;
+    printf("check %s/%s\n",base,rel);
+    if ( (exchange= find_exchange(0,exchangestr)) != 0 )
+    {
+        if ( exchange->trade != 0 )
+        {
+            printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,base,rel,price,volume,exchangestr);
+            (*exchange->trade)(&retstr,exchange,base,rel,dir,price,volume);
+            return(retstr);
+        } else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
+    } else return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
+}
+
+cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade)
+{
+    char buf[1024],*retstr,*exchange; uint64_t qty,avail,priceNQT; struct prices777 *prices; cJSON *json = 0;
+    if ( (prices= order->source) != 0 )
+    {
+        exchange = prices->exchange;
+        if ( dotrade == 0 )
+        {
+            sprintf(buf,"{\"trade\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"price\":%.8f,\"volume\":%.8f}",order->wt > 0. ? "buy" : "sell",exchange,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,order->price,order->vol);
+            if ( strcmp(exchange,"nxtae") == 0 )
+            {
+                qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,order->assetid,order->price,order->vol);
+                sprintf(buf+strlen(buf)-1,",\"priceNQT\":\"%llu\",\"quantityQNT\":\"%llu\",\"avail\":\"%llu\"}",(long long)priceNQT,(long long)qty,(long long)avail);
+                if ( qty == 0 )
+                    sprintf(buf+strlen(buf)-1,",\"error\":\"insufficient balance\"}");
+            }
+            return(cJSON_Parse(buf));
+        }
+        if ( strcmp(exchange,"nxtae") == 0 )
+            retstr = fill_nxtae(SUPERNET.my64bits,order->wt,order->price,order->vol,prices->baseid,prices->relid);
+        else retstr = prices777_trade(exchange,prices->base,prices->rel,order->wt,order->price,order->vol);
+        if ( retstr != 0 )
+        {
+            json = cJSON_Parse(retstr);
+            free(retstr);
+        }
+    }
+    return(json);
+}
+
+/*char *placequote_str(struct InstantDEX_quote *iQ)
 {
     char iQstr[1024],exchangestr[64],buf[MAX_JSON_FIELD];
     init_hexbytes_noT(iQstr,(uint8_t *)iQ,sizeof(*iQ));
@@ -591,17 +608,53 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
         free_json(json);
     } else printf("gen_InstantDEX_json returns null\n");
     return(jsonstr);
+}*/
+
+char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ) // called by placequote, should autofill
+{
+    return(0);
+}
+
+int32_t match_unconfirmed(void **obooks,int32_t numbooks,char *account,uint64_t quoteid)
+{
+    return(-1);
+}
+
+void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
+{
+    char *retstr;
+    return;
+    printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d | expires in %ld\n",(long long)iQ->quoteid,numtx,updateNXT,iQ->timestamp+iQ->duration-time(NULL));
+    if ( (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
+    {
+        printf("automatched order!\n");
+        free(retstr);
+    }
+}
+
+void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
+{
 }
 
 char *InstantDEX_quote(struct prices777 *prices,int32_t dir,double price,double volume,uint64_t orderid,uint32_t minperc,uint32_t automatch,uint32_t duration)
 {
     //extern queue_t InstantDEXQ;
     //queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
-    //free_json(json);
-    char retbuf[1024];
-    sprintf(retbuf,"{\"result\":\"success\",\"exchange\":\"%s\",\"name\":\"%s\",\"base\":\"%s\",\"rel\":%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"trade\":\"%s\",\"price\":%.8f,\"volume\":%.8f,\"orderid\":\"%llu\",\"minperc\":%d,\"automatch\":%d,\"duration\":%d}",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,dir>0?"buy":"sell",price,volume,(long long)orderid,minperc,automatch,duration);
+    char retbuf[1024],*str; uint32_t nonce;
+    if ( strcmp(prices->exchange,"nxtae") == 0 )
+        return(fill_nxtae(SUPERNET.my64bits,dir,price,volume,prices->baseid,prices->relid));
+    else if ( strcmp(prices->exchange,"InstantDEX") != 0 )
+        return(prices777_trade(prices->exchange,prices->base,prices->rel,dir,price,volume));
+    sprintf(retbuf,"{\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"exchange\":\"%s\",\"name\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"method\":\"%s\",\"price\":%.8f,\"volume\":%.8f,\"orderid\":\"%llu\",\"minperc\":%d,\"automatch\":%d,\"duration\":%d}",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,dir>0?"buy":"sell",price,volume,(long long)orderid,minperc,automatch,duration);
+    if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 )//&& (retstr= check_ordermatch(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,&iQ)) != 0 )
+    {
+    } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
+    if ( (str= busdata_sync(&nonce,retbuf,"allnodes",0)) != 0 )
+        free(str);
     return(clonestr(retbuf));
 }
+
+/*
 
 char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -714,6 +767,7 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
     //printf("placequote.(%s)\n",retstr);
     return(retstr);
 }
+*/
 
 #endif
 #endif

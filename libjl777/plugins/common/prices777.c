@@ -956,7 +956,7 @@ void prices777_exchangeloop(void *ptr)
         {
             for (i=n=0; i<BUNDLE.num; i++)
             {
-                if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->changed != 0 )
+                if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->changed != 0 )
                 {
                     prices->pollnxtblock = prices777_NXTBLOCK;
                     //if ( Debuglevel > 2 )

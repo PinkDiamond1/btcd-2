@@ -352,21 +352,6 @@ uint64_t submit_to_exchange(int32_t exchangeid,char **jsonstrp,uint64_t assetid,
     return(txid);
 }
 
-char *prices777_trade(char *exchangestr,char *base,char *rel,int32_t dir,double price,double volume)
-{
-    char *retstr; struct exchange_info *exchange;
-    printf("check %s/%s\n",base,rel);
-    if ( (exchange= find_exchange(0,exchangestr)) != 0 )
-    {
-        if ( exchange->trade != 0 )
-        {
-            printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,base,rel,price,volume,exchangestr);
-            (*exchange->trade)(&retstr,exchange,base,rel,dir,price,volume);
-            return(retstr);
-        } else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
-    } else return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
-}
-
 uint64_t InstantDEX_tradestub(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
 {
     printf("this is just a InstantDEX_tradestub\n");
@@ -377,36 +362,6 @@ uint64_t NXT_tradestub(char **retstrp,struct exchange_info *exchange,char *base,
 {
     printf("this is just a NXT_tradestub\n");
     return(0);
-}
-
-cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade)
-{
-    char buf[1024],*retstr,*exchange; uint64_t qty,avail,priceNQT; struct prices777 *prices; cJSON *json = 0;
-    if ( (prices= order->source) != 0 )
-    {
-        exchange = prices->exchange;
-        if ( dotrade == 0 )
-        {
-            sprintf(buf,"{\"trade\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"price\":%.8f,\"volume\":%.8f}",order->wt > 0. ? "buy" : "sell",exchange,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,order->price,order->vol);
-            if ( strcmp(exchange,"nxtae") == 0 )
-            {
-                qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,order->assetid,order->price,order->vol);
-                sprintf(buf+strlen(buf)-1,",\"priceNQT\":\"%llu\",\"quantityQNT\":\"%llu\",\"avail\":\"%llu\"}",(long long)priceNQT,(long long)qty,(long long)avail);
-                if ( qty == 0 )
-                    sprintf(buf+strlen(buf)-1,",\"error\":\"insufficient balance\"}");
-            }
-            return(cJSON_Parse(buf));
-        }
-        if ( strcmp(exchange,"nxtae") == 0 )
-            retstr = fill_nxtae(SUPERNET.my64bits,order->wt,order->price,order->vol,prices->baseid,prices->relid);
-        else retstr = prices777_trade(exchange,prices->base,prices->rel,order->wt,order->price,order->vol);
-        if ( retstr != 0 )
-        {
-            json = cJSON_Parse(retstr);
-            free(retstr);
-        }
-    }
-    return(json);
 }
 
 #endif

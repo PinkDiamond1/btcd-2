@@ -571,12 +571,12 @@ int SuperNET_start(char *fname,char *myip)
     }
     strcpy(SUPERNET.myipaddr,ipaddr);
     init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);
-    printf("SuperNET_start myip.(%s) -> ipaddr.(%s)\n",myip!=0?myip:"",ipaddr);
+    busdata_init(10,1,0);
+    printf("SuperNET_start myip.(%s) -> ipaddr.(%s) SUPERNET.port %d\n",myip!=0?myip:"",ipaddr,SUPERNET.port);
     language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
     if ( jsonstr != 0 )
         free(jsonstr);
     portable_thread_create((void *)SuperNET_loop,myip);
-    busdata_init(10,1,0);
     printf("busdata_init done\n");
     for (i=0; i<100; i++)
     {
