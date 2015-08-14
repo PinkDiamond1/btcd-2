@@ -2435,3 +2435,33 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
     for (std::map<CKeyID, CBlockIndex*>::const_iterator it = mapKeyFirstBlock.begin(); it != mapKeyFirstBlock.end(); it++)
         mapKeyBirth[it->first] = it->second->nTime - 7200; // block times can be 2h off
 }
+
+#ifdef PEGGY
+//bitcoindark: create a peggy base transaction
+//TODO: this dummy just pays 1 btcd to paymentScript.
+bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, uint32_t numOutputs)
+{
+    peggyTx.vin.resize(2);
+    peggyTx.vout.resize(numOutputs);
+
+    peggyTx.vin[0].prevout.SetNull();
+    peggyTx.vin[0].scriptSig.clear();
+
+    peggyTx.vin[1].prevout.SetNull();
+    peggyTx.vin[1].scriptSig.clear();
+
+
+    int i;
+    CBitcoinAddress address;
+    CScript outScript;
+    for(i = 0; i < numOutputs; i++)
+    {
+        address = CBitcoinAddress(paymentScript);
+        outScript.SetDestination(address.Get());
+        CTxOut out(1, outScript);
+        peggyTx.vout.push_back(out);
+    }
+    return true;
+
+}
+#endif
