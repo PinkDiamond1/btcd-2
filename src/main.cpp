@@ -2156,7 +2156,17 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         if (fCheckSig && !CheckBlockSignature())
             return DoS(100, error("CheckBlock() : bad proof-of-stake block signature"));
     }
-    
+
+    #ifdef PEGGY
+    if (IsPeggyTime())
+    {
+        //bitcoindark: third transaction must be peggy, the rest must not be
+        for (unsigned int i = 3; i < vtx.size(); i++)
+            if (vtx[i].IsPeggyBase())
+                return DoS(100, error("CheckBlock : more than one peggybase"));
+    }
+    #endif
+
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, vtx)
     {
