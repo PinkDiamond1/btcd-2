@@ -2464,6 +2464,21 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                     if (it->nTime > nTime) { it = vtx.erase(it); } else { ++it; }
                 
                 vtx.insert(vtx.begin() + 1, txCoinStake);
+
+                #ifdef PEGGY
+                if(pindexBest->IsPeggyTime()) //latest block known is peggy time, this one should be as well
+                {
+                    //bitcoindark: create peggybase transaction for this block
+                    CTransaction peggy;
+                    char paymentScript[256]; //temp script
+                    strcpy(paymentScript, "\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889"); // temp. TODO: add peggypaments here
+                    if(wallet.CreatePeggyBase(peggy, paymentScript))
+                    {
+                        peggy.nTime = nTime;
+                        vtx.insert(vtx.begin() + 2, peggy);
+                    }
+                }
+                #endif
                 hashMerkleRoot = BuildMerkleTree();
                 
                 // append a signature to our block

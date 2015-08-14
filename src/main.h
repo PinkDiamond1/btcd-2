@@ -978,7 +978,7 @@ public:
     #ifdef PEGGY
     bool IsPeggyTime() const
     {
-        return (IsProofOfStake() && vtx.size() > 2 && vtx[2].IsPeggyBase());
+        return (vtx.size() > 2 && vtx[2].IsPeggyBase());
     }
     #endif
 
