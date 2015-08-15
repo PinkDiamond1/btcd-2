@@ -400,9 +400,13 @@ bool CTransaction::IsStandard() const
 //
 bool CTransaction::AreInputsStandard(const MapPrevTx& mapInputs) const
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+        return true;
+    #else
     if (IsCoinBase())
         return true; // Coinbases don't use vin normally
-    
+    #endif
     for (unsigned int i = 0; i < vin.size(); i++)
     {
         const CTxOut& prev = GetOutputFor(vin[i], mapInputs);
