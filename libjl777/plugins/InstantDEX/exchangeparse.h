@@ -151,52 +151,35 @@ struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr)
     return(exchange);
 }
 
-int32_t exchange_supports(uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t InstantDEX_supports(char *base,char *rel) { return(1); }
+
+int32_t NXT_supports(char *base,char *rel)
 {
-    int32_t exchangeid; struct exchange_info *exchange;
-    if ( Debuglevel > 2 )
-        printf("genpairs.(%llu %llu) starts with n.%d\n",(long long)baseid,(long long)relid,n);
-    for (exchangeid=0; exchangeid<MAX_EXCHANGES; exchangeid++)
-    {
-        if ( exchangeid == INSTANTDEX_UNCONFID )
-            continue;
-        if ( (exchange= get_exchange(exchangeid)) != 0 )
-        {
-            if ( exchange->supports != 0 )//&& exchange->ramparse != ramparse_stub )
-                n = (*exchange->supports)(exchangeid,assetids,n,baseid,relid);
-        } else break;
-    }
-    return(n);
+    if ( strcmp(rel,"NXT") == 0 )
+        return(1);
+    else if ( strcmp(base,"NXT") == 0 )
+        return(-1);
+    else return(0);
 }
 
-int32_t InstantDEX_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t poloniex_supports(char *base,char *rel)
 {
-    return(0);
-    //n = add_NXT_assetids(assetids,n,baseid);
-    //n = add_NXT_assetids(assetids,n,relid);
-    //return(n);
-}
-
-int32_t NXT_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
-{
-    return(0);
-    //if ( baseid != NXT_ASSETID )
-    //    n = add_NXT_assetids(assetids,n,baseid);
-    //if ( relid != NXT_ASSETID )
-    //    n = add_NXT_assetids(assetids,n,relid);
-    //return(n);
-}
-
-int32_t poloniex_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
-{
-    return(0);
+    if ( strcmp(rel,"BTC") == 0 )
+        return(1);
+    else if ( strcmp(base,"BTC") == 0 )
+        return(-1);
+    else return(0);
     //char *poloassets[][8] = { { "UNITY", "12071612744977229797" },  { "JLH", "6932037131189568014" },  { "XUSD", "12982485703607823902" },  { "LQD", "4630752101777892988" },  { "NXTI", "14273984620270850703" }, { "CNMT", "7474435909229872610", "6220108297598959542" } };
     //return(add_exchange_assetids(assetids,n,BTC_ASSETID,baseid,relid,exchangeid,poloassets,(int32_t)(sizeof(poloassets)/sizeof(*poloassets))));
 }
 
-int32_t bter_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t bter_supports(char *base,char *rel)
 {
-    return(0);
+    if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
+        return(1);
+    else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )
+        return(-1);
+    else return(0);
     /*char *bterassets[][8] = { { "UNITY", "12071612744977229797" },  { "ATOMIC", "11694807213441909013" },  { "DICE", "18184274154437352348" },  { "MRKT", "134138275353332190" },  { "MGW", "10524562908394749924" } };
     uint64_t unityid = calc_nxt64bits("12071612744977229797");
     n = add_exchange_assetids(assetids,n,BTC_ASSETID,baseid,relid,exchangeid,bterassets,(int32_t)(sizeof(bterassets)/sizeof(*bterassets)));
@@ -209,79 +192,119 @@ int32_t bter_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t b
     return(n);*/
 }
 
-int32_t bittrex_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t bittrex_supports(char *base,char *rel)
 {
-    return(0);
+    if ( strcmp(rel,"BTC") == 0 )
+        return(1);
+    else if ( strcmp(base,"BTC") == 0 )
+        return(-1);
+    else return(0);
     //return(add_exchange_assetids(assetids,n,BTC_ASSETID,baseid,relid,exchangeid,0,0));
 }
 
-int32_t btc38_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t btc38_supports(char *base,char *rel)
 {
-    return(0);
+    printf("btc38.(%s/%s)\n",base,rel);
+    if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
+        return(1);
+    else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )
+        return(-1);
+    else return(0);
     //return(add_exchange_assetids(assetids,n,BTC_ASSETID,baseid,relid,exchangeid,0,0));
     //return(add_exchange_assetids(assetids,n,CNY_ASSETID,baseid,relid,exchangeid,0,0));
 }
 
-int32_t okcoin_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t okcoin_supports(char *base,char *rel)
 {
-    return(0);
+    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) )
+        return(1);
+    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) )
+        return(-1);
+    else return(0);
     //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID}, {LTC_ASSETID, USD_ASSETID} };
     //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
 }
 
-int32_t huobi_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t huobi_supports(char *base,char *rel)
 {
-    return(0);
+    if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
+        return(1);
+    else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )
+        return(-1);
+    else return(0);
     //return(_add_related(assetids,n,BTC_ASSETID,CNY_ASSETID,exchangeid,baseid,relid));
 }
 
-int32_t bitfinex_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t bitfinex_supports(char *base,char *rel)
 {
-    return(0);
-    //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID}, {LTC_ASSETID, USD_ASSETID}, {LTC_ASSETID, BTC_ASSETID}, {DASH_ASSETID, BTC_ASSETID}, {DASH_ASSETID, USD_ASSETID} };
+    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"DASH") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"DASH") == 0 && strcmp(rel,"USD") == 0) )
+        return(1);
+    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"BTC") == 0) || (strcmp(rel,"DASH") == 0 && strcmp(base,"BTC") == 0) || (strcmp(rel,"DASH") == 0 && strcmp(base,"USD") == 0) )
+        return(-1);
+    else return(0);
+}
+
+int32_t btce_supports(char *base,char *rel)
+{
+    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"BTC") == 0 && strcmp(rel,"RUR") == 0) || (strcmp(base,"PPC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"PPC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"RUR") == 0) || (strcmp(base,"NMC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"NMC") == 0 && strcmp(rel,"USD") == 0) )
+        return(1);
+    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"BTC") == 0) || (strcmp(rel,"BTC") == 0 && strcmp(base,"RUR") == 0) || (strcmp(rel,"PPC") == 0 && strcmp(base,"BTC") == 0) || (strcmp(rel,"PPC") == 0 && strcmp(base,"USD") == 0 ) || (strcmp(rel,"LTC") == 0 && strcmp(base,"RUR") == 0) || (strcmp(rel,"NMC") == 0 && strcmp(base,"BTC") == 0 ) || (strcmp(rel,"NMC") == 0 && strcmp(base,"USD") == 0) )
+        return(-1);
+    else return(0);
+    //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID}, {LTC_ASSETID, BTC_ASSETID}, {LTC_ASSETID, USD_ASSETID}, {BTC_ASSETID, RUR_ASSETID}, {PPC_ASSETID, BTC_ASSETID},
+    //{PPC_ASSETID, USD_ASSETID}, {LTC_ASSETID, RUR_ASSETID}, {NMC_ASSETID, BTC_ASSETID}, {NMC_ASSETID, USD_ASSETID} };
     //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
 }
 
-int32_t btce_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t bityes_supports(char *base,char *rel)
 {
-    return(0);
-    //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID}, {LTC_ASSETID, BTC_ASSETID}, {LTC_ASSETID, USD_ASSETID}, {BTC_ASSETID, RUR_ASSETID}, {PPC_ASSETID, BTC_ASSETID}, {PPC_ASSETID, USD_ASSETID}, {LTC_ASSETID, RUR_ASSETID}, {NMC_ASSETID, BTC_ASSETID}, {NMC_ASSETID, USD_ASSETID} };
-    //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
-}
-
-int32_t bityes_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
-{
-    return(0);
+    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) )
+        return(1);
+    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"USD") == 0) )
+        return(-1);
+    else return(0);
     //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID}, {LTC_ASSETID, USD_ASSETID} };
     //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
 }
 
-int32_t coinbase_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t coinbase_supports(char *base,char *rel)
 {
-    return(0);
+    if ( strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0 )
+        return(1);
+    else if ( strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0 )
+        return(-1);
+    else return(0);
     //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID} };
     //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
 }
 
-int32_t bitstamp_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t bitstamp_supports(char *base,char *rel)
 {
-    return(0);
+    if ( strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0 )
+        return(1);
+    else if ( strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0 )
+        return(-1);
+    else return(0);
     //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID} };
     //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
 }
 
-int32_t lakebtc_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t lakebtc_supports(char *base,char *rel)
 {
-    return(0);
-    //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID} };
-    //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
+    if ( strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0 )
+        return(1);
+    else if ( strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0 )
+        return(-1);
+    else return(0);
 }
 
-int32_t exmo_supports(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
+int32_t exmo_supports(char *base,char *rel)
 {
-    return(0);
-    //uint64_t supported[][2] = { {BTC_ASSETID, USD_ASSETID}, {BTC_ASSETID, EUR_ASSETID} , {BTC_ASSETID, RUR_ASSETID} };
-    //return(add_related(assetids,n,supported,sizeof(supported)/sizeof(*supported),exchangeid,baseid,relid));
+    if ( strcmp(base,"BTC") == 0 && (strcmp(rel,"USD") == 0 || strcmp(rel,"EUR") == 0 || strcmp(rel,"RUR") == 0) )
+        return(1);
+    else if ( strcmp(rel,"BTC") == 0 && (strcmp(base,"USD") == 0 || strcmp(base,"EUR") == 0 || strcmp(base,"RUR") == 0) )
+        return(-1);
+    else return(0);
 }
 
 double prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD"

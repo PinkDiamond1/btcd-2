@@ -684,12 +684,12 @@ char *prices777_allorderbooks()
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize)
 {
     static long allocated;
-    struct exchange_pair { char *exchange; double (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
+    struct exchange_pair { char *exchange; double (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(char *base,char *rel); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
     {
         {"nxtae", prices777_NXT, NXT_supports, NXT_tradestub }, {"unconf", prices777_unconfNXT, NXT_supports, NXT_tradestub },
         {"InstantDEX", prices777_InstantDEX, InstantDEX_supports, InstantDEX_tradestub }, {"basket", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
         {"poloniex", prices777_poloniex, poloniex_supports, poloniex_trade }, {"bitfinex", prices777_bitfinex, bitfinex_supports },
-        {"btc38", prices777_btc38, btc38_supports, btc38_trade }, {"bter", prices777_bter, bter_supports, bter_trade },
+        {"btc38", prices777_btc38, btc38_supports, btc38_trade }, //{"bter", prices777_bter, bter_supports, bter_trade },
         {"btce", prices777_btce, btce_supports, btce_trade }, {"bitstamp", prices777_bitstamp, bitstamp_supports },
         {"bittrex", prices777_bittrex, bittrex_supports, bittrex_trade }, {"okcoin", prices777_okcoin, okcoin_supports },
         {"huobi", prices777_huobi, huobi_supports }, {"bityes", prices777_bityes, bityes_supports },
@@ -699,12 +699,26 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     };
     int32_t i,rellen; char basebuf[64],relbuf[64]; struct exchange_info *exchangeptr;
     struct prices777 *prices;
+    if ( needfunc < 0 )
+    {
+        for (i=0; i<sizeof(pairs)/sizeof(*pairs); i++)
+        {
+            if ( (exchangeptr= find_exchange(0,pairs[i].exchange)) != 0 )
+            {
+                printf("%s set supports.%p\n",pairs[i].exchange,pairs[i].supports);
+                exchangeptr->supports = pairs[i].supports;
+            }
+        }
+        return(0);
+    }
+    printf("init.(%s/%s) %llu %llu\n",base,rel,(long long)baseid,(long long)relid);
     if ( strcmp(exchange,"nxtae") == 0 || strcmp(exchange,"unconf") == 0 )
     {
         if ( strcmp(base,"NXT") == 0 || baseid == NXT_ASSETID )
         {
             strcpy(base,rel), baseid = relid;
             strcpy(rel,"NXT"), relid = NXT_ASSETID;
+            printf("flip.(%s/%s) %llu %llu\n",base,rel,(long long)baseid,(long long)relid);
         }
     }
     for (i=0; i<BUNDLE.num; i++)
@@ -715,7 +729,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
             {
                 if ( (rel == 0 && BUNDLE.ptrs[i]->origrel[0] == 0) || strcmp(rel,BUNDLE.ptrs[i]->origrel) == 0 )
                 {
-                    //if ( Debuglevel > 2 )
+                    if ( Debuglevel > 2 )
                         printf("duplicate initpair.(%s) (%s) (%s)\n",exchange,base,BUNDLE.ptrs[i]->origrel);
                     return(BUNDLE.ptrs[i]);
                 }
@@ -747,6 +761,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         safecopy(prices->lbase,base,sizeof(prices->lbase)), tolowercase(prices->lbase);
         safecopy(prices->lrel,rel,sizeof(prices->lrel)), tolowercase(prices->lrel);
         rellen = (int32_t)(strlen(prices->rel) + 1);
+        tmp[0] = 0;
         prices->type = _set_assetname(&prices->ap_mult,tmp,0,prices->baseid);
         printf("nxtbook.(%s) -> NXT %s %llu vs (%s) mult.%llu\n",base,prices->contract,(long long)prices->baseid,tmp,(long long)prices->ap_mult);
     }
@@ -790,6 +805,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
             {
                 if ( strcmp(exchange,pairs[i].exchange) == 0 )
                 {
+                    exchangeptr->supports = pairs[i].supports;
                     if ( (exchangeptr->updatefunc= pairs[i].updatefunc) != 0 )
                     {
                         exchangeptr->trade = pairs[i].trade;
@@ -883,7 +899,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             if ( valid >= 0 )
                             {
                                 _set_assetname(&mult,name,0,refbaseid), strcat(name,"/"), _set_assetname(&mult,name+strlen(name),0,refrelid);
-                                BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(name,_base,_rel,refbaseid,refrelid,basket,2);
+                                BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(1,name,_base,_rel,refbaseid,refrelid,basket,2,"basket");
                                 //prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                                 printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                                 printf("B total polling.%d added.(%s) (%s/%s) {%s && %s}\n",BUNDLE.num,prices->contract,_base,_rel,firstprices->contract,basket[1].prices->contract);
@@ -929,12 +945,14 @@ void prices777_exchangeloop(void *ptr)
         {
             if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->basketsize == 0 && prices->exchangeid == exchange->exchangeid )
             {
-                if ( isnxtae == 0 )
+                if ( prices->exchangeid == INSTANTDEX_EXCHANGEID && prices->dirty != 0 )
+                    pollflag = 1;
+                else if ( isnxtae == 0 )
                     pollflag = milliseconds() > (exchange->lastupdate + exchange->pollgap*1000) && milliseconds() > (prices->lastupdate + 1000*SUPERNET.idlegap);
                 else if ( strcmp(exchange->name,"unconf") == 0 || prices->pollnxtblock < prices777_NXTBLOCK || milliseconds() > prices->lastupdate + 1000*SUPERNET.idlegap )
                     pollflag = 1;
                 else continue;
-                if ( pollflag != 0 )
+                if ( pollflag != 0 && exchange->updatefunc != 0 )
                 {
                     portable_mutex_lock(&exchange->mutex);
                     prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
@@ -946,6 +964,7 @@ void prices777_exchangeloop(void *ptr)
                         prices777_propagate(prices);
                     }
                     prices->pollnxtblock = prices777_NXTBLOCK;
+                    prices->dirty = 0;
                     n++;
                 }
             }
@@ -963,7 +982,13 @@ void prices777_exchangeloop(void *ptr)
                     printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                     prices->lastupdate = updated;
                     if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
-                         prices777_propagate(prices);
+                    {
+                        if ( prices->O.numbids > 0 || prices->O.numasks > 0 )
+                        {
+                            prices777_jsonstrs(prices,&prices->O);
+                            prices777_propagate(prices);
+                        }
+                    }
                     prices->changed = 0;
                 }
             }
@@ -1841,6 +1866,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         // configure settings
         init_Currencymasks();
         BUNDLE.jsonstr = clonestr(jsonstr);
+        PRICES.readyflag = 1;
         //BUNDLE.kv = kv777_init("DB","prices",0);
         //printf("BUNDLE.kv.%p\n",BUNDLE.kv);
         strcpy(retbuf,"{\"result\":\"prices init\"}");

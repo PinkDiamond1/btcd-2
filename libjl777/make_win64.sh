@@ -10,7 +10,7 @@ make gcc-mpc MXE_TARGETS='x86_64-w64-mingw32.static'
 make mingw-w64 MXE_TARGETS='x86_64-w64-mingw32.static'
 make gcc MXE_TARGETS='x86_64-w64-mingw32.static'
 #make gzip2 MXE_TARGETS='x86_64-w64-mingw32.static'
-make libiconv MXE_TARGETS='x86_64-w64-mingw32.static' 
+make libiconv MXE_TARGETS='x86_64-w64-mingw32.static'
 make gettext MXE_TARGETS='x86_64-w64-mingw32.static'
 make pcre MXE_TARGETS='x86_64-w64-mingw32.static'
 make zlib MXE_TARGETS='x86_64-w64-mingw32.static'
@@ -31,8 +31,8 @@ cd nanomsg
 echo ">>>>>>>>>>>>>>>>>>building nanomsg"
 make clean
 sh ./autogen.sh
-CC=x86_64-w64-mingw32.static-gcc CXX=x86_64-w64-mingw32.static-g++ ./configure --disable-replication --enable-cxx --host x86_64-w64-mingw32.static
-make
+CC=x86_64-w64-mingw32.static-gcc CXX=x86_64-w64-mingw32.static-g++ ./configure --host x86_64-w64-mingw32.static
+make CFLAGS='-g -O2 -w -DNN_HAVE_WINDOWS -DNN_HAVE_MINGW -D_WIN32_WINNT=0x0600'
 cp .libs/libnanomsg.a ../libs/libnanomsg-win64.a
 cd ../
 rm mxe/usr/x86_64-w64-mingw32.static/include/objidl.h
@@ -47,5 +47,3 @@ make
 cp libmman.a ../libs/libmman.a
 cd ..
 echo ">>>>>>>>>>>>>>>>>>finished with make winpatch"
-
-

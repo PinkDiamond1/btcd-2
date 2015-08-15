@@ -8,39 +8,52 @@
 #ifndef xcode_orderbooks_h
 #define xcode_orderbooks_h
 
-void testfoo(char *str)
+struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t relid,char *exchange)
 {
-    int32_t i,j;
+    int32_t i; struct prices777 *prices;
+    *invertedp = 0;
     for (i=0; i<BUNDLE.num; i++)
     {
-        if ( BUNDLE.ptrs[i]->basketsize == 0 )
-            continue;
-        for (j=0; j<BUNDLE.ptrs[i]->basketsize; j++)
-            printf("%d ",BUNDLE.ptrs[i]->basket[j].groupsize);
-        printf("(%s) groupsizes basketsize.%d\n",str,BUNDLE.ptrs[i]->basketsize);
+        if ( (prices= BUNDLE.ptrs[i]) != 0 && strcmp(prices->exchange,exchange) == 0 )
+        {
+            if ( prices777_equiv(prices->baseid) == prices777_equiv(baseid) && prices777_equiv(prices->relid) == prices777_equiv(relid) )
+                return(prices);
+            else if ( prices777_equiv(prices->relid) == prices777_equiv(baseid) && prices777_equiv(prices->baseid) == prices777_equiv(relid) )
+            {
+                *invertedp = 1;
+                return(prices);
+            }
+        }
     }
+    return(0);
 }
 
-struct prices777 *prices777_createbasket(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777_basket *basket,int32_t n)
+struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777_basket *basket,int32_t n,char *typestr)
 {
-    int32_t i,j,m,max = 0; double firstwt,wtsum; struct prices777 *prices,*feature;
-    if ( n > MAX_GROUPS )
+    int32_t i,j,m,iter,max = 0; double firstwt,wtsum; struct prices777 *prices,*feature;
+    prices = prices777_initpair(1,0,typestr,base,rel,0.,name,baseid,relid,n);
+    for (iter=0; iter<2; iter++)
     {
-        printf("baskets limited to %d, %d is too many for %s.(%s/%s)\n",MAX_GROUPS,n,name,base,rel);
-        return(0);
-    }
-    prices = prices777_initpair(1,0,"basket",base,rel,0.,name,baseid,relid,n);
-    for (i=0; i<n; i++)
-    {
-        feature = basket[i].prices;
-        feature->dependents = realloc(feature->dependents,sizeof(*feature->dependents) * (feature->numdependents + 1));
-        feature->dependents[feature->numdependents++] = &prices->changed;
-        if ( basket[i].groupid > max )
-            max = basket[i].groupid;
-        if ( fabs(basket[i].wt) < SMALLVAL )
+        for (i=0; i<n; i++)
         {
-            printf("all basket features must have nonzero wt\n");
-            free(prices);
+            feature = basket[i].prices;
+            if ( addbasket*iter != 0 )
+            {
+                feature->dependents = realloc(feature->dependents,sizeof(*feature->dependents) * (feature->numdependents + 1));
+                feature->dependents[feature->numdependents++] = &prices->changed;
+            }
+            if ( basket[i].groupid > max )
+                max = basket[i].groupid;
+            if ( fabs(basket[i].wt) < SMALLVAL )
+            {
+                printf("all basket features must have nonzero wt\n");
+                free(prices);
+                return(0);
+            }
+        }
+        if ( (max+1) > MAX_GROUPS )
+        {
+            printf("baskets limited to %d, %d is too many for %s.(%s/%s)\n",MAX_GROUPS,n,name,base,rel);
             return(0);
         }
     }
@@ -331,6 +344,11 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
 void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB)
 {
     int32_t allflag; char *strs[4];
+    if ( OB->numbids == 0 && OB->numasks == 0 )
+    {
+        printf("warning: updating null orderbook ignored for %s (%s/%s)\n",prices->contract,prices->base,prices->rel);
+        return;
+    }
     for (allflag=0; allflag<4; allflag++)
     {
         strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,prices,OB,MAX_DEPTH,allflag%2);
@@ -419,7 +437,6 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
         memcpy(prices->O.book[i],prices->O.book[i+1],sizeof(prices->O.book[i]));
     memcpy(prices->O.book[MAX_GROUPS],OB.book[MAX_GROUPS],sizeof(OB.book[MAX_GROUPS]));
     prices->O.numbids = OB.numbids, prices->O.numasks = OB.numasks, prices->O.timestamp = OB.timestamp;
-    prices777_jsonstrs(prices,&OB);
 }
 
 double prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t maxdepth,cJSON *json,char *resultfield,char *bidfield,char *askfield,char *pricefield,char *volfield)
@@ -434,7 +451,10 @@ double prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32
         bidobj = jarray(&numbids,obj,bidfield);
         askobj = jarray(&numasks,obj,askfield);
         if ( bidobj != 0 || askobj != 0 )
+        {
             prices777_json_quotes(&hbla,prices,bidobj,askobj,maxdepth,pricefield,volfield,0);
+            prices777_jsonstrs(prices,&prices->O);
+        }
     }
     return(hbla);
 }
@@ -675,15 +695,14 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         }
         //printf("%s slot.%d (%f %f %f %f) (%d %d)\n",prices->contract,slot,gp->bid.price,gp->bid.vol,gp->ask.price,gp->ask.vol,OB.numbids,OB.numasks);
     }
+    fprintf(stderr,"basket.%s slot.%d numbids.%d numasks.%d\n",prices->contract,slot,prices->O.numbids,prices->O.numasks);
     if ( slot > 0 )
     {
         prices->O2 = prices->O;
         prices->O = OB;
-        prices777_jsonstrs(prices,&OB);
+        if ( prices->lastbid > SMALLVAL && prices->lastask > SMALLVAL )
+            hbla = 0.5 * (prices->lastbid + prices->lastask);
     }
-    fprintf(stderr,"basket.%s slot.%d numbids.%d numasks.%d\n",prices->contract,slot,prices->O.numbids,prices->O.numasks);
-    if ( prices->lastbid > SMALLVAL && prices->lastask > SMALLVAL )
-        hbla = 0.5 * (prices->lastbid + prices->lastask);
     return(hbla);
 }
 
@@ -728,7 +747,7 @@ struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct 
     return(0);
 }
 
-struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson)
+struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson,int32_t addbasket,char *typestr)
 {
     //{"name":"NXT/BTC","base":"NXT","rel":"BTC","basket":[{"exchange":"poloniex"},{"exchange":"btc38"}]}
     int32_t i,n,keysize,groupid,valid; char refname[64],refbase[64],refrel[64],name[64],base[64],rel[64],exchangestr[64],key[8192];
@@ -789,15 +808,22 @@ struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson)
                 return(0);
             }
         }
-        printf(">>>>> (%s/%s).%s %llu %llu\n",refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
-        InstantDEX_name(key,&keysize,"basket",refname,refbase,&refbaseid,refrel,&refrelid);
-        prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
-        printf("<<<<< valid.%d refname.(%s) (%s/%s).%s %llu %llu\n",valid,refname,refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
+        printf(">>>>> (%s/%s).%s %llu %llu\n",refbase,refrel,typestr,(long long)refbaseid,(long long)refrelid);
+        InstantDEX_name(key,&keysize,typestr,refname,refbase,&refbaseid,refrel,&refrelid);
+        if ( addbasket != 0 )
+        {
+            prices777_addbundle(&valid,0,0,typestr,refbaseid,refrelid);
+            printf("<<<<< valid.%d refname.(%s) (%s/%s).%s %llu %llu\n",valid,refname,refbase,refrel,typestr,(long long)refbaseid,(long long)refrelid);
+        } else valid = 0;
         if ( valid >= 0 )
         {
-            BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(refname,refbase,refrel,refbaseid,refrelid,basket,n);
-            //prices->lastprice = prices777_basket(prices,MAX_DEPTH);
-            printf("C total polling.%d added.(%s/%s).%s updating basket lastprice %f changed.%p %d groupsize.%d numgroups.%d %p\n",BUNDLE.num,prices->base,prices->rel,prices->exchange,prices->lastprice,&prices->changed,prices->changed,prices->basket[0].groupsize,prices->numgroups,&prices->basket[0].groupsize);
+            if ( (prices = prices777_createbasket(addbasket,refname,refbase,refrel,refbaseid,refrelid,basket,n,typestr)) != 0 )
+            {
+                if ( addbasket != 0 )
+                    BUNDLE.ptrs[BUNDLE.num++] = prices;
+                //prices->lastprice = prices777_basket(prices,MAX_DEPTH);
+                printf("C total polling.%d added.(%s/%s).%s updating basket lastprice %f changed.%p %d groupsize.%d numgroups.%d %p\n",BUNDLE.num,prices->base,prices->rel,prices->exchange,prices->lastprice,&prices->changed,prices->changed,prices->basket[0].groupsize,prices->numgroups,&prices->basket[0].groupsize);
+            }
         } else prices = 0;
         if ( basketjson != _basketjson )
             free_json(basketjson);
@@ -890,6 +916,11 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
     return(hbla);
 }
 
+int32_t match_unconfirmed(char *account,uint64_t quoteid,cJSON *txobj)
+{
+    return(-1);
+}
+
 double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 {
     char url[1024],account[1024],txidstr[1024],comment[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
@@ -935,10 +966,10 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                             if ( (commentobj= cJSON_Parse(comment)) != 0 )
                             {
                                 quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
-                                if ( 1 || Debuglevel > 2 )
+                                if ( strcmp(SUPERNET.NXTADDR,account) == 0 || Debuglevel > 2 )
                                     printf("acct.(%s) pending quoteid.%llu asset.%llu qty.%llu %.8f amount %.8f %d:%d tx.%s\n",account,(long long)quoteid,(long long)assetid,(long long)qty,dstr(priceNQT),dstr(amount),type,subtype,txidstr);
-                                //if ( quoteid != 0 )
-                                //    match_unconfirmed(obooks,numbooks,account,quoteid);
+                                if ( quoteid != 0 )
+                                    match_unconfirmed(account,quoteid,txobj);
                                 free_json(commentobj);
                             }
                         }
@@ -946,7 +977,8 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                         price = prices777_price_volume(&vol,baseamount,relamount);
                         if ( prices->baseid == assetid )
                         {
-                            printf("unconf.%d subtype.%d %s %llu (%llu %llu) %f %f mult.%llu qty.%llu pqt.%llu baseamount.%lld relamount.%lld\n",i,subtype,txidstr,(long long)prices->baseid,(long long)assetid,(long long)NXT_ASSETID,price,vol,(long long)prices->ap_mult,(long long)qty,(long long)priceNQT,(long long)baseamount,(long long)relamount);
+                            if ( Debuglevel > 2 )
+                                printf("unconf.%d subtype.%d %s %llu (%llu %llu) %f %f mult.%llu qty.%llu pqt.%llu baseamount.%lld relamount.%lld\n",i,subtype,txidstr,(long long)prices->baseid,(long long)assetid,(long long)NXT_ASSETID,price,vol,(long long)prices->ap_mult,(long long)qty,(long long)priceNQT,(long long)baseamount,(long long)relamount);
                             if ( subtype == 2 )
                             {
                                 array = bids;
@@ -970,7 +1002,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
     cJSON_AddItemToObject(json,"bids",bids);
     cJSON_AddItemToObject(json,"asks",asks);
     prices777_json_orderbook("unconf",prices,maxdepth,json,0,"bids","asks",0,0);
-    if ( Debuglevel > 2 || prices->O.numbids != 0 || prices->O.numasks != 0 )
+    if ( Debuglevel > 2 )//|| prices->O.numbids != 0 || prices->O.numasks != 0 )
         printf("%s %s/%s unconf.(%s) %f %f (%d %d)\n",prices->contract,prices->base,prices->rel,jprint(json,0),prices->lastbid,prices->lastask,prices->O.numbids,prices->O.numasks);
     free_json(json);
     return(_pairaved(prices->lastbid,prices->lastask));
@@ -978,8 +1010,71 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 
 double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
 {
-    double hbla = 0.;
+    cJSON *json; double hbla = 0.;
+    if ( (json= InstantDEX_orderbook(prices)) != 0 )
+    {
+        if ( Debuglevel > 2 )
+            printf("InstantDEX.(%s)\n",jprint(json,0));
+        prices777_json_orderbook("InstantDEX",prices,maxdepth,json,0,"bids","asks",0,0);
+        free_json(json);
+    }
     return(hbla);
+}
+
+char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,uint64_t relid,int32_t maxdepth,int32_t allflag,int32_t tradeable)
+{
+    cJSON *basketjson,*array,*item,*item2; struct prices777 *active;
+    uint64_t mgwbase,mgwrel; int32_t inverted,exchangeid; char numstr[64],base[64],rel[64],*retstr = 0;
+    strcpy(base,_base), strcpy(rel,_rel);
+    if ( (active= prices777_find(&inverted,baseid,relid,(tradeable != 0) ? "active" : "basket")) == 0 )
+    {
+        basketjson = cJSON_CreateObject(), array = cJSON_CreateArray();
+        jaddstr(basketjson,"name",name), jaddstr(basketjson,"base",base), jaddstr(basketjson,"rel",rel);
+        item = cJSON_CreateObject(), jaddstr(item,"exchange",INSTANTDEX_NAME), jaddi(array,item);
+        mgwbase = is_MGWcoin(base), mgwrel = is_MGWcoin(rel);
+        if ( (strcmp(base,"NXT") == 0 || strcmp(rel,"NXT") == 0) && (mgwbase != 0 || mgwrel != 0) )
+        {
+            item = cJSON_CreateObject(), jaddstr(item,"exchange",INSTANTDEX_NXTAENAME), jaddstr(item,"rel","NXT");
+            item2 = cJSON_CreateObject(), jaddstr(item2,"exchange",INSTANTDEX_NXTAEUNCONF), jaddstr(item2,"rel","NXT");
+            if ( strcmp(base,"NXT") == 0 )
+            {
+                jaddnum(item,"wt",-1), jaddnum(item2,"wt",-1);
+                sprintf(numstr,"%llu",(long long)mgwrel), jaddstr(item,"baseid",numstr), jaddstr(item2,"baseid",numstr);
+            }
+            else
+            {
+                strcpy(base,_rel), jaddstr(item,"base",base), jaddstr(item2,"base",base);
+                sprintf(numstr,"%llu",(long long)mgwbase), jaddstr(item,"baseid",numstr), jaddstr(item2,"baseid",numstr);
+            }
+            jaddi(array,item), jaddi(array,item2);
+        }
+        for (exchangeid=4; exchangeid<MAX_EXCHANGES; exchangeid++)
+        {
+            if ( Exchanges[exchangeid].name[0] == 0 )
+                break;
+            printf("exchangeid.%d ptr.%p (%s/%s)\n",exchangeid,Exchanges[exchangeid].supports,base,rel);
+            if ( Exchanges[exchangeid].supports != 0 && (inverted= (*Exchanges[exchangeid].supports)(base,rel)) != 0 && (tradeable == 0 ||Exchanges[exchangeid].apikey[0] != 0) )
+            {
+                item = cJSON_CreateObject(), jaddstr(item,"exchange",Exchanges[exchangeid].name);
+                if ( inverted < 0 )
+                    jaddnum(item,"wt",-1);
+                jaddi(array,item);
+            }
+        }
+        jadd(basketjson,"basket",array);
+        if ( (active= prices777_makebasket(0,basketjson,1,(tradeable != 0) ? "active" : "basket")) != 0 )
+        {
+            prices777_basket(active,maxdepth);
+            retstr = prices777_orderbook_jsonstr(0,SUPERNET.my64bits,active,&active->O,maxdepth,allflag);
+        } else retstr = clonestr("{\"error\":\"cant create active orderbook\"}");
+        printf("BASKET.(%s)\n",jprint(basketjson,1));
+        //free_json(basketjson);
+    }
+    else if ( (retstr= active->orderbook_jsonstrs[0][allflag]) == 0 )
+        retstr = prices777_orderbook_jsonstr(0,SUPERNET.my64bits,active,&active->O,maxdepth,allflag);
+    if ( retstr != 0 )
+        retstr = clonestr(retstr);
+    return(retstr);
 }
 
 #endif

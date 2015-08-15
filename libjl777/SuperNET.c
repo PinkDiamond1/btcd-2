@@ -285,9 +285,11 @@ void SuperNET_loop(void *ipaddr)
         while ( INSTANTDEX.readyflag == 0 || find_daemoninfo(&ind,"InstantDEX",0,0) == 0 )
             poll_daemons();
     }
+    printf(">>>>>>>>>>>>>>>> START PRICE DAEMON\n");
     strs[n++] = language_func((char *)"prices","",0,0,1,(char *)"prices",jsonargs,call_system);
-    while ( 1 || PRICES.readyflag == 0 || find_daemoninfo(&ind,"prices",0,0) == 0 )
+    while ( PRICES.readyflag == 0 || find_daemoninfo(&ind,"prices",0,0) == 0 )
         poll_daemons();
+    printf(">>>>>>>>>>>>>>>> GOT PRICE DAEMON\n");
 #endif
     /*strs[n++] = language_func((char *)"teleport","",0,0,1,(char *)"teleport",jsonargs,call_system);
     while ( TELEPORT.readyflag == 0 || find_daemoninfo(&ind,"teleport",0,0) == 0 )

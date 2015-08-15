@@ -159,30 +159,28 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 #define INSTANTDEX_ACCT "4383817337783094122"
 #define MAX_TXPTRS 1024
 
+#define INSTANTDEX_NAME "InstantDEX"
+#define INSTANTDEX_NXTAENAME "nxtae"
+#define INSTANTDEX_NXTAEUNCONF "unconf"
+#define INSTANTDEX_BASKETNAME "basket"
+#define INSTANTDEX_ACTIVENAME "active"
+#define INSTANTDEX_EXCHANGEID 0
+#define INSTANTDEX_UNCONFID 1
+#define INSTANTDEX_NXTAEID 2
+#define MAX_EXCHANGES 64
+
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
-    uint64_t quoteid,baseid,baseamount,relid,relamount,nxt64bits;
-    struct InstantDEX_quote *baseiQ,*reliQ;
+    uint64_t quoteid; // must be here
+    uint64_t baseid,baseamount,relid,relamount,nxt64bits;
     uint32_t timestamp,duration;
     uint8_t closed:1,sent:1,matched:1,isask:1,pad2:4,minperc:7;
     char exchangeid,gui[9];
 };
 
-/*struct orderbook
-{
-    uint64_t baseid,relid,jumpasset;
-    char base[64],rel[64],jumper[64],exchangestr[64],name[64];
-    //struct InstantDEX_quote bids[MAX_DEPTH],asks[MAX_DEPTH];
-    struct prices777 *bidsources[MAX_DEPTH],*asksources[MAX_DEPTH];
-    double lastbid,lastask,bidasks[MAX_DEPTH][4];
-    int32_t numbids,numasks;
-};*/
-
-//struct prices777_nxtquote { uint64_t baseid,relid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
-//struct prices777_nxtbooks { struct prices777_nxtquote orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
+struct prices777_order { struct prices777 *source; double price,vol,wt,ratio; uint64_t id,assetid,quoteid; uint32_t timestamp; uint16_t slot_ba; };
 struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; char base[64],rel[64]; };
-struct prices777_order { struct prices777 *source; double price,vol,wt,ratio; uint64_t id,assetid; uint32_t timestamp; uint16_t slot_ba; };
 struct prices777_orderentry { struct prices777_order bid,ask; };
 #define MAX_GROUPS 8
 
@@ -196,7 +194,7 @@ struct prices777
 {
     char url[512],exchange[64],base[64],rel[64],lbase[64],lrel[64],key[512],oppokey[512],contract[64],origbase[64],origrel[64];
     uint64_t contractnum,ap_mult,baseid,relid; int32_t keysize,oppokeysize; double lastupdate,decay,oppodecay,lastprice,lastbid,lastask;
-    uint32_t pollnxtblock,exchangeid,numquotes,updated,lasttimestamp,RTflag,disabled;
+    uint32_t pollnxtblock,exchangeid,numquotes,updated,lasttimestamp,RTflag,disabled,dirty;
     portable_mutex_t mutex;
     char *orderbook_jsonstrs[2][2];
     struct prices777_basketinfo O,O2; double groupwts[MAX_GROUPS + 1];
@@ -207,7 +205,7 @@ struct prices777
 struct exchange_info
 {
     double (*updatefunc)(struct prices777 *prices,int32_t maxdepth);
-    int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid);
+    int32_t (*supports)(char *base,char *rel);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
     uint32_t num,exchangeid,pollgap,refcount,polling; uint64_t nxt64bits; double lastupdate;
@@ -221,20 +219,20 @@ struct exchange_info *exchange_find(char *exchangestr);
 void prices777_exchangeloop(void *ptr);
 char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid);
 cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade);
+uint64_t prices777_equiv(uint64_t assetid);
+void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB);
+char *prices777_activebooks(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,int32_t maxdepth,int32_t allflag,int32_t tradeable);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);
-struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson);
+struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson,int32_t addbasket,char *typestr);
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
 //cJSON *prices777_InstantDEX_json(char *_base,char *_rel,int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset);
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT);
 uint64_t calc_asset_qty(uint64_t *availp,uint64_t *priceNQTp,char *NXTaddr,int32_t checkflag,uint64_t assetid,double price,double vol);
+cJSON *InstantDEX_orderbook(struct prices777 *prices);
+struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t relid,char *exchange);
 
-int32_t iQ_exchangestr(char *exchange,struct InstantDEX_quote *iQ);
-int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,uint64_t quoteid,double price,double volume,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount,char *exchange,uint64_t nxt64bits,char *gui,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,int32_t duration);
-//void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ,int32_t polarity,int32_t oldest,char *gui);
-//void free_orderbook(struct orderbook *op);
-//void sort_orderbook(struct orderbook *op);
 uint64_t calc_quoteid(struct InstantDEX_quote *iQ);
 double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,uint64_t relamount2);
 double make_jumpquote(uint64_t baseid,uint64_t relid,uint64_t *baseamountp,uint64_t *relamountp,uint64_t *frombasep,uint64_t *fromrelp,uint64_t *tobasep,uint64_t *torelp);

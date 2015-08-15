@@ -266,7 +266,7 @@ void process_userinput(char *_line)
         //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
         printf("console.(%s) -> (%s)\n",line,retstr);
         return;
-    }
+    } else printf("cant parse.(%s)\n",line);
     settoken(ipaddr,line);
     printf("expands to: %s [%s] %s\n",broadcastflag != 0 ? "broadcast": "",line,ipaddr);
     if ( is_ipaddr(ipaddr) != 0 )
