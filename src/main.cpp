@@ -545,7 +545,11 @@ bool CTransaction::CheckTransaction() const
     for (unsigned int i = 0; i < vout.size(); i++)
     {
         const CTxOut& txout = vout[i];
+        #ifdef PEGGY
+        if (txout.IsEmpty() && !IsCoinBase() && !IsCoinStake() && !IsPeggyBase())
+        #else
         if (txout.IsEmpty() && !IsCoinBase() && !IsCoinStake())
+        #endif
             return DoS(100, error("CTransaction::CheckTransaction() : txout empty for user transaction"));
         if (txout.nValue < 0)
             return DoS(100, error("CTransaction::CheckTransaction() : txout.nValue negative"));
