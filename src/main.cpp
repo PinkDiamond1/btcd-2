@@ -1278,7 +1278,11 @@ void CBlock::UpdateTime(const CBlockIndex* pindexPrev)
 bool CTransaction::DisconnectInputs(CTxDB& txdb)
 {
     // Relinquish previous transactions' spent pointers
+    #ifdef PEGGY
+    if (!IsCoinBase() && !IsPeggyBase())
+    #else
     if (!IsCoinBase())
+    #endif
     {
         BOOST_FOREACH(const CTxIn& txin, vin)
         {
