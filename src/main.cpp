@@ -962,7 +962,11 @@ bool CWalletTx::AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs)
         // Add previous supporting transactions first
         BOOST_FOREACH(CMerkleTx& tx, vtxPrev)
         {
+            #ifdef PEGGY
+            if (!(tx.IsCoinBase() || tx.IsCoinStake() || tx.IsPeggyBase()))
+            #else
             if (!(tx.IsCoinBase() || tx.IsCoinStake()))
+            #endif
             {
                 uint256 hash = tx.GetHash();
                 if (!mempool.exists(hash) && !txdb.ContainsTx(hash))
