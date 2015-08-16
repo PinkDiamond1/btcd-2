@@ -1836,7 +1836,11 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         
         // Queue memory transactions to resurrect
         BOOST_FOREACH(const CTransaction& tx, block.vtx)
+        #ifdef PEGGY
+        if (!(tx.IsCoinBase() || tx.IsCoinStake() || tx.IsPeggyBase()))
+        #else
         if (!(tx.IsCoinBase() || tx.IsCoinStake()))
+        #endif
             vResurrect.push_back(tx);
     }
     
