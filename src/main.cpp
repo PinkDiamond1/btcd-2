@@ -2050,8 +2050,11 @@ bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
 {
     CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
     nCoinAge = 0;
-    
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return true;
     
     BOOST_FOREACH(const CTxIn& txin, vin)
