@@ -2554,7 +2554,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                 vtx.insert(vtx.begin() + 1, txCoinStake);
 
                 #ifdef PEGGY
-                if(pindexBest->IsPeggyTime()) //latest block known is peggy time, this one should be as well
+                if(pindexBest->nHeight + 1 >= nMinPeggyHeight) //latest block known is peggy time, this one should be as well
                 {
                     //bitcoindark: create peggybase transaction for this block
                     CTransaction peggy;
