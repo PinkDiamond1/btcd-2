@@ -1408,7 +1408,11 @@ const CTxOut& CTransaction::GetOutputFor(const CTxIn& input, const MapPrevTx& in
 
 int64_t CTransaction::GetValueIn(const MapPrevTx& inputs) const
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return 0;
     
     int64_t nResult = 0;
@@ -1422,7 +1426,11 @@ int64_t CTransaction::GetValueIn(const MapPrevTx& inputs) const
 
 unsigned int CTransaction::GetP2SHSigOpCount(const MapPrevTx& inputs) const
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return 0;
     
     unsigned int nSigOps = 0;
