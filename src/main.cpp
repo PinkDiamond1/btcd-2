@@ -2237,6 +2237,8 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
     if (IsPeggyTime())
     {
         //bitcoindark: third transaction must be peggy, the rest must not be
+        if (vtx.empty() || !vtx[2].IsPeggyBase())
+            return DoS(100, error("CheckBlock() : third tx is not peggybase"));
         for (unsigned int i = 3; i < vtx.size(); i++)
             if (vtx[i].IsPeggyBase())
                 return DoS(100, error("CheckBlock : more than one peggybase"));
