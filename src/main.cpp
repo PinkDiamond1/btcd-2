@@ -577,13 +577,16 @@ bool CTransaction::CheckTransaction() const
         vInOutPoints.insert(txin.prevout);
         #endif
     }
+    uint8_t minScriptSize = 2;
     #ifdef PEGGY
+    if(IsPeggyBase())
+        minScriptSize = 0;
     if (IsCoinBase() || IsPeggyBase())
     #else
     if (IsCoinBase())
     #endif
     {
-        if (vin[0].scriptSig.size() < 2 || vin[0].scriptSig.size() > 100)
+        if (vin[0].scriptSig.size() < minScriptSize || vin[0].scriptSig.size() > 100)
             return DoS(100, error("CTransaction::CheckTransaction() : coinbase script size is invalid"));
     }
     else
