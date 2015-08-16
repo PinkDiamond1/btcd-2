@@ -667,7 +667,11 @@ public:
     std::string ToString() const
     {
         std::string str;
-        str += IsCoinBase()? "Coinbase" : (IsCoinStake()? "Coinstake" : "CTransaction");
+        #ifdef PEGGY
+        str += IsCoinBase()? "Coinbase" : (IsCoinStake()? "Coinstake" : (IsPeggyBase()? "PeggyBase":"CTransaction"));
+        #else
+        str += IsCoinBase()? "Coinbase" : (IsCoinStake()? "Coinstake" :"CTransaction");
+        #endif
         str += strprintf("(hash=%s, nTime=%d, ver=%d, vin.size=%"PRIszu", vout.size=%"PRIszu", nLockTime=%d)\n",
             GetHash().ToString().substr(0,10).c_str(),
             nTime,
