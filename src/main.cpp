@@ -1468,11 +1468,15 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             if (prevout.n >= txPrev.vout.size() || prevout.n >= txindex.vSpent.size())
                 return DoS(100, error("ConnectInputs() : %s prevout.n out of range %d %"PRIszu" %"PRIszu" prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.n, txPrev.vout.size(), txindex.vSpent.size(), prevout.hash.ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
             
-            // If prev is coinbase or coinstake, check that it's matured
+            // If prev is coinbase or coinstake or peggybase, check that it's matured
+            #ifdef PEGGY
+            if (txPrev.IsCoinBase() || txPrev.IsCoinStake() || txPrev.IsPeggyBase())
+            #else
             if (txPrev.IsCoinBase() || txPrev.IsCoinStake())
+            #endif
                 for (const CBlockIndex* pindex = pindexBlock; pindex && pindexBlock->nHeight - pindex->nHeight < nCoinbaseMaturity; pindex = pindex->pprev)
                     if (pindex->nBlockPos == txindex.pos.nBlockPos && pindex->nFile == txindex.pos.nFile)
-                        return error("ConnectInputs() : tried to spend %s at depth %d", txPrev.IsCoinBase() ? "coinbase" : "coinstake", pindexBlock->nHeight - pindex->nHeight);
+                        return error("ConnectInputs() : tried to spend %s at depth %d", txPrev.IsCoinBase() ? "coinbase" : (txPrev.IsPeggyBase() ? "peggybase" : "coinstake"), pindexBlock->nHeight - pindex->nHeight);
             
             // ppcoin: check transaction timestamp
             if (txPrev.nTime > nTime)
