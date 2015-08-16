@@ -1310,7 +1310,7 @@ bool CTransaction::DisconnectInputs(CTxDB& txdb)
     // reorganized away. This is only possible if this transaction was completely
     // spent, so erasing it would be a no-op anyway.
     txdb.EraseTxIndex(*this);
-    
+
     return true;
 }
 
@@ -1323,8 +1323,11 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes
     // or because the transaction is malformed (in which case the transaction should
     // be dropped).  If tx is definitely invalid, fInvalid will be set to true.
     fInvalid = false;
-    
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return true; // Coinbase transactions have no inputs to fetch.
     
     for (unsigned int i = 0; i < vin.size(); i++)
