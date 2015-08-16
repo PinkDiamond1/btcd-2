@@ -567,7 +567,6 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
                         if ( orderbook_verifymatch(dir,baseid,relid,testprice,volume,items[0],items[1],cJSON_GetObjectItem(json,"buyer"),cJSON_GetObjectItem(json,"seller")) < 0 )
                         {
                             printf("orderbook_verifymatch failed dir.%d %s/%s testprice %f %llu %f || %llu %f\n(%s)",dir,base,rel,testprice,(long long)refbaseid,baseprice,(long long)refrelid,relprice,retstr);//, getchar();
-                            getchar();
                         } else printf("VERIFIED <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< iter.%d dir.%d %s/%s price %f vol %f\n",iter,dir,base,rel,price,volume);
                         free_json(json);
                         if ( 0 && rb->numquotes > 1 )

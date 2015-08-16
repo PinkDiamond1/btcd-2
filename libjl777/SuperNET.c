@@ -627,7 +627,7 @@ int main(int argc,const char *argv[])
         char digeststr[33],*str = "abc";
         calc_md5(digeststr,str,(int32_t)strlen(str));
         printf("(%s) -> (%s)\n",str,digeststr);
-        getchar();
+        //getchar();
     }
     while ( 0 )
     {

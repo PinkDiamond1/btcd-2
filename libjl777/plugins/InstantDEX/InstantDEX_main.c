@@ -30,6 +30,8 @@
 #include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
+static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo", "quadriga" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
+
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory"
 
 #define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "respondtx"
@@ -46,24 +48,9 @@ cJSON *Lottostats_json;
 cJSON *InstantDEX_lottostats();
 
 #include "NXT_tx.h"
+#include "trades.h"
 #include "quotes.h"
 #include "atomic.h"
-
-void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
-{
-    char *retstr;
-    return;
-    printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d | expires in %ld\n",(long long)iQ->quoteid,numtx,updateNXT,iQ->timestamp+iQ->duration-time(NULL));
-    if ( (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(1,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
-    {
-        printf("automatched order!\n");
-        free(retstr);
-    }
-}
-
-void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
-{
-}
 
 uint32_t prices777_NXTBLOCK;
 int32_t InstantDEX_idle(struct plugin_info *plugin)
@@ -76,9 +63,12 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            //printf("Dequeued InstantDEX.(%s)\n",jsonstr);
+            printf("Dequeued InstantDEX.(%s)\n",jsonstr);
             if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
+            {
+                printf("busdata.(%s)\n",str);
                 free(str);
+            }
             free_json(json);
             n++;
         } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
@@ -135,9 +125,9 @@ int32_t get_assetname(char *name,uint64_t assetid)
 uint64_t prices777_equiv(uint64_t assetid)
 {
     char *str;
-    if ( (str= is_MGWasset(assetid)) != 0 )
+    if ( (str= is_MGWasset(0,assetid)) != 0 )
         return(stringbits(str));
-               return(assetid);
+    return(assetid);
 }
 
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
@@ -162,7 +152,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
                 relid = calc_nxt64bits(rel);
             else relid = is_MGWcoin(rel);
         }
-        else if ( (str= is_MGWasset(relid)) != 0 )
+        else if ( (str= is_MGWasset(0,relid)) != 0 )
             strcpy(rel,str);
         if ( baseid == 0 && base[0] != 0 )
         {
@@ -170,7 +160,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
                 baseid = calc_nxt64bits(base);
             else baseid = is_MGWcoin(base);
         }
-        else if ( (str= is_MGWasset(baseid)) != 0 )
+        else if ( (str= is_MGWasset(0,baseid)) != 0 )
             strcpy(base,str);
         if ( base[0] == 0 )
         {
@@ -268,45 +258,103 @@ cJSON *InstantDEX_lottostats()
     return(cJSON_Parse(buf));
 }
 
+int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json,char *origargstr)
+{
+    uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize; char key[1024],buf[64];
+    memset(iQ,0,sizeof(*iQ));
+    iQ->baseid = j64bits(json,"baseid"); iQ->relid = j64bits(json,"relid");
+    iQ->baseamount = j64bits(json,"baseamount"), iQ->relamount = j64bits(json,"relamount");
+    iQ->s.vol = jdouble(json,"volume"); iQ->s.price = jdouble(json,"price");
+    if ( (iQ->s.timestamp= juint(json,"timestamp")) == 0 )
+        iQ->s.timestamp = (uint32_t)time(NULL);
+    copy_cJSON(gui,jobj(json,"gui")), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
+    iQ->s.automatch = juint(json,"automatch");
+    iQ->s.minperc = juint(json,"minperc");
+    iQ->s.duration = juint(json,"duration");
+    copy_cJSON(exchangestr,jobj(json,"exchange"));
+    if ( find_exchange(&exchangeid,exchangestr) == 0 )
+        exchangeid = -1;
+    iQ->exchangeid = exchangeid;
+    copy_cJSON(base,jobj(json,"base")), copy_cJSON(rel,jobj(json,"rel")), copy_cJSON(name,jobj(json,"name"));
+    InstantDEX_name(key,&keysize,exchangestr,name,base,&iQ->baseid,rel,&iQ->relid);
+    iQ->s.basebits = stringbits(base);
+    iQ->s.relbits = stringbits(rel);
+    iQ->s.offerNXT = j64bits(json,"offerNXT");
+    iQ->s.quoteid = j64bits(json,"quoteid");
+    if ( jstr(json,"ask") != 0 || jstr(json,"placeask") != 0 )
+        iQ->s.isask = 1;
+    if ( iQ->baseamount == 0 || iQ->relamount == 0 )
+    {
+        if ( iQ->s.price <= SMALLVAL || iQ->s.vol <= SMALLVAL )
+            return(-1);
+        set_best_amounts(&iQ->baseamount,&iQ->relamount,iQ->s.price,iQ->s.vol);
+    }
+    if ( iQ->s.quoteid == 0 )
+        iQ->s.quoteid = calc_quoteid(iQ);
+    else if ( iQ->s.quoteid != calc_quoteid(iQ) )
+    {
+        printf("bidask_parse quoteid.%llu != calc.%llu\n",(long long)iQ->s.quoteid,(long long)calc_quoteid(iQ));
+        return(-1);
+    }
+    if ( iQ->s.price > SMALLVAL && iQ->s.vol > SMALLVAL )
+    {
+        buf[0] = 0, _set_assetname(&basemult,buf,0,iQ->baseid);
+        printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->baseid,buf,(long long)basemult);
+        buf[0] = 0, _set_assetname(&relmult,buf,0,iQ->relid);
+        printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->relid,buf,(long long)relmult);
+        //basemult = get_assetmult(iQ->baseid), relmult = get_assetmult(iQ->relid);
+        baseamount = (iQ->baseamount + basemult/2) / basemult, baseamount *= basemult;
+        relamount = (iQ->relamount + relmult/2) / relmult, relamount *= relmult;
+        if ( iQ->s.price != 0. && iQ->s.vol != 0 )
+        {
+            price = prices777_price_volume(&volume,baseamount,relamount);
+            if ( fabs(iQ->s.price - price)/price > 0.001 )
+            {
+                printf("cant create accurate price ref.(%f %f) -> (%f %f)\n",iQ->s.price,iQ->s.vol,price,volume);
+                return(-1);
+            }
+        }
+    }
+    return(0);
+}
+
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 {
     char *prices777_allorderbooks();
     char *InstantDEX_openorders();
     char *InstantDEX_tradehistory();
-    char *InstantDEX_cancelorder(uint64_t orderid);
-    char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
-    cJSON *json; uint64_t orderid,baseid,relid,assetbits; uint32_t maxdepth; int32_t dir,invert,keysize,allfields; struct prices777 *prices;
+    char *InstantDEX_cancelorder(uint64_t sequenceid,uint64_t quoteid);
+    char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD]; struct InstantDEX_quote iQ;
+    cJSON *json; uint64_t assetbits,sequenceid; uint32_t maxdepth; int32_t invert=0,keysize,allfields; struct prices777 *prices;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        // instantdex orders and orderbooks, openorders/cancelorder/tradehistory
-        // placebid/ask, makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
+        // makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
         // autofill and automatch
         // tradehistory and other stats -> peggy integration
-        baseid = j64bits(json,"baseid"), relid = j64bits(json,"relid");
-        copy_cJSON(name,jobj(json,"name"));
-        copy_cJSON(base,jobj(json,"base"));
-        copy_cJSON(rel,jobj(json,"rel"));
+        bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,jsonstr);
+        if ( iQ.s.offerNXT == 0 )
+            iQ.s.offerNXT = SUPERNET.my64bits;
         copy_cJSON(method,jobj(json,"method"));
-        orderid = j64bits(json,"orderid");
+        if ( (sequenceid= j64bits(json,"orderid")) == 0 )
+            sequenceid = j64bits(json,"sequenceid");
         allfields = juint(json,"allfields");
         if ( (maxdepth= juint(json,"maxdepth")) <= 0 )
             maxdepth = MAX_DEPTH;
-        copy_cJSON(exchangestr,jobj(json,"exchange"));
         if ( exchangestr[0] == 0 )
         {
-            if ( baseid != 0 && relid != 0 )
+            if ( iQ.baseid != 0 && iQ.relid != 0 )
                 strcpy(exchangestr,"nxtae");
             else strcpy(exchangestr,"basket");
         }
-        assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
+        assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&iQ.baseid,rel,&iQ.relid);
         if ( strcmp(method,"allorderbooks") == 0 )
             retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
             retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
         else if ( strcmp(method,"cancelorder") == 0 )
-            retstr = InstantDEX_cancelorder(orderid);
+            retstr = InstantDEX_cancelorder(sequenceid,iQ.s.quoteid);
         else if ( strcmp(method,"orderstatus") == 0 )
-            retstr = InstantDEX_orderstatus(orderid);
+            retstr = InstantDEX_orderstatus(sequenceid,iQ.s.quoteid);
         else if ( strcmp(method,"tradehistory") == 0 )
             retstr = InstantDEX_tradehistory();
         else if ( strcmp(method,"lottostats") == 0 )
@@ -330,23 +378,24 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
             retstr = clonestr(retbuf);
         }
-        if ( strcmp(exchangestr,"active") == 0 && strcmp(method,"orderbook") == 0 )
-            retstr = prices777_activebooks(name,base,rel,baseid,relid,maxdepth,allfields,juint(json,"tradeable"));
-        if ( retstr == 0 && (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
+        else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
+            return(InstantDEX_placebidask(0,sequenceid,exchangestr,name,base,rel,&iQ));
+        else if ( strcmp(exchangestr,"active") == 0 && strcmp(method,"orderbook") == 0 )
+            retstr = prices777_activebooks(name,base,rel,iQ.baseid,iQ.relid,maxdepth,allfields,juint(json,"tradeable"));
+        else if ( (prices= prices777_find(&invert,iQ.baseid,iQ.relid,exchangestr)) == 0 )
         {
-            if ( prices777_equiv(prices->baseid) == prices777_equiv(baseid) && prices777_equiv(prices->relid) == prices777_equiv(relid) )
-                invert = 0;
-            else if ( prices777_equiv(prices->baseid) == prices777_equiv(relid) && prices777_equiv(prices->relid) == prices777_equiv(baseid) )
-                invert = 1;
-            else invert = 0, printf("baserel not matching (%s %s) %llu %llu vs (%s %s) %llu %llu\n",prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,base,rel,(long long)baseid,(long long)relid);
-            if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
+            if ( (prices= prices777_poll(exchangestr,name,base,iQ.baseid,rel,iQ.relid)) != 0 )
             {
-                if ( strcmp(method,"placebid") == 0 )
-                    dir = 1 - invert*2;
-                else dir = -(1 - invert*2);
-                return(InstantDEX_quote(localaccess,remoteaddr,prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"),juint(json,"automatch"),juint(json,"duration"),jstr(json,"gui")));
+                if ( prices777_equiv(prices->baseid) == prices777_equiv(iQ.baseid) && prices777_equiv(prices->relid) == prices777_equiv(iQ.relid) )
+                    invert = 0;
+                else if ( prices777_equiv(prices->baseid) == prices777_equiv(iQ.relid) && prices777_equiv(prices->relid) == prices777_equiv(iQ.baseid) )
+                    invert = 1;
+                else invert = 0, printf("baserel not matching (%s %s) %llu %llu vs (%s %s) %llu %llu\n",prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,base,rel,(long long)iQ.baseid,(long long)iQ.relid);
             }
-            else if ( strcmp(method,"disable") == 0 )
+        }
+        if ( retstr == 0 && prices != 0 )
+        {
+            if ( strcmp(method,"disable") == 0 )
             {
                 if ( prices != 0 )
                 {
@@ -364,12 +413,12 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                 }
                 else return(clonestr("{\"error\":\"no prices to enable\"}"));
             }
-    //printf("return invert.%d allfields.%d (%s %s) vs (%s %s)  [%llu %llu] vs [%llu %llu]\n",invert,allfields,base,rel,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,(long long)baseid,(long long)relid);
             else if ( strcmp(method,"orderbook") == 0 )
             {
-                if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
+                if ( maxdepth < MAX_DEPTH )
+                    return(prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices,&prices->O,maxdepth,allfields));
+                else if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
                 {
-                    char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct prices777 *prices,struct prices777_basketinfo *OB,int32_t maxdepth,int32_t allflag);
                     retstr = prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices,&prices->O,MAX_DEPTH,allfields);
                     portable_mutex_lock(&prices->mutex);
                     if ( prices->orderbook_jsonstrs[invert][allfields] != 0 )
@@ -381,92 +430,26 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                 }
                 if ( retstr != 0 )
                     retstr = clonestr(retstr);
-                if ( 0 && maxdepth != MAX_DEPTH && retstr != 0 )
-                {
-                    int32_t i; cJSON *bids,*asks,*bids2,*asks2,*clone;
-                    if ( (json= cJSON_Parse(retstr)) != 0 )
-                    {
-                        bids = jobj(json,"bids");
-                        asks = jobj(json,"asks");
-                        //printf("parsed bids.%p asks.%p\n",bids,asks);
-                        if ( bids != 0 && asks != 0 )
-                        {
-                            bids2 = cJSON_CreateObject();
-                            asks2 = cJSON_CreateObject();
-                            for (i=0; i<maxdepth; i++)
-                            {
-                                jaddi(bids2,jitem(bids,i));
-                                jaddi(asks2,jitem(asks,i));
-                            }
-                            clone = cJSON_Duplicate(json,0);
-                            printf("new.(%s) (%s)\n",jprint(bids2,0),jprint(asks2,0));
-                            jadd(clone,"bids",bids2), jadd(clone,"asks",asks2);
-                            retstr = jprint(clone,1);
-                        }
-                        free_json(json);
-                    }
-                }
             }
         }
         //if ( Debuglevel > 2 )
-            printf("(%s) %p exchange.(%s) base.(%s) %llu rel.(%s) %llu | name.(%s) %llu\n",retstr!=0?retstr:"",prices,exchangestr,base,(long long)baseid,rel,(long long)relid,name,(long long)assetbits);
+            printf("(%s) %p exchange.(%s) base.(%s) %llu rel.(%s) %llu | name.(%s) %llu\n",retstr!=0?retstr:"",prices,exchangestr,base,(long long)iQ.baseid,rel,(long long)iQ.relid,name,(long long)assetbits);
     }
     return(retstr);
 }
 
-int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON *json,char *origargstr)
+char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,char *origargstr)
 {
-    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],name[MAX_JSON_FIELD],key[512];
-    double price,volume; int32_t keysize,automatch; struct exchange_info *exchange;
-    memset(iQ,0,sizeof(*iQ));
-    iQ->baseid = j64bits(json,"baseid"); iQ->relid = j64bits(json,"relid");
-    volume = jdouble(json,"volume"); price = jdouble(json,"price");
-    iQ->timestamp = juint(json,"timestamp");
-    iQ->baseamount = j64bits(json,"baseamount");
-    iQ->relamount = j64bits(json,"relamount");
-    copy_cJSON(gui,jobj(json,"gui")), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
-    automatch = juint(json,"automatch");
-    iQ->minperc = juint(json,"minperc");
-    iQ->duration = juint(json,"duration");
-    copy_cJSON(exchangestr,jobj(json,"exchange"));//, iQ->exchangeid = exchangeid(exchange);
-    InstantDEX_name(key,&keysize,exchangestr,name,base,&iQ->baseid,rel,&iQ->relid);
-    if ( (exchange= exchange_find(exchangestr)) != 0 )
-        iQ->exchangeid = exchange->exchangeid;
-    iQ->nxt64bits = j64bits(json,"offerNXT");
-    copy_cJSON(base,jobj(json,"base")), copy_cJSON(rel,jobj(json,"rel")), copy_cJSON(name,jobj(json,"name"));
-    iQ->isask = (dir < 0);
-    return(0);
-}
-
-char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,char *origargstr)
-{
-    char offerNXT[MAX_JSON_FIELD],*checkstr; struct InstantDEX_quote iQ;
+    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD];
+    struct InstantDEX_quote iQ;
     copy_cJSON(offerNXT,jobj(json,"offerNXT"));
+    //printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
-        if ( bidask_parse(&iQ,1,json,origargstr) >= 0 )
-        {
-            if ( (checkstr= placequote_str(&iQ,jdouble(json,"price"),jdouble(json,"volume"))) != 0 )
-                printf("NETWORKBID.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
-            create_iQ(&iQ);
-        }
-    } else printf("got my bid from network (%s)\n",origargstr);
-    return(0);
-}
-
-char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,char *origargstr)
-{
-    char offerNXT[MAX_JSON_FIELD],*checkstr; struct InstantDEX_quote iQ;
-    copy_cJSON(offerNXT,jobj(json,"offerNXT"));
-    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
-    {
-        if ( bidask_parse(&iQ,-1,json,origargstr) >= 0 )
-        {
-            if ( (checkstr= placequote_str(&iQ,jdouble(json,"price"),jdouble(json,"volume"))) != 0 )
-                printf("NETWORKASK.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
-            create_iQ(&iQ);
-        }
-    } else printf("got my ask from network (%s)\n",origargstr);
+        if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,origargstr) == 0 )
+            return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr,name,base,rel,&iQ));
+        else printf("error with incoming bidask\n");
+    } else printf("got my bidask from network (%s)\n",origargstr);
     return(0);
 }
 
@@ -480,15 +463,14 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 void init_exchanges(cJSON *json)
 {
-    static char *exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
     cJSON *array; int32_t i,n;
     find_exchange(0,INSTANTDEX_NAME);
     find_exchange(0,INSTANTDEX_NXTAEUNCONF);
     find_exchange(0,INSTANTDEX_NXTAENAME);
     find_exchange(0,INSTANTDEX_BASKETNAME);
     find_exchange(0,INSTANTDEX_ACTIVENAME);
-    for (i=0; i<sizeof(exchanges)/sizeof(*exchanges); i++)
-        find_exchange(0,exchanges[i]);
+    for (i=0; i<sizeof(Supported_exchanges)/sizeof(*Supported_exchanges); i++)
+        find_exchange(0,Supported_exchanges[i]);
     prices777_initpair(-1,0,0,0,0,0.,0,0,0,0);
     if ( (array= jarray(&n,json,"baskets")) != 0 )
     {
@@ -564,10 +546,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( SUPERNET.iamrelay <= 1 )
         {
-            if ( strcmp(methodstr,"bid") == 0 )
-                retstr = bid_func(0,1,sender,json,jsonstr);
-            else if ( strcmp(methodstr,"ask") == 0 )
-                retstr = ask_func(0,1,sender,json,jsonstr);
+            if ( strcmp(methodstr,"bid") == 0 || strcmp(methodstr,"ask") == 0 )
+                retstr = bidask_func(0,1,sender,json,jsonstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));

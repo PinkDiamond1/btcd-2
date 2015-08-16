@@ -55,17 +55,17 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecr
 
 int32_t nonce_leverage(char *broadcaststr)
 {
-    int32_t leverage = 4;
+    int32_t leverage = 3;
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 6;
+            leverage = 5;
         else if ( strcmp(broadcaststr,"join") == 0 )
             leverage = 9;
         else if ( strcmp(broadcaststr,"servicerequest") == 0 )
-            leverage = 6;
+            leverage = 4;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
-            leverage = 5;
+            leverage = 4;
         else if ( atoi(broadcaststr) != 0 )
             leverage = atoi(broadcaststr);
     }

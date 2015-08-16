@@ -378,7 +378,7 @@ void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
         safecopy(queue->name,name,sizeof(queue->name));
     if ( item == 0 )
     {
-        printf("FATAL type error: queueing empty value\n"), getchar();
+        printf("FATAL type error: queueing empty value\n");//, getchar();
         return;
     }
     lock_queue(queue);
@@ -533,7 +533,7 @@ uint16_t wait_for_myipaddr(char *ipaddr)
 {
     uint16_t port = 0;
     printf("need a portable way to find IP addr\n");
-    getchar();
+    //getchar();
     return(port);
 }
 

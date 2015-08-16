@@ -423,7 +423,7 @@ int32_t serdes777_rwinout(int32_t rwflag,int32_t inoutflag,void *inout,HUFF *TX)
     if ( a < 0 || b < 0 || c < 0 || d < 0 )
     {
         printf("serdes777_rwinput.%d error encoding type.%d %d %d %d %d\n",rwflag,type,a,b,c,d);
-        getchar();
+        //getchar();
         return(-1);
     }
     return(a + b + c + d);

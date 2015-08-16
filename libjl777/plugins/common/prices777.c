@@ -455,7 +455,7 @@ int32_t prices777_basenum(char *base)
         for (i=0; i<sizeof(CURRENCIES)/sizeof(*CURRENCIES); i++)
             for (j=0; j<sizeof(CURRENCIES)/sizeof(*CURRENCIES); j++)
                 if ( i != j && strcmp(CURRENCIES[i],CURRENCIES[j]) == 0 )
-                    printf("duplicate.(%s)\n",CURRENCIES[i]), getchar();
+                    printf("duplicate.(%s)\n",CURRENCIES[i]);//, getchar();
     }
     for (i=0; i<sizeof(CURRENCIES)/sizeof(*CURRENCIES); i++)
         if ( strcmp(CURRENCIES[i],base) == 0 )
@@ -471,7 +471,7 @@ int32_t prices777_contractnum(char *base,char *rel)
         for (i=0; i<sizeof(CONTRACTS)/sizeof(*CONTRACTS); i++)
             for (j=0; j<sizeof(CONTRACTS)/sizeof(*CONTRACTS); j++)
                 if ( i != j && strcmp(CONTRACTS[i],CONTRACTS[j]) == 0 )
-                    printf("duplicate.(%s)\n",CONTRACTS[i]), getchar();
+                    printf("duplicate.(%s)\n",CONTRACTS[i]);//, getchar();
     }
     if ( base != 0 && base[0] != 0 && rel != 0 && rel[0] != 0 )
     {
@@ -694,7 +694,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {"bittrex", prices777_bittrex, bittrex_supports, bittrex_trade }, {"okcoin", prices777_okcoin, okcoin_supports },
         {"huobi", prices777_huobi, huobi_supports }, {"bityes", prices777_bityes, bityes_supports },
         {"coinbase", prices777_coinbase, coinbase_supports }, {"lakebtc", prices777_lakebtc, lakebtc_supports },
-        {"exmo", prices777_exmo, exmo_supports },
+        {"exmo", prices777_exmo, exmo_supports }, {"quadriga", prices777_quadriga, quadriga_supports },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
     int32_t i,rellen; char basebuf[64],relbuf[64]; struct exchange_info *exchangeptr;

@@ -315,7 +315,7 @@ int32_t peggy_islegal_amount(struct peggy_entry *entry,struct peggy_info *PEGS,s
     if ( entry->baseid == entry->relid )
     {
         printf("illegal baseid.%d relid.%d (%s)\n",PEG->name.baseid,PEG->name.relid,PEG->name.name);
-        getchar();
+        //getchar();
         return(1);
     }
     if ( PEG->name.id == 0 )

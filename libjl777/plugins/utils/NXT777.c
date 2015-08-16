@@ -842,16 +842,34 @@ int32_t unstringbits(char *buf,uint64_t bits)
     return(i);
 }
 
+int32_t is_native_crypto(char *name,uint64_t bits)
+{
+    int32_t i,n;
+    if ( (n= (int32_t)strlen(name)) > 0 || (n= unstringbits(name,bits)) <= 5 )
+    {
+        for (i=0; i<n; i++)
+        {
+            if ( (name[i] >= '0' && name[i] <= '9') || (name[i] >= 'A' && name[i] <= 'Z') )// || (name[i] >= '0' && name[i] <= '9') )
+                continue;
+            printf("(%s) is not native crypto\n",name);
+            return(0);
+        }
+        printf("(%s) is native crypto\n",name);
+        return(1);
+    }
+    return(0);
+}
+
 int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
 {
     int32_t type = 0,decimals = -1; cJSON *json=0; char assetidstr[64];
+    *multp = 1;
     if ( assetid != 0 )
     {
-        if ( is_native_crypto(buf,assetid) != 0 )
-        {
-            *multp = 1;
+        if ( is_MGWasset(multp,assetid) != 0 )
             return(0);
-        }
+        if ( is_native_crypto(buf,assetid) != 0 )
+            return(0);
     }
     if ( jsonstr == 0 )
     {
@@ -874,7 +892,7 @@ int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
                         {
                             if ( get_cJSON_int(json,"errorCode") != 0 )
                             {
-                                printf("(%s) not asset and not currency (%s)\n",assetidstr,jsonstr), getchar();
+                                printf("(%s) not asset and not currency (%s)\n",assetidstr,jsonstr);//, getchar();
                                 free_json(json), free(jsonstr);
                                 return(-1);
                             }

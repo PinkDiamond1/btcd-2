@@ -1051,7 +1051,7 @@ void txnet777_test(char *protocol,char *path,char *agent)
     for (i=0; i<numthreads; i++)
         portable_thread_create((void *)txnet777_poll,TXNETS[i]);
     Startmilli = milliseconds();
-    getchar();
+   // getchar();
     
 }
 #endif

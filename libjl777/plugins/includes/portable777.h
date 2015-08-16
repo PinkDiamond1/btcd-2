@@ -139,7 +139,7 @@ struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_
 int32_t is_native_crypto(char *name,uint64_t bits);
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp);
 uint64_t is_MGWcoin(char *name);
-char *is_MGWasset(uint64_t);
+char *is_MGWasset(uint64_t *multp,uint64_t assetid);
 int32_t unstringbits(char *buf,uint64_t bits);
 int32_t get_assetname(char *name,uint64_t assetid);
 
@@ -169,17 +169,16 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 #define INSTANTDEX_NXTAEID 2
 #define MAX_EXCHANGES 64
 
+struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,automatch:3,minperc:7; };
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
-    uint64_t quoteid; // must be here
-    uint64_t baseid,baseamount,relid,relamount,nxt64bits;
-    uint32_t timestamp,duration;
-    uint8_t closed:1,sent:1,matched:1,isask:1,pad2:4,minperc:7;
+    struct InstantDEX_shared s; // must be here
+    uint64_t baseid,baseamount,relid,relamount;
     char exchangeid,gui[9];
 };
 
-struct prices777_order { struct prices777 *source; double price,vol,wt,ratio; uint64_t id,assetid,quoteid; uint32_t timestamp; uint16_t slot_ba; };
+struct prices777_order { struct InstantDEX_shared s; struct prices777 *source; uint64_t id; double wt,ratio; uint16_t slot_ba; };
 struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; char base[64],rel[64]; };
 struct prices777_orderentry { struct prices777_order bid,ask; };
 #define MAX_GROUPS 8
@@ -222,6 +221,7 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade);
 uint64_t prices777_equiv(uint64_t assetid);
 void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB);
 char *prices777_activebooks(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,int32_t maxdepth,int32_t allflag,int32_t tradeable);
+char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct prices777 *prices,struct prices777_basketinfo *OB,int32_t maxdepth,int32_t allflag);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);

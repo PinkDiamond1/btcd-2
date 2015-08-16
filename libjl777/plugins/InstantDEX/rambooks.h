@@ -167,7 +167,7 @@ struct rambook_info *get_rambook(char *_base,uint64_t baseid,char *_rel,uint64_t
     {
         if ( relid != NXT_ASSETID || is_native_crypto(base,baseid) != 0 )
         {
-            printf("illegal NXT rambook %llu/%llu\n",(long long)baseid,(long long)relid), getchar();
+            printf("illegal NXT rambook %llu/%llu\n",(long long)baseid,(long long)relid);//, getchar();
             return(0);
         }
     }

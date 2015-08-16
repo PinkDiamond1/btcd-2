@@ -451,8 +451,8 @@ void set_basereliQ(struct InstantDEX_quote *iQ,cJSON *obj)
     char exchange[64]; int32_t exchangeid;
     iQ->baseamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
     iQ->relamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
-    iQ->quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
-    iQ->nxt64bits = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
+    iQ->s.quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
+    iQ->s.offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
     copy_cJSON(exchange,cJSON_GetObjectItem(obj,"exchange"));
     find_exchange(&exchangeid,exchange);
     iQ->exchangeid = exchangeid;
@@ -464,9 +464,9 @@ char *set_combohalf(struct pendingpair *pt,struct InstantDEX_quote *iQ,struct pe
     char *retstr;
     pt->baseamount = offer->ratio * iQ->baseamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
     pt->relamount = offer->ratio * iQ->relamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
-    pt->quoteid = iQ->quoteid;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
-    pt->offerNXT = iQ->nxt64bits;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
-    iQ_exchangestr(pt->exchange,iQ);
+    pt->quoteid = iQ->s.quoteid;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
+    pt->offerNXT = iQ->s.offerNXT;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
+    strcpy(pt->exchange,exchange_str(iQ->exchangeid));
     //copy_cJSON(pt->exchange,cJSON_GetObjectItem(obj,"exchange"));
     pt->nxt64bits = offer->nxt64bits, pt->baseid = baseid, pt->relid = relid, pt->ratio = offer->ratio;
     pt->price = prices777_price_volume(&pt->volume,pt->baseamount,pt->relamount);
@@ -688,14 +688,14 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
     double price,vol,refprice,refvol;
     struct InstantDEX_quote *iQ;
     uint64_t baseamount,relamount;
-    if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->matched == 0 )
+    if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->s.matched == 0 )
     {
         if ( dir == 0 )
         {
             printf("need to validate iQ details\n"); // combo orderbook entries, polling, automatch
-            polarity = (iQ->isask == 0) ? -1 : 1;
+            polarity = (iQ->s.isask == 0) ? -1 : 1;
             dir = polarity;
-        } else polarity = (iQ->isask != 0) ? -1 : 1;
+        } else polarity = (iQ->s.isask != 0) ? -1 : 1;
         if ( Debuglevel > 1 )
             printf("found quoteid.%llu polarity.%d %llu/%llu vs %llu dir.%d\n",(long long)quoteid,polarity,(long long)iQ->baseid,(long long)iQ->relid,(long long)assetid,dir);
         //found quoteid.7555841528599494229 polarity.1 6932037131189568014/6854596569382794790 vs 6854596569382794790 dir.1
@@ -709,7 +709,7 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
             else price = prices777_price_volume(&vol,relamount,baseamount), refprice = prices777_price_volume(&refvol,iQ->relamount,iQ->baseamount);
             if ( Debuglevel > 1 )
                 printf("polarity.%d dir.%d (%f %f) vs ref.(%f %f)\n",polarity,dir,price,vol,refprice,refvol);
-            if ( vol >= refvol*(double)iQ->minperc/100. && vol <= refvol )
+            if ( vol >= refvol*(double)iQ->s.minperc/100. && vol <= refvol )
             {
                 if ( (dir > 0 && price <= (refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL)) || (dir < 0 && price >= (refprice / (1. + INSTANTDEX_PRICESLIPPAGE) - SMALLVAL)) )
                     return(iQ);
@@ -758,7 +758,7 @@ char *respondtx(char *NXTaddr,char *NXTACCTSECRET,char *sender,char *cmdstr,uint
                                     sprintf(retbuf,"{\"error\":[\"%s\"],\"submit_txid\":\"%llu\",\"quoteid\":\"%llu\"}",submitstr == 0 ? "submit error" : submitstr,(long long)txid,(long long)quoteid), free(submitstr);
                                 else
                                 {
-                                    iQ->matched = 1;
+                                    iQ->s.matched = 1;
                                     sprintf(retbuf,"{\"result\":\"%s\",:\"submit_txid\":\"%llu\",:\"quoteid\":\"%llu\"}",cmdstr,(long long)txid,(long long)quoteid);
                                 }
                             } else printf("invalid offer or quoteid mismatch %llu vs %llu\n",(long long)checkquoteid,(long long)quoteid);

@@ -220,8 +220,8 @@ int32_t badass_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port)
     strcpy(servers[n++],"89.248.160.240");
     strcpy(servers[n++],"89.248.160.241");
     strcpy(servers[n++],"89.248.160.242");
-    strcpy(servers[n++],"89.248.160.243");
-    strcpy(servers[n++],"89.248.160.244");
+    //strcpy(servers[n++],"89.248.160.243");
+    //strcpy(servers[n++],"89.248.160.244");
     //strcpy(servers[n++],"89.248.160.245");
     return(n);
 }
@@ -260,7 +260,7 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t 
     strcpy(failsafes[numfailsafes++],"5.9.102.210");
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
-    lbsock = _lb_socket(port,globalport,relaysport,maxmillis,Bservers,0*m,Cservers,0*n,failsafes,numfailsafes);
+    lbsock = _lb_socket(port,globalport,relaysport,maxmillis,Bservers,m,Cservers,0*n,failsafes,numfailsafes);
     return(lbsock);
 }
 

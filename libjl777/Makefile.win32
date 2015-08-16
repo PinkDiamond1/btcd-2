@@ -76,14 +76,14 @@ test:	all
 	(cd tests; make test)
 
 clean: doesntexist
-	rm libs/libjl777-win32.a SuperNET.exe; rm -f libjl777-win32.a  $(OBJS) *~
+	rm libs/libjl777-win32.a SuperNET; rm -f libjl777-win32.a  $(OBJS) *~
 
 PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp #-I. -Iutils -Iramchain -Icoins -Imgw -I -Isophia -I../includes -I../.. -I../coins -I../ramchain -I../sophia -I../$
 
 
 _echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
 
-_api := rm cgi/*; $(CC) -o cgi/api.cgi -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api.cgi cgi/nxt.cgi; ln cgi/api.cgi cgi/nxts.cgi; ln cgi/api.cgi cgi/port.cgi; ln cgi/api.cgi cgi/ports.cgi; ln cgi/api.cgi cgi/InstantDEX.cgi; ln cgi/api.cgi cgi/echodemo.cgi 
+_api := rm cgi/*; $(CC) -o cgi/api.exe -O2 $(PINCLUDES) api_main.c ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api.exe cgi/nxt.exe; ln cgi/api.exe cgi/nxts.exe; ln cgi/api.exe cgi/port.exe; ln cgi/api.exe cgi/ports.exe; ln cgi/api.exe cgi/InstantDEX.exe; ln cgi/api.exe cgi/echodemo.exe 
 
 _msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) two/msc.c $(PLIBS)
 
@@ -139,7 +139,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET.exe; $(CC) -o SuperNET.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
+    pkill SuperNET; rm SuperNET; $(CC) -o SuperNET.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
 
 #-lz -ldl -lutil -lpcre -lexpat
 
@@ -357,7 +357,7 @@ plugins/agents/nxt: plugins/two/nxt.c
 plugins/agents/two: plugins/two/two.c
 plugins/InstantDEX/InstantDEX_main.o: plugins/InstantDEX/InstantDEX_main.c plugins/InstantDEX/assetids.h plugins/InstantDEX/atomic.h plugins/InstantDEX/bars.h plugins/InstantDEX/exchangepairs.h plugins/InstantDEX/exchanges.h plugins/InstantDEX/feeds.h plugins/InstantDEX/NXT_tx.h plugins/InstantDEX/orderbooks.h plugins/InstantDEX/quotes.h plugins/InstantDEX/rambooks.h plugins/InstantDEX/signals.h plugins/InstantDEX/tradebot.h plugins/InstantDEX/trades.h plugins/InstantDEX/InstantDEX.h
 
-plugins/cgi/api: plugins/agents/api_main.c plugins/ccgi/ccgi.c plugins/ccgi/prefork.c
+plugins/cgi/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/kv777.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
 
