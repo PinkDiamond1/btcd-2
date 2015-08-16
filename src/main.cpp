@@ -1698,7 +1698,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             nTxPos += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
         
         MapPrevTx mapInputs;
+        #ifdef PEGGY
+        if (tx.IsCoinBase() || tx.IsPeggyBase())
+        #else
         if (tx.IsCoinBase())
+        #endif
             nValueOut += tx.GetValueOut();
         else
         {
@@ -1750,6 +1754,10 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if (nStakeReward > nCalculatedStakeReward)
             return DoS(100, error("ConnectBlock() : coinstake pays too much(actual=%"PRId64" vs calculated=%"PRId64")", nStakeReward, nCalculatedStakeReward));
     }
+
+    #ifdef PEGGY
+    //TODO: Check that all peggybase vouts pay the correct amount
+    #endif
     
     // ppcoin: track money supply and mint amount info
     pindex->nMint = nValueOut - nValueIn + nFees;
