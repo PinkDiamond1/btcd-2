@@ -2559,7 +2559,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                     //bitcoindark: create peggybase transaction for this block
                     CTransaction peggy;
                     char paymentScript[256]; //temp script
-                    strcpy(paymentScript, "\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889"); // temp. TODO: add peggypaments here
+                    strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
                     if(wallet.CreatePeggyBase(peggy, paymentScript))
                     {
                         peggy.nTime = nTime;
