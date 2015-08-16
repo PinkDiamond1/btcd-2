@@ -1570,7 +1570,11 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
 
 bool CTransaction::ClientConnectInputs()
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return false;
     
     // Take over previous transactions' spent pointers
