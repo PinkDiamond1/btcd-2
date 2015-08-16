@@ -2443,7 +2443,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
 bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript)
 {
     peggyTx.vin.resize(2);
-
+    
     peggyTx.vin[0].prevout.SetNull();
     peggyTx.vin[0].scriptSig.clear();
 
@@ -2452,8 +2452,7 @@ bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript)
 
     cJSON *json = cJSON_Parse(paymentScript);
 
-    int numOutputs = cJSON_GetArraySize(json);
-    peggyTx.vout.resize(numOutputs);
+    uint32_t numOutputs = cJSON_GetArraySize(json);
 
     CBitcoinAddress address;
     CScript outScript;
