@@ -10,35 +10,6 @@
 
 struct tradehistory { uint64_t assetid,purchased,sold; };
 
-/*struct InstantDEX_quote *prices777_convorder(struct InstantDEX_quote *iQ,struct prices777 *prices,struct prices777_order *order,int32_t dir)
-{
-    uint64_t baseamount,relamount;
-    memset(iQ,0,sizeof(*iQ));
-    set_best_amounts(&baseamount,&relamount,order->s.price,order->s.vol);
-    if ( dir < 0 )
-        iQ->relid = prices->baseid, iQ->relamount = baseamount, iQ->baseid = prices->relid, iQ->baseamount = relamount;
-    else iQ->relid = prices->relid, iQ->relamount = relamount, iQ->baseid = prices->baseid, iQ->baseamount = baseamount;
-    iQ->s = order->s;
-    return(iQ);
-}
-
-int32_t prices777_conviQ(struct prices777_order *order,struct InstantDEX_quote *iQ)
-{
-    struct prices777 *prices; int32_t inverted;
-    memset(order,0,sizeof(*order));
-    if ( (prices= prices777_find(&inverted,iQ->baseid,iQ->relid,INSTANTDEX_NAME)) != 0 )
-    {
-        order->source = prices;
-        order->price = prices777_price_volume(&order->vol,iQ->baseamount,iQ->relamount);
-        order->s = iQ->s;
-        if ( iQ->s.isask != 0 )
-            order->wt = -1;
-        else order->wt = 1;
-        return(0);
-    }
-    return(-1);
-}*/
-
 struct tradehistory *_update_tradehistory(struct tradehistory *hist,uint64_t assetid,uint64_t purchased,uint64_t sold)
 {
     int32_t i = 0;
@@ -222,68 +193,18 @@ char *InstantDEX_tradehistory()
     return(jprint(json,1));
 }
 
-char *InstantDEX_dotrades(struct prices777_order *trades,int32_t numtrades,int32_t dotrade)
-{
-    cJSON *retjson,*retarray,*item; int32_t i;
-    retjson = cJSON_CreateObject(), retarray = cJSON_CreateArray();
-    for (i=0; i<numtrades; i++)
-    {
-        item = InstantDEX_tradejson(&trades[i],dotrade);
-        //printf("GOT%d.(%s)\n",i,jprint(item,0));
-        jaddi(retarray,item);
-    }
-    jadd(retjson,"traderesults",retarray);
-    return(jprint(retjson,1));
-}
-
-char *InstantDEX_tradesequence(cJSON *json)
-{
-    //"trades":[[{"basket":"bid","rootwt":-1,"groupwt":1,"wt":-1,"price":40000,"volume":0.00015000,"group":0,"trade":"buy","exchange":"nxtae","asset":"17554243582654188572","base":"BTC","rel":"NXT","orderid":"3545444239044461477","orderprice":40000,"ordervolume":0.00015000}], [{"basket":"bid","rootwt":-1,"groupwt":1,"wt":1,"price":0.00376903,"volume":1297.41480000,"group":10,"trade":"sell","exchange":"coinbase","name":"BTC/USD","base":"BTC","rel":"USD","orderid":"1","orderprice":265.32000000,"ordervolume":4.89000000}]]}
-    cJSON *array,*item; int32_t i,n,dir; char *tradestr,*exchangestr,base[512],rel[512],name[512]; struct prices777_order trades[16],*order;
-    uint64_t orderid,assetid,currency,baseid,relid; double orderprice,ordervolume; struct prices777 *prices; uint32_t timestamp;
-    memset(trades,0,sizeof(trades));
-    if ( (array= jarray(&n,json,"trades")) != 0 )
-    {
-        if ( n > sizeof(trades)/sizeof(*trades) )
-            return(clonestr("{\"error\":\"exceeded max trades possible in a tradesequence\"}"));
-        timestamp = (uint32_t)time(NULL);
-        for (i=0; i<n; i++)
-        {
-            item = jitem(array,i);
-            tradestr = jstr(item,"trade"), exchangestr = jstr(item,"exchange");
-            copy_cJSON(base,jobj(item,"base")), copy_cJSON(rel,jobj(item,"rel")), copy_cJSON(name,jobj(item,"name"));
-            orderid = j64bits(item,"orderid"), assetid = j64bits(item,"asset"), currency = j64bits(item,"currency");
-            baseid = j64bits(item,"baseid"), relid = j64bits(item,"relid");
-            orderprice = jdouble(item,"orderprice"), ordervolume = jdouble(item,"ordervolume");
-            if ( tradestr != 0 )
-            {
-                if ( strcmp(tradestr,"buy") == 0 )
-                    dir = 1;
-                else if ( strcmp(tradestr,"sell") == 0 )
-                    dir = -1;
-                else if ( strcmp(tradestr,"swap") == 0 )
-                    dir = 0;
-                else return(clonestr("{\"error\":\"invalid trade direction\"}"));
-                if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
-                {
-                    order = &trades[i];
-                    order->source = prices;
-                    order->id = orderid;
-                    order->s.offerNXT = j64bits(item,"offerNXT");
-                    order->wt = dir, order->s.price = orderprice, order->s.vol = ordervolume;
-                } else return(clonestr("{\"error\":\"invalid exchange or contract pair\"}"));
-            } else return(clonestr("{\"error\":\"no trade specified\"}"));
-        }
-        return(InstantDEX_dotrades(trades,n,juint(json,"dotrade")));
-    }
-    printf("error parsing.(%s)\n",jprint(json,0));
-    return(clonestr("{\"error\":\"couldnt process trades\"}"));
-}
-
 char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double volume)
 {
-    char *retstr; struct exchange_info *exchange;
-    if ( strcmp(prices->exchange,"nxtae") == 0 )
+    char *retstr; struct exchange_info *exchange; struct pending_trade *pend;
+    pend = calloc(1,sizeof(*pend));
+    pend->prices = prices, pend->dir = dir, pend->price = price, pend->volume = volume;
+    queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
+    if ( strcmp(prices->exchange,INSTANTDEX_NAME) == 0 )
+    {
+        // send offer
+        //retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,refvol,0,perc,refiQ->baseid,refiQ->relid,iQ->quoteid,dir > 0,exchange,iQ->baseamount*refvol/vol,iQ->relamount*refvol/vol,iQ->nxt64bits,iQ->minperc);
+    }
+    else if ( strcmp(prices->exchange,"nxtae") == 0 )
         retstr = fill_nxtae(SUPERNET.my64bits,dir,price,volume,prices->baseid,prices->relid);
     else if ( (exchange= find_exchange(0,prices->exchange)) != 0 )
     {
@@ -362,6 +283,64 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade)
     return(json);
 }
 
+char *InstantDEX_dotrades(struct prices777_order *trades,int32_t numtrades,int32_t dotrade)
+{
+    cJSON *retjson,*retarray,*item; int32_t i;
+    retjson = cJSON_CreateObject(), retarray = cJSON_CreateArray();
+    for (i=0; i<numtrades; i++)
+    {
+        item = InstantDEX_tradejson(&trades[i],dotrade);
+        //printf("GOT%d.(%s)\n",i,jprint(item,0));
+        jaddi(retarray,item);
+    }
+    jadd(retjson,"traderesults",retarray);
+    return(jprint(retjson,1));
+}
+
+char *InstantDEX_tradesequence(cJSON *json)
+{
+    //"trades":[[{"basket":"bid","rootwt":-1,"groupwt":1,"wt":-1,"price":40000,"volume":0.00015000,"group":0,"trade":"buy","exchange":"nxtae","asset":"17554243582654188572","base":"BTC","rel":"NXT","orderid":"3545444239044461477","orderprice":40000,"ordervolume":0.00015000}], [{"basket":"bid","rootwt":-1,"groupwt":1,"wt":1,"price":0.00376903,"volume":1297.41480000,"group":10,"trade":"sell","exchange":"coinbase","name":"BTC/USD","base":"BTC","rel":"USD","orderid":"1","orderprice":265.32000000,"ordervolume":4.89000000}]]}
+    cJSON *array,*item; int32_t i,n,dir; char *tradestr,*exchangestr,base[512],rel[512],name[512]; struct prices777_order trades[16],*order;
+    uint64_t orderid,assetid,currency,baseid,relid; double orderprice,ordervolume; struct prices777 *prices; uint32_t timestamp;
+    memset(trades,0,sizeof(trades));
+    if ( (array= jarray(&n,json,"trades")) != 0 )
+    {
+        if ( n > sizeof(trades)/sizeof(*trades) )
+            return(clonestr("{\"error\":\"exceeded max trades possible in a tradesequence\"}"));
+        timestamp = (uint32_t)time(NULL);
+        for (i=0; i<n; i++)
+        {
+            item = jitem(array,i);
+            tradestr = jstr(item,"trade"), exchangestr = jstr(item,"exchange");
+            copy_cJSON(base,jobj(item,"base")), copy_cJSON(rel,jobj(item,"rel")), copy_cJSON(name,jobj(item,"name"));
+            orderid = j64bits(item,"orderid"), assetid = j64bits(item,"asset"), currency = j64bits(item,"currency");
+            baseid = j64bits(item,"baseid"), relid = j64bits(item,"relid");
+            orderprice = jdouble(item,"orderprice"), ordervolume = jdouble(item,"ordervolume");
+            if ( tradestr != 0 )
+            {
+                if ( strcmp(tradestr,"buy") == 0 )
+                    dir = 1;
+                else if ( strcmp(tradestr,"sell") == 0 )
+                    dir = -1;
+                else if ( strcmp(tradestr,"swap") == 0 )
+                    dir = 0;
+                else return(clonestr("{\"error\":\"invalid trade direction\"}"));
+                if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
+                {
+                    order = &trades[i];
+                    order->source = prices;
+                    order->id = orderid;
+                    order->s.offerNXT = j64bits(item,"offerNXT");
+                    order->wt = dir, order->s.price = orderprice, order->s.vol = ordervolume;
+                } else return(clonestr("{\"error\":\"invalid exchange or contract pair\"}"));
+            } else return(clonestr("{\"error\":\"no trade specified\"}"));
+        }
+        return(InstantDEX_dotrades(trades,n,juint(json,"dotrade")));
+    }
+    printf("error parsing.(%s)\n",jprint(json,0));
+    return(clonestr("{\"error\":\"couldnt process trades\"}"));
+}
+
 void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
 {
     /* char *retstr;
@@ -372,10 +351,6 @@ void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx
      printf("automatched order!\n");
      free(retstr);
      }*/
-}
-
-void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
-{
 }
 
 #endif

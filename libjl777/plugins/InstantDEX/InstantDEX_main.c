@@ -18,6 +18,7 @@
 #define INSTANTDEX_MINVOL 75
 #define INSTANTDEX_MINVOLPERC ((double)INSTANTDEX_MINVOL / 100.)
 #define INSTANTDEX_PRICESLIPPAGE 0.001
+#define FINISH_HEIGHT 7
 
 #define INSTANTDEX_TRIGGERDEADLINE 15
 #define JUMPTRADE_SECONDS 100
@@ -53,41 +54,61 @@ cJSON *InstantDEX_lottostats();
 #include "atomic.h"
 
 uint32_t prices777_NXTBLOCK;
-int32_t InstantDEX_idle(struct plugin_info *plugin)
+int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
+
+void idle()
+{
+    char *jsonstr,*str; cJSON *json; int32_t n = 0; uint32_t nonce;
+    while ( INSTANTDEX.readyflag == 0 )
+        sleep(1);
+    while ( 1 )
+    {
+        if ( n == 0 )
+            msleep(100);
+        n = 0;
+        if ( (jsonstr= queue_dequeue(&InstantDEXQ,1)) != 0 )
+        {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                //printf("Dequeued InstantDEX.(%s)\n",jsonstr);
+                //fprintf(stderr,"dequeued\n");
+                if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
+                {
+                    //fprintf(stderr,"busdata.(%s)\n",str);
+                    free(str);
+                }
+                free_json(json);
+                n++;
+            } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
+            free_queueitem(jsonstr);
+        }
+    }
+}
+
+void idle2()
 {
     static double lastmilli; static cJSON *oldjson;
-    char *jsonstr,*str; cJSON *json; uint32_t NXTblock; int32_t n = 0; uint32_t nonce;
-    if ( INSTANTDEX.readyflag == 0 )
-        return(0);
-    if ( (jsonstr= queue_dequeue(&InstantDEXQ,1)) != 0 )
+    uint32_t NXTblock;
+    while ( INSTANTDEX.readyflag == 0 )
+        sleep(1);
+    while ( 1 )
     {
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        if ( milliseconds() < (lastmilli + 5000) )
+            msleep(100);
+        NXTblock = _get_NXTheight(0);
+        if ( 1 && NXTblock != prices777_NXTBLOCK )
         {
-            printf("Dequeued InstantDEX.(%s)\n",jsonstr);
-            if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
-            {
-                printf("busdata.(%s)\n",str);
-                free(str);
-            }
-            free_json(json);
-            n++;
-        } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
-        free_queueitem(jsonstr);
+            if ( oldjson != 0 )
+                free_json(oldjson);
+            oldjson = Lottostats_json;
+            //fprintf(stderr,"idle NXT\n");
+            Lottostats_json = InstantDEX_lottostats();
+            prices777_NXTBLOCK = NXTblock;
+            InstantDEX_update(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
+            //fprintf(stderr,"done idle NXT\n");
+        }
+        lastmilli = milliseconds();
     }
-    if ( milliseconds() < (lastmilli + 5000) )
-        return(n);
-    NXTblock = _get_NXTheight(0);
-    if ( NXTblock != prices777_NXTBLOCK )
-    {
-        if ( oldjson != 0 )
-            free_json(oldjson);
-        oldjson = Lottostats_json;
-        Lottostats_json = InstantDEX_lottostats();
-        prices777_NXTBLOCK = NXTblock;
-        poll_pending_offers(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
-    }
-    lastmilli = milliseconds();
-    return(0);
 }
 
 int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t baseid,char *rel,uint64_t relid)
@@ -139,7 +160,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         strcpy(base,"NXT");
     if ( strcmp(rel,"5527630") == 0 || relid == 5527630 )
         strcpy(rel,"NXT");
-    if ( strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 || (baseid != 0 && relid != 0) )
+    if ( strcmp("InstantDEX",exchange) == 0 || strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 || (baseid != 0 && relid != 0) )
     {
         if ( strcmp(rel,"NXT") == 0 )
             s = "+", relid = stringbits("NXT"), strcpy(rel,"NXT");
@@ -209,7 +230,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
     }
     *baseidp = baseid, *relidp = relid;
     *keysizep = prices777_key(key,exchange,name,base,baseid,rel,relid);
-// printf("<<<<<<< name.(%s) (%s/%s) %llu/%llu\n",name,base,rel,(long long)baseid,(long long)relid);
+//printf("<<<<<<< name.(%s) (%s/%s) %llu/%llu\n",name,base,rel,(long long)baseid,(long long)relid);
     return(assetbits);
 }
 
@@ -260,7 +281,7 @@ cJSON *InstantDEX_lottostats()
 
 int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json,char *origargstr)
 {
-    uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize; char key[1024],buf[64];
+    uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize; char key[1024],buf[64],*methodstr;
     memset(iQ,0,sizeof(*iQ));
     iQ->baseid = j64bits(json,"baseid"); iQ->relid = j64bits(json,"relid");
     iQ->baseamount = j64bits(json,"baseamount"), iQ->relamount = j64bits(json,"relamount");
@@ -281,7 +302,7 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     iQ->s.relbits = stringbits(rel);
     iQ->s.offerNXT = j64bits(json,"offerNXT");
     iQ->s.quoteid = j64bits(json,"quoteid");
-    if ( jstr(json,"ask") != 0 || jstr(json,"placeask") != 0 )
+    if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"placeask") == 0 || strcmp(methodstr,"ask") == 0) )
         iQ->s.isask = 1;
     if ( iQ->baseamount == 0 || iQ->relamount == 0 )
     {
@@ -299,9 +320,9 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     if ( iQ->s.price > SMALLVAL && iQ->s.vol > SMALLVAL )
     {
         buf[0] = 0, _set_assetname(&basemult,buf,0,iQ->baseid);
-        printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->baseid,buf,(long long)basemult);
+        //printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->baseid,buf,(long long)basemult);
         buf[0] = 0, _set_assetname(&relmult,buf,0,iQ->relid);
-        printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->relid,buf,(long long)relmult);
+        //printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->relid,buf,(long long)relmult);
         //basemult = get_assetmult(iQ->baseid), relmult = get_assetmult(iQ->relid);
         baseamount = (iQ->baseamount + basemult/2) / basemult, baseamount *= basemult;
         relamount = (iQ->relamount + relmult/2) / relmult, relamount *= relmult;
@@ -326,6 +347,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     char *InstantDEX_cancelorder(uint64_t sequenceid,uint64_t quoteid);
     char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD]; struct InstantDEX_quote iQ;
     cJSON *json; uint64_t assetbits,sequenceid; uint32_t maxdepth; int32_t invert=0,keysize,allfields; struct prices777 *prices;
+    if ( INSTANTDEX.readyflag == 0 )
+        return(0);
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
         // makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
@@ -334,6 +357,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,jsonstr);
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
+        printf("isask.%d\n",iQ.s.isask);
         copy_cJSON(method,jobj(json,"method"));
         if ( (sequenceid= j64bits(json,"orderid")) == 0 )
             sequenceid = j64bits(json,"sequenceid");
@@ -449,7 +473,7 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
         if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,origargstr) == 0 )
             return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr,name,base,rel,&iQ));
         else printf("error with incoming bidask\n");
-    } else printf("got my bidask from network (%s)\n",origargstr);
+    } else fprintf(stderr,"got my bidask from network (%s)\n",origargstr);
     return(0);
 }
 
@@ -496,7 +520,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char *resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-   // if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s) initflag.%d\n",plugin->name,jsonstr,initflag);
     if ( initflag > 0 )
     {

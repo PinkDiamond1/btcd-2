@@ -100,12 +100,14 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
     if ( broadcastmode == 0 )
         broadcastmode = "";
     _stripwhite(cmdjson,' ');
+    //fprintf(stderr,">>>>>>>> start noncing.(%s)\n",broadcastmode);
     for (i=0; i<n; i++)
     {
-        if ( (nonce= busdata_nonce(&leverage,cmdjson,broadcastmode,5000,0)) != 0 )
+        if ( (nonce= busdata_nonce(&leverage,cmdjson,broadcastmode,SUPERNET.PLUGINTIMEOUT,0)) != 0 )
             break;
         printf("iter.%d of %d couldnt find nonce, try again\n",i,n);
     }
+    //fprintf(stderr,"<<<<<<<<<< got noncing\n");
     if ( (nonceerr= busdata_nonce(&leverage,cmdjson,broadcastmode,0,nonce)) != 0 )
     {
         printf("error validating nonce.%u -> %u\n",nonce,nonceerr);
@@ -1014,9 +1016,12 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         {
             cJSON_ReplaceItemInObject(json,"method",cJSON_CreateString(newmethod));
             cJSON_ReplaceItemInObject(json,"plugin",cJSON_CreateString("relay"));
-            cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
+            if ( 0 )
+            {
+                cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(method));
             //if ( strcmp(plugin,"relay") != 0 )
                 cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString(plugin));
+            }
         }
         if ( (tag= get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"))) == 0 )
         {
@@ -1053,7 +1058,9 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 4096);
+        //fprintf(stderr,"start tokenization\n");
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
+        //fprintf(stderr,"done tokenization\n");
         if ( Debuglevel > 2 )
             printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method,str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
@@ -1084,8 +1091,10 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
     sentflag = 0;
     if ( Debuglevel > 2 )
         printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
+    //fprintf(stderr,"start busdata\n");
     if ( (data= create_busdata(&sentflag,noncep,&datalen,jsonstr,broadcastmode,destNXTaddr)) != 0 )
     {
+        //fprintf(stderr,"created busdata\n");
         if ( SUPERNET.iamrelay != 0 )
         {
             if ( json != 0 )
@@ -1213,7 +1222,6 @@ int32_t busdata_poll()
                         obj = cJSON_GetArrayItem(json,0);
                     else obj = json;
                     tag = get_API_nxt64bits(cJSON_GetObjectItem(obj,"tag"));
-                    //fprintf(stderr,"got tag.%llu\n",(long long)tag);
                     if ( is_duplicate_tag(tag) == 0 )
                     {
                         if ( (retstr= nn_busdata_processor((uint8_t *)msg,len)) != 0 )

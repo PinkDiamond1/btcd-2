@@ -518,7 +518,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         else if ( in_jsonarray(localaccess != 0 ? dp->methodsjson : dp->pubmethods,method) == 0 )
         {
             methodsstr = cJSON_Print(localaccess != 0 ? dp->methodsjson : dp->pubmethods);
-            if ( Debuglevel > 2 )
+            //if ( Debuglevel > 2 )
                 fprintf(stderr,"available.%s methods.(%s) vs (%s)\n",plugin,methodsstr,method);
             sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\",\"daemonid\":\"%llu\",\"myid\":\"%llu\"}",plugin,method,methodsstr,(long long)dp->daemonid,(long long)dp->myid);
             free(methodsstr);
@@ -527,7 +527,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         else
         {
             if ( Debuglevel > 2 )
-                fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
+                fprintf(stderr,"B send_to_daemon.(%s) sock.%d (%s).%d\n",dp->name,sock,origargstr,len);
             if ( (tag= send_to_daemon(sock,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess,tokenstr)) == 0 )
             {
 fprintf(stderr,"null tag from send_to_daemon\n");

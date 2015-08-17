@@ -10,7 +10,6 @@
 #ifndef xcode_atomic_h
 #define xcode_atomic_h
 
-#define FINISH_HEIGHT 7
 
 struct tradeinfo
 {

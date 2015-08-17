@@ -168,7 +168,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
         if ( jstr(json,"plugin") != 0 && jstr(json,"agent") != 0 )
             override = 1;
-        fprintf(stderr,"SuperNET_JSON override.%d\n",override);
+        //fprintf(stderr,"SuperNET_JSON override.%d\n",override);
         if ( plugin[0] == 0 )
             copy_cJSON(plugin,cJSON_GetObjectItem(json,"agent"));
         if ( override == 0 && strcmp(plugin,"InstantDEX") == 0 )
@@ -202,6 +202,8 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
         if ( strlen(jsonstr) < sizeof(buf)-1)
         {
             strcpy(buf,jsonstr);
+            //if ( previpaddr == 0 || previpaddr[0] == 0 )
+            //    sprintf(buf + strlen(buf)-1,",\"rand\":\"%d\"}",rand());
             return(process_nn_message(-1,buf));
         }
     }
@@ -589,6 +591,9 @@ int SuperNET_start(char *fname,char *myip)
     portable_thread_create((void *)SuperNET_agentloop,myip);
     portable_thread_create((void *)SuperNET_apiloop,myip);
     portable_thread_create((void *)crypto_update,myip);
+    void idle(); void idle2();
+    portable_thread_create((void *)idle,myip);
+    portable_thread_create((void *)idle2,myip);
     return(0);
 }
 

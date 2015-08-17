@@ -161,19 +161,58 @@ void prices777_additem(cJSON **highbidp,cJSON **lowaskp,cJSON *bids,cJSON *asks,
     }
 }
 
+uint64_t calc_qty(uint64_t mult,uint64_t assetid,uint64_t amount)
+{
+    if ( assetid != NXT_ASSETID )
+        return(amount / mult);
+    else return(amount);
+}
+
 void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid)
 {
+    uint64_t baseqty,relqty; char basec,relc;
     jaddnum(item,"group",group);
-    jaddstr(item,"trade",bidask == 0 ? "sell":"buy");
     jaddstr(item,"exchange",prices->exchange);
-    if ( strcmp(prices->exchange,"nxtae") == 0 || strcmp(prices->exchange,"unconf") == 0 )
-        jadd64bits(item,prices->type == 2 ? "asset" : "currency",prices->baseid);
-    else jaddstr(item,"name",prices->contract);
+    if ( strcmp(prices->exchange,"nxtae") == 0 || strcmp(prices->exchange,"unconf") == 0 || strcmp(prices->exchange,"InstantDEX") == 0 )
+    {
+        jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
+        jadd64bits(item,"offerNXT",SUPERNET.my64bits);
+        if ( strcmp(prices->exchange,"InstantDEX") == 0 )
+        {
+            jaddstr(item,"method","swap");
+            baseqty = calc_qty(prices->basemult,prices->baseid,SATOSHIDEN * volume + 0.5/SATOSHIDEN);
+            relqty = calc_qty(prices->relmult,prices->relid,SATOSHIDEN * volume * price + 0.5/SATOSHIDEN);
+            if ( bidask != 0 )
+            {
+                basec = '+', relc = '-';
+                jadd64bits(item,"recvbase",baseqty);
+                jadd64bits(item,"sendrel",relqty);
+            }
+            else
+            {
+                basec = '-', relc = '+';
+                jadd64bits(item,"sendbase",baseqty);
+                jadd64bits(item,"recvrel",relqty);
+            }
+            //printf("(%s %cbaseqty.%llu <-> %s %crelqty.%llu) basemult.%llu baseid.%llu vol %f amount %llu\n",prices->base,basec,(long long)baseqty,prices->rel,relc,(long long)relqty,(long long)prices->basemult,(long long)prices->baseid,volume,(long long)volume*SATOSHIDEN);
+        }
+        else
+        {
+            jaddnum(item,"orderprice",price);
+            jaddnum(item,"ordervolume",volume);
+            jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
+        }
+    }
+    else
+    {
+        jaddnum(item,"orderprice",price);
+        jaddnum(item,"ordervolume",volume);
+        jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
+        jaddstr(item,"name",prices->contract);
+    }
     jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
     if ( orderid != 0 )
         jadd64bits(item,"orderid",orderid);
-    jaddnum(item,"orderprice",price);
-    jaddnum(item,"ordervolume",volume);
 }
 
 cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,double origprice,double origvolume,double rootwt,double groupwt,double wt,uint64_t orderid)
@@ -295,19 +334,20 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
     json = cJSON_CreateObject(), bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
     gp = &OB->book[MAX_GROUPS][0];
     memset(suborders,0,sizeof(suborders));
-    for (slot=0; slot<OB->numbids && slot<OB->numasks && slot<maxdepth; slot++,gp++)
+    for (slot=0; (slot<OB->numbids || slot<OB->numasks) && slot<maxdepth; slot++,gp++)
     {
+        //printf("slot.%d\n",slot);
         if ( slot < OB->numbids )
         {
             for (i=0; i<prices->numgroups; i++)
                 suborders[i] = &OB->book[i][slot].bid;
-            prices777_orderbook_item(prices,0,suborders,(invert==0) ? bids : asks,invert,allflag,gp->bid.s.price,gp->bid.s.vol,gp->bid.id);
+            prices777_orderbook_item(prices,0,suborders,(invert==0) ? bids : asks,invert,allflag,gp->bid.s.price,gp->bid.s.vol,gp->bid.s.quoteid);
         }
         if ( slot < OB->numasks )
         {
             for (i=0; i<prices->numgroups; i++)
                 suborders[i] = &OB->book[i][slot].ask;
-            prices777_orderbook_item(prices,1,suborders,(invert==0) ? asks : bids,invert,allflag,gp->ask.s.price,gp->ask.s.vol,gp->ask.id);
+            prices777_orderbook_item(prices,1,suborders,(invert==0) ? asks : bids,invert,allflag,gp->ask.s.price,gp->ask.s.vol,gp->ask.s.quoteid);
         }
     }
     expand_nxt64bits(NXTaddr,nxt64bits);
@@ -424,7 +464,7 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
                         hbla = price;
                     else hbla = 0.5 * (hbla + price);
                 }
-                if ( Debuglevel > 2 || prices->basketsize > 0 || strcmp("unconf",prices->exchange) == 0 )
+                //if ( Debuglevel > 2 || prices->basketsize > 0 || strcmp("unconf",prices->exchange) == 0 )
                     printf("%d,%d: %-8s %s %5s/%-5s %13.8f vol %13.8f | invert %13.8f vol %13.8f | timestamp.%u\n",OB.numbids,OB.numasks,prices->exchange,dir>0?"bid":"ask",prices->base,prices->rel,price,volume,1./price,volume*price,timestamp);
             }
         }
@@ -1013,7 +1053,7 @@ double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
     cJSON *json; double hbla = 0.;
     if ( (json= InstantDEX_orderbook(prices)) != 0 )
     {
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("InstantDEX.(%s)\n",jprint(json,0));
         prices777_json_orderbook("InstantDEX",prices,maxdepth,json,0,"bids","asks",0,0);
         free_json(json);

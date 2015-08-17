@@ -630,4 +630,24 @@ int32_t update_NXT_assettrades()
     return(count);
 }
 
+int32_t trigger_items(cJSON *item)
+{
+    char feeutxbytes[MAX_JSON_FIELD],feesignedtx[MAX_JSON_FIELD],triggerhash[65],feesighash[65];
+    struct NXT_tx T,*feetx; uint32_t triggerheight,expiration;
+    set_NXTtx(SUPERNET.my64bits,&T,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT),-1);
+    triggerheight = _get_NXTheight(0) + FINISH_HEIGHT;
+    if ( (feetx= sign_NXT_tx(feeutxbytes,feesignedtx,SUPERNET.NXTACCTSECRET,SUPERNET.my64bits,&T,0,1.)) != 0 )
+    {
+        expiration = get_txhashes(feesighash,triggerhash,feetx);
+        jadd64bits(item,"feetxid",feetx->txid);
+        jaddstr(item,"triggerhash",triggerhash);
+        jaddnum(item,"triggerheight",triggerheight);
+        //sprintf(offer->comment + strlen(offer->comment) - 1,",\"feetxid\":\"%llu\",\"triggerhash\":\"%s\",\"triggerheight\":\"%u\"}",(long long)feetx->txid,triggerhash,offer->triggerheight);
+        //if ( strlen(triggerhash) == 64 && (retstr= submit_trades(offer,NXTACCTSECRET)) != 0 )
+        //    return(retstr);
+        return(0);
+    }
+    return(-1);
+}
+
 #endif

@@ -264,7 +264,7 @@ void process_userinput(char *_line)
         retstr = SuperNET_JSON(line);
         //retstr = process_nn_message(-1,line);
         //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
-        printf("console.(%s) -> (%s)\n",line,retstr);
+        fprintf(stderr,"console -> (%s)\n",retstr);
         return;
     } else printf("cant parse.(%s)\n",line);
     settoken(ipaddr,line);

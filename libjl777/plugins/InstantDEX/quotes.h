@@ -142,6 +142,7 @@ char *InstantDEX_cancelorder(uint64_t orderid,uint64_t quoteid)
 struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
 {
     struct InstantDEX_quote *newiQ; struct prices777 *prices; int32_t inverted;
+    printf("createiQ %llu/%llu %f %f\n",(long long)iQ->baseid,(long long)iQ->relid,iQ->s.price,iQ->s.vol);
     if ( (newiQ= find_iQ(iQ->s.quoteid)) != 0 )
         return(newiQ);
     newiQ = calloc(1,sizeof(*newiQ));
@@ -248,7 +249,7 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
     {
         HASH_ITER(hh,AllQuotes,ptr,tmp)
         {
-            //printf("iterate quote.%llu\n",(long long)iQ->quoteid);
+            //printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
             if ( prices777_equiv(ptr->baseid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->relid) == prices777_equiv(prices->relid) )
                 invert = 0;
             else if ( prices777_equiv(ptr->relid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->baseid) == prices777_equiv(prices->relid) )
@@ -312,13 +313,81 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
     return(json);
 }
 
-char *check_ordermatch(int32_t pollflag,struct prices777 *prices,struct InstantDEX_quote *refiQ)
+double ordermetric(double price,double vol,int32_t dir,double refprice,double refvol)
 {
-  /*  int32_t i,besti,n=0,dir = 1; struct InstantDEX_quote *iQ,_iQ; struct prices777_order *order;
-    uint64_t assetA,amountA,assetB,amountB; char otherNXTaddr[64],exchange[64],*retstr = 0; double metric,price,vol,perc,bestmetric = 0.;
-    besti = -1;
-    if ( refiQ->s.isask != 0 )
-        dir = -1;
+    double metric = 0.;
+    if ( vol > (refvol * INSTANTDEX_MINVOLPERC) )//&& refvol > (vol * iQ->s.minperc * .01) )
+    {
+        if ( vol < refvol )
+            metric = (vol / refvol);
+        else metric = 1.;
+        if ( dir > 0 && price < (refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL) )
+            metric *= (1. + (refprice - price)/refprice);
+        else if ( dir < 0 && price > (refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL) )
+            metric *= (1. + (price - refprice)/refprice);
+        else metric = 0.;
+        if ( metric != 0. )
+        {
+            printf("price %.8f vol %.8f | %.8f > %.8f? %.8f > %.8f?\n",price,vol,vol,(refvol * INSTANTDEX_MINVOLPERC),refvol,(vol * INSTANTDEX_MINVOLPERC));
+            printf("price %f against %f or %f\n",price,(refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL),(refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL));
+            printf("metric %f\n",metric);
+        }
+    }
+    return(metric);
+}
+
+char *autofill(char *remoteaddr,struct InstantDEX_quote *refiQ,char *NXTaddr,char *NXTACCTSECRET)
+{
+    double price,volume,revprice,revvol,metric,bestmetric = 0.; int32_t dir,inverted; uint64_t nxt64bits; char *retstr=0;
+    struct InstantDEX_quote *iQ,*tmp,*bestiQ; struct prices777 *prices;
+    nxt64bits = calc_nxt64bits(NXTaddr);
+    memset(&bestiQ,0,sizeof(bestiQ));
+    dir = (refiQ->s.isask != 0) ? -1 : 1;
+    HASH_ITER(hh,AllQuotes,iQ,tmp)
+    {
+        if ( iQ->s.offerNXT == nxt64bits && iQ->s.closed == 0 && iQ->s.pending == 0 )
+        {
+            if ( iQ->baseid == refiQ->baseid && iQ->relid == refiQ->relid && iQ->s.isask != refiQ->s.isask && (metric= ordermetric(iQ->s.price,iQ->s.vol,dir,refiQ->s.price,refiQ->s.vol)) > bestmetric )
+            {
+                bestmetric = metric;
+                bestiQ = iQ;
+            }
+            else if ( iQ->baseid == refiQ->relid && iQ->relid == refiQ->baseid && iQ->s.isask == refiQ->s.isask && iQ->s.price > SMALLVAL )
+            {
+                revvol = (iQ->s.price * iQ->s.vol), revprice = (1. / iQ->s.price);
+                if ( (metric= ordermetric(revprice,revvol,dir,refiQ->s.price,refiQ->s.vol)) > bestmetric )
+                {
+                    bestmetric = metric;
+                    bestiQ = iQ;
+                }
+            }
+        }
+    }
+    if ( bestmetric > 0. )
+    {
+        if ( (prices= prices777_find(&inverted,bestiQ->baseid,bestiQ->relid,exchange_str(bestiQ->exchangeid))) != 0 )
+        {
+            printf("isask.%d %f %f -> bestmetric %f inverted.%d autofill dir.%d price %f vol %f\n",bestiQ->s.isask,bestiQ->s.price,bestiQ->s.vol,bestmetric,inverted,dir,refiQ->s.price,refiQ->s.vol);
+            if ( bestiQ->s.isask != 0 )
+                dir = -1;
+            else dir = 1;
+            if ( inverted != 0 )
+            {
+                dir *= -1;
+                volume = (bestiQ->s.price * bestiQ->s.vol);
+                price = 1. / bestiQ->s.price;
+                printf("price inverted (%f %f) -> (%f %f)\n",bestiQ->s.price,bestiQ->s.vol,price,volume);
+            } else price = bestiQ->s.price, volume = bestiQ->s.vol;
+            retstr = prices777_trade(prices,dir,price,volume);
+        }
+    }
+    return(retstr);
+}
+
+char *automatch(struct prices777 *prices,int32_t dir,double refprice,double refvol,char *NXTaddr,char *NXTACCTSECRET)
+{
+    int32_t i,n=0; struct prices777_order order,bestorder; char *retstr = 0; double metric,bestmetric = 0.;
+    memset(&bestorder,0,sizeof(bestorder));
     if ( dir > 0 )
         n = prices->O.numasks;
     else if ( dir < 0 )
@@ -327,68 +396,67 @@ char *check_ordermatch(int32_t pollflag,struct prices777 *prices,struct InstantD
     {
         for (i=0; i<n; i++)
         {
-            order = (dir > 0) ? &prices->O.book[MAX_GROUPS][i].bid : &prices->O.book[MAX_GROUPS][i].ask;
-            if ( order->source == 0 )
-                continue;
-            iQ = prices777_convorder(&_iQ,prices,order,dir);
-            expand_nxt64bits(otherNXTaddr,iQ->s.offerNXT);
-            if ( iQ->s.closed != 0 )
-                continue;
-            if ( iQ->exchangeid == INSTANTDEX_EXCHANGEID && is_unfunded_order(iQ->s.offerNXT,dir > 0 ? iQ->baseid : iQ->relid,dir > 0 ? iQ->baseamount : iQ->relamount) != 0 )
+            order = (dir > 0) ? prices->O.book[MAX_GROUPS][i].ask : prices->O.book[MAX_GROUPS][i].bid;
+            if ( (metric= ordermetric(order.s.price,order.s.vol,dir,refprice,refvol)) > bestmetric )
             {
-                iQ->s.closed = 1;
-                printf("found unfunded order!\n");
-                continue;
+                bestmetric = metric;
+                bestorder = order;
             }
-            strcpy(exchange,order->source->exchange);
-            if ( strcmp(otherNXTaddr,SUPERNET.NXTADDR) != 0 && iQ->s.matched == 0 && iQ->exchangeid == INSTANTDEX_NXTAEID )
-            {
-                price = order->s.price, vol = order->s.vol;
-                if ( vol > (refvol * INSTANTDEX_MINVOLPERC) && refvol > (vol * iQ->s.minperc * .01) )
-                {
-                    if ( vol < refvol )
-                        metric = (vol / refvol);
-                    else metric = 1.;
-                    if ( dir > 0 && price < (refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL) )
-                        metric *= (1. + (refprice - price)/refprice);
-                    else if ( dir < 0 && price > (refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL) )
-                        metric *= (1. + (price - refprice)/refprice);
-                    else metric = 0.;
-                    if ( metric != 0. )
-                    {
-                        printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s) | ",iQ->s.matched,exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
-                        printf("price %.8f vol %.8f | %.8f > %.8f? %.8f > %.8f?\n",price,vol,vol,(refvol * INSTANTDEX_MINVOLPERC),refvol,(vol * INSTANTDEX_MINVOLPERC));
-                        printf("price %f against %f or %f\n",price,(refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL),(refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL));
-                        printf("metric %f\n",metric);
-                    }
-                    if ( metric > bestmetric )
-                    {
-                        bestmetric = metric;
-                        besti = i;
-                    }
-                }
-            }// else printf("NXTaddr.%s: skip %s from %s\n",NXTaddr,exchange,otherNXTaddr);
         }
     }
     //printf("n.%d\n",n);
-    if ( besti >= 0 )
-    {
-        order = (dir > 0) ? &prices->O.book[MAX_GROUPS][besti].bid : &prices->O.book[MAX_GROUPS][besti].ask;
-        iQ = prices777_convorder(&_iQ,prices,order,dir);
-        if ( dir < 0 )
-            assetA = refiQ->relid, amountA = iQ->relamount, assetB = refiQ->baseid, amountB = iQ->baseamount;
-        else assetB = refiQ->relid, amountB = iQ->relamount, assetA = refiQ->baseid, amountA = iQ->baseamount;
-        price = order->s.price, vol = order->s.vol;
-        strcpy(exchange,order->source->exchange);
-        expand_nxt64bits(otherNXTaddr,iQ->s.offerNXT);
-        perc = 100.;
-        if ( perc >= iQ->s.minperc )
-        {
-            //retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,refvol,0,perc,refiQ->baseid,refiQ->relid,iQ->quoteid,dir > 0,exchange,iQ->baseamount*refvol/vol,iQ->relamount*refvol/vol,iQ->nxt64bits,iQ->minperc);
-        }
-    } else printf("besti.%d\n",besti);
-    return(retstr);*/
+    if ( bestorder.source != 0 )
+        retstr = prices777_trade(bestorder.source,bestorder.s.isask!=0?-1:1,bestorder.s.price,bestorder.s.vol);
+    return(retstr);
+}
+
+char *offer_statemachine(struct pending_trade *pend)
+{
+    // if trade is complete return str
     return(0);
+}
+
+void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
+{
+    int32_t iter,dir; struct pending_trade *pend; double price,volume; char *retstr = 0;
+    int32_t inverted; struct InstantDEX_quote *iQ,*tmp; struct prices777 *prices; uint64_t nxt64bits = calc_nxt64bits(NXTaddr);
+    HASH_ITER(hh,AllQuotes,iQ,tmp)
+    {
+        if ( iQ->s.offerNXT == nxt64bits && iQ->s.closed == 0 && iQ->s.pending == 0 )
+        {
+            if ( (prices= prices777_find(&inverted,iQ->baseid,iQ->relid,exchange_str(iQ->exchangeid))) != 0 )
+            {
+                if ( iQ->s.isask != 0 )
+                    dir = -1;
+                else dir = 1;
+                if ( inverted != 0 )
+                {
+                    dir *= -1;
+                    volume = (iQ->s.price * iQ->s.vol);
+                    price = 1. / iQ->s.price;
+                    printf("price inverted (%f %f) -> (%f %f)\n",iQ->s.price,iQ->s.vol,price,volume);
+                } else price = iQ->s.price, volume = iQ->s.vol;
+                if ( (retstr= automatch(prices,dir,price,volume,NXTaddr,NXTACCTSECRET)) != 0 )
+                {
+                    printf("automatched %s isask.%d %f %f (%s)\n",prices->contract,iQ->s.isask,iQ->s.price,iQ->s.vol,retstr);
+                    iQ->s.pending = 1;
+                    free(retstr);
+                }
+            }
+        }
+    }
+    for (iter=0; iter<2; iter++)
+    {
+        while ( (pend= queue_dequeue(&Pending_offersQ.pingpong[iter],0)) != 0 )
+        {
+           if ( (retstr= offer_statemachine(pend)) != 0 )
+           {
+               printf("automatched %s %d %f %f (%s)\n",pend->prices->contract,pend->dir,pend->price,pend->volume,retstr);
+               free(retstr);
+               free(pend);
+           } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
+        }
+    }
 }
 
 char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr,char *name,char *base,char *rel,struct InstantDEX_quote *iQ)
@@ -414,18 +482,26 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
             price = 1. / price;
             printf("price inverted (%f %f) -> (%f %f)\n",iQ->s.price,iQ->s.vol,price,volume);
         }
-        if ( strcmp(exchangestr,"InstantDEX") != 0 && strcmp(exchangestr,"active") != 0 && strcmp(exchangestr,"basket") != 0 )
+        printf("dir.%d price %f vol %f isask.%d\n",dir,price,volume,iQ->s.isask);
+        if ( remoteaddr == 0 )
         {
+            if ( strcmp(exchangestr,"InstantDEX") != 0 && strcmp(exchangestr,"active") != 0 && strcmp(exchangestr,"basket") != 0 )
+            {
+                create_iQ(iQ);
+                return(prices777_trade(prices,dir,price,volume));
+            }
+            if ( iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) != 0 )
+                return(retstr);
+            retstr = InstantDEX_str(0,1,iQ);
             create_iQ(iQ);
-            return(prices777_trade(prices,dir,price,volume));
+            queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
         }
-        if ( remoteaddr == 0 && iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(0,prices,iQ)) != 0 )
+        else
+        {
+            if ( (retstr= autofill(remoteaddr,iQ,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) == 0 )
+                create_iQ(iQ);
             return(retstr);
-        retstr = InstantDEX_str(0,1,iQ);
-        if ( Debuglevel > 2 )
-            printf("placequote.(%s) remoteaddr.(%s)\n",retstr,remoteaddr==0?"local":remoteaddr);
-        create_iQ(iQ);
-        queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
+        }
     }
     if ( retstr == 0 )
         retstr = clonestr("{\"error\":\"cant get prices ptr\"}");

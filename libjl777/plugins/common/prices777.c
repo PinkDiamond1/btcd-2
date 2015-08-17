@@ -712,7 +712,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         return(0);
     }
     printf("init.(%s/%s) %llu %llu\n",base,rel,(long long)baseid,(long long)relid);
-    if ( strcmp(exchange,"nxtae") == 0 || strcmp(exchange,"unconf") == 0 )
+    if ( strcmp(exchange,"nxtae") == 0 || strcmp(exchange,"unconf") == 0 || strcmp(exchange,"InstantDEX") == 0 )
     {
         if ( strcmp(base,"NXT") == 0 || baseid == NXT_ASSETID )
         {
@@ -754,16 +754,22 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         strcpy(prices->origrel,rel);
     allocated += sizeof(*prices);
     safecopy(prices->exchange,exchange,sizeof(prices->exchange));
-    if ( strcmp(exchange,"nxtae") == 0 || strcmp(exchange,"unconf") == 0 )
+    if ( strcmp(exchange,"nxtae") == 0 || strcmp(exchange,"unconf") == 0 || strcmp(exchange,INSTANTDEX_NAME) == 0 )
     {
         char tmp[16];
+        _set_assetname(&prices->basemult,tmp,0,prices->baseid);
+        _set_assetname(&prices->relmult,tmp,0,prices->relid);
+        if ( prices->relmult == 0 )
+            prices->relmult = 1;
+        if ( prices->basemult == 0 )
+            prices->basemult = 1;
         //prices->nxtbooks = calloc(1,sizeof(*prices->nxtbooks));
         safecopy(prices->lbase,base,sizeof(prices->lbase)), tolowercase(prices->lbase);
         safecopy(prices->lrel,rel,sizeof(prices->lrel)), tolowercase(prices->lrel);
         rellen = (int32_t)(strlen(prices->rel) + 1);
         tmp[0] = 0;
         prices->type = _set_assetname(&prices->ap_mult,tmp,0,prices->baseid);
-        printf("nxtbook.(%s) -> NXT %s %llu vs (%s) mult.%llu\n",base,prices->contract,(long long)prices->baseid,tmp,(long long)prices->ap_mult);
+        printf("nxtbook.(%s) -> NXT %s %llu/%llu vs (%s) mult.%llu (%llu/%llu)\n",base,prices->contract,(long long)prices->baseid,(long long)prices->relid,tmp,(long long)prices->ap_mult,(long long)prices->basemult,(long long)prices->relmult);
     }
     else
     {
@@ -842,7 +848,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
             printf("cant add exchange.(%s)\n",exchangestr);
             return(0);
         }
-        if ( strcmp(exchangestr,"nxtae") == 0 || strcmp(exchangestr,"unconf") == 0 )
+        if ( strcmp(exchangestr,"nxtae") == 0 || strcmp(exchangestr,"unconf") == 0 || strcmp(exchangestr,"InstantDEX") == 0 )
         {
             if ( refbaseid == NXT_ASSETID )
                 assetids[n*4] = refrelid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],rel,14), n++;

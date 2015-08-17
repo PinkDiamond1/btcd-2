@@ -169,7 +169,9 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 #define INSTANTDEX_NXTAEID 2
 #define MAX_EXCHANGES 64
 
-struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,automatch:3,minperc:7; };
+struct pending_trade { struct queueitem DL; struct prices777 *prices; double price,volume; int32_t dir; };
+
+struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,pending:1,automatch:3,minperc:7; };
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
@@ -192,8 +194,8 @@ struct prices777_basketinfo
 struct prices777
 {
     char url[512],exchange[64],base[64],rel[64],lbase[64],lrel[64],key[512],oppokey[512],contract[64],origbase[64],origrel[64];
-    uint64_t contractnum,ap_mult,baseid,relid; int32_t keysize,oppokeysize; double lastupdate,decay,oppodecay,lastprice,lastbid,lastask;
-    uint32_t pollnxtblock,exchangeid,numquotes,updated,lasttimestamp,RTflag,disabled,dirty;
+    uint64_t contractnum,ap_mult,baseid,relid,basemult,relmult; double lastupdate,decay,oppodecay,lastprice,lastbid,lastask;
+    uint32_t pollnxtblock,exchangeid,numquotes,updated,lasttimestamp,RTflag,disabled,dirty; int32_t keysize,oppokeysize;
     portable_mutex_t mutex;
     char *orderbook_jsonstrs[2][2];
     struct prices777_basketinfo O,O2; double groupwts[MAX_GROUPS + 1];
@@ -237,6 +239,7 @@ uint64_t calc_quoteid(struct InstantDEX_quote *iQ);
 double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,uint64_t relamount2);
 double make_jumpquote(uint64_t baseid,uint64_t relid,uint64_t *baseamountp,uint64_t *relamountp,uint64_t *frombasep,uint64_t *fromrelp,uint64_t *tobasep,uint64_t *torelp);
 
+extern queue_t PendingQ;
 char *peggyrates(uint32_t timestamp);
 
 #endif
