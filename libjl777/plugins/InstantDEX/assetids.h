@@ -114,7 +114,7 @@ char *MGWassets[][3] =
     { "9037144112883608562", "VRC", "8" },
     { "1369181773544917037", "BBR", "8" },
     { "17353118525598940144", "DRK", "8" },
-    { "2881764795164526882", "LTC", "8" },
+    { "2881764795164526882", "LTC", "4" },
     { "7117580438310874759", "BC", "4" },
     { "275548135983837356", "VIA", "4" },
     { "6220108297598959542", "CNMT", "0" },
@@ -149,10 +149,10 @@ int32_t is_native_crypto(char *name,uint64_t bits)
         {
             if ( (name[i] >= '0' && name[i] <= '9') || (name[i] >= 'A' && name[i] <= 'Z') )// || (name[i] >= '0' && name[i] <= '9') )
                 continue;
-            //printf("(%s) is not native crypto\n",name);
+            printf("(%s) is not native crypto\n",name);
             return(0);
         }
-        //printf("(%s) is native crypto\n",name);
+        printf("(%s) is native crypto\n",name);
         return(1);
     }
     return(0);

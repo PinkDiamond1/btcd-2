@@ -23,7 +23,7 @@ char *MGWassets[][3] =
     { "9037144112883608562", "VRC", "8" },
     { "1369181773544917037", "BBR", "8" },
     { "17353118525598940144", "DRK", "8" },
-    { "2881764795164526882", "LTC", "8" },
+    { "2881764795164526882", "LTC", "4" },
     { "7117580438310874759", "BC", "4" },
     { "275548135983837356", "VIA", "4" },
     { "6220108297598959542", "CNMT", "0" },
@@ -47,7 +47,10 @@ char *is_MGWasset(uint64_t *multp,uint64_t assetid)
         if ( strcmp(MGWassets[i][0],assetidstr) == 0 )
         {
             if ( multp != 0 )
+            {
                 *multp = calc_decimals_mult(atoi(MGWassets[i][2]));
+                //printf("%s -> %d MGW assetmult.%llu\n",MGWassets[i][2],atoi(MGWassets[i][2]),(long long)*multp);
+            }
             return(MGWassets[i][1]);
         }
     return(0);

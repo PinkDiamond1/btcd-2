@@ -817,6 +817,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
                         exchangeptr->trade = pairs[i].trade;
                         exchangeptr->refcount++;
                     }
+                    //printf("return prices.%p\n",prices);
                     return(prices);
                 }
             }

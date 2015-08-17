@@ -168,7 +168,7 @@ uint64_t calc_qty(uint64_t mult,uint64_t assetid,uint64_t amount)
     else return(amount);
 }
 
-void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid)
+void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid,uint64_t quoteid)
 {
     uint64_t baseqty,relqty; char basec,relc;
     jaddnum(item,"group",group);
@@ -177,10 +177,12 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
     {
         jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
         jadd64bits(item,"offerNXT",SUPERNET.my64bits);
+        jadd64bits(item,"baseid",prices->baseid), jadd64bits(item,"relid",prices->relid);
         if ( strcmp(prices->exchange,"InstantDEX") == 0 )
         {
-            jaddstr(item,"method","swap");
+            jaddstr(item,"trade","swap");
             baseqty = calc_qty(prices->basemult,prices->baseid,SATOSHIDEN * volume + 0.5/SATOSHIDEN);
+            //printf("baseid.%llu basemult.%llu -> %llu\n",(long long)prices->baseid,(long long)prices->basemult,(long long)baseqty);
             relqty = calc_qty(prices->relmult,prices->relid,SATOSHIDEN * volume * price + 0.5/SATOSHIDEN);
             if ( bidask != 0 )
             {
@@ -198,24 +200,25 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
         }
         else
         {
-            jaddnum(item,"orderprice",price);
-            jaddnum(item,"ordervolume",volume);
             jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
+            jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
         }
     }
     else
     {
-        jaddnum(item,"orderprice",price);
-        jaddnum(item,"ordervolume",volume);
-        jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
+         jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
         jaddstr(item,"name",prices->contract);
+        jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
     }
-    jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
+    jaddnum(item,"orderprice",price);
+    jaddnum(item,"ordervolume",volume);
     if ( orderid != 0 )
         jadd64bits(item,"orderid",orderid);
+    if ( quoteid != 0 )
+        jadd64bits(item,"quoteid",quoteid);
 }
 
-cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,double origprice,double origvolume,double rootwt,double groupwt,double wt,uint64_t orderid)
+cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,double origprice,double origvolume,double rootwt,double groupwt,double wt,uint64_t orderid,uint64_t quoteid)
 {
     cJSON *item; double price,volume;
     item = cJSON_CreateObject();
@@ -235,11 +238,11 @@ cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,
         volume = origprice * origvolume;
         price = 1./origprice;
     } else price = origprice, volume = origvolume;
-    _prices777_item(item,group,prices,bidask,price,volume,orderid);
+    _prices777_item(item,group,prices,bidask,price,volume,orderid,quoteid);
     return(item);
 }
 
-cJSON *prices777_tradeitem(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,int32_t slot,uint32_t timestamp,double price,double volume,double rootwt,double groupwt,double wt,uint64_t orderid)
+cJSON *prices777_tradeitem(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,int32_t slot,uint32_t timestamp,double price,double volume,double rootwt,double groupwt,double wt,uint64_t orderid,uint64_t quoteid)
 {
     static uint32_t match,error;
     if ( prices->O.timestamp == timestamp )
@@ -258,7 +261,7 @@ cJSON *prices777_tradeitem(int32_t rootbidask,struct prices777 *prices,int32_t g
         else if ( bidask != 0 && prices->O2.book[MAX_GROUPS][slot].ask.s.price == price && prices->O2.book[MAX_GROUPS][slot].ask.s.vol == volume )
             match++;
     } else error++, printf("mismatched tradeitem error.%d match.%d\n",error,match);
-    return(prices777_item(rootbidask,prices,group,bidask,price,volume,rootwt,groupwt,wt,orderid));
+    return(prices777_item(rootbidask,prices,group,bidask,price,volume,rootwt,groupwt,wt,orderid,quoteid));
 }
 
 cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct prices777_order *orders[],double rootwt,double groupwt,double wt,int32_t refgroup)
@@ -275,7 +278,7 @@ cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct pr
         if ( (src= order->source) != 0 )
         {
             if ( src->basketsize == 0 )
-                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->s.timestamp,order->s.price,order->ratio*order->s.vol,rootwt,groupwt,order->wt,order->id));
+                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->s.timestamp,order->s.price,order->ratio*order->s.vol,rootwt,groupwt,order->wt,order->id,order->s.quoteid));
             else if ( src->O.timestamp == order->s.timestamp )
             {
                 for (j=0; j<src->numgroups; j++)
@@ -299,7 +302,7 @@ cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct pr
     return(array);
 }
 
-void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct prices777_order *suborders[],cJSON *array,int32_t invert,int32_t allflag,double origprice,double origvolume,uint64_t orderid)
+void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct prices777_order *suborders[],cJSON *array,int32_t invert,int32_t allflag,double origprice,double origvolume,uint64_t orderid,uint64_t quoteid)
 {
     cJSON *item,*obj,*tarray; double price,volume;
     item = cJSON_CreateObject();
@@ -314,7 +317,7 @@ void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct pri
         {
             tarray = cJSON_CreateArray();
             obj = cJSON_CreateObject();
-            _prices777_item(obj,0,prices,bidask,origprice,origvolume,orderid);
+            _prices777_item(obj,0,prices,bidask,origprice,origvolume,orderid,quoteid);
             jaddi(tarray,obj);
         } else tarray = prices777_tradesequence(prices,bidask,suborders,invert!=0?-1:1.,1.,1.,0);
         jadd(item,"trades",tarray);
@@ -341,13 +344,13 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
         {
             for (i=0; i<prices->numgroups; i++)
                 suborders[i] = &OB->book[i][slot].bid;
-            prices777_orderbook_item(prices,0,suborders,(invert==0) ? bids : asks,invert,allflag,gp->bid.s.price,gp->bid.s.vol,gp->bid.s.quoteid);
+            prices777_orderbook_item(prices,0,suborders,(invert==0) ? bids : asks,invert,allflag,gp->bid.s.price,gp->bid.s.vol,gp->bid.id,gp->bid.s.quoteid);
         }
         if ( slot < OB->numasks )
         {
             for (i=0; i<prices->numgroups; i++)
                 suborders[i] = &OB->book[i][slot].ask;
-            prices777_orderbook_item(prices,1,suborders,(invert==0) ? asks : bids,invert,allflag,gp->ask.s.price,gp->ask.s.vol,gp->ask.s.quoteid);
+            prices777_orderbook_item(prices,1,suborders,(invert==0) ? asks : bids,invert,allflag,gp->ask.s.price,gp->ask.s.vol,gp->ask.id,gp->ask.s.quoteid);
         }
     }
     expand_nxt64bits(NXTaddr,nxt64bits);
@@ -464,7 +467,7 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
                         hbla = price;
                     else hbla = 0.5 * (hbla + price);
                 }
-                //if ( Debuglevel > 2 || prices->basketsize > 0 || strcmp("unconf",prices->exchange) == 0 )
+                if ( Debuglevel > 2 || prices->basketsize > 0 || strcmp("unconf",prices->exchange) == 0 )
                     printf("%d,%d: %-8s %s %5s/%-5s %13.8f vol %13.8f | invert %13.8f vol %13.8f | timestamp.%u\n",OB.numbids,OB.numasks,prices->exchange,dir>0?"bid":"ask",prices->base,prices->rel,price,volume,1./price,volume*price,timestamp);
             }
         }

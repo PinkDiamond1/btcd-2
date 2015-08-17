@@ -448,8 +448,8 @@ char *set_buyer_seller(struct pendinghalf *seller,struct pendinghalf *buyer,stru
 void set_basereliQ(struct InstantDEX_quote *iQ,cJSON *obj)
 {
     char exchange[64]; int32_t exchangeid;
-    iQ->baseamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
-    iQ->relamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
+    iQ->s.baseamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
+    iQ->s.relamount = get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
     iQ->s.quoteid = get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
     iQ->s.offerNXT = get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
     copy_cJSON(exchange,cJSON_GetObjectItem(obj,"exchange"));
@@ -461,8 +461,8 @@ void set_basereliQ(struct InstantDEX_quote *iQ,cJSON *obj)
 char *set_combohalf(struct pendingpair *pt,struct InstantDEX_quote *iQ,struct pending_offer *offer,uint64_t baseid,uint64_t relid,int32_t askoffer,int32_t dir)
 {
     char *retstr;
-    pt->baseamount = offer->ratio * iQ->baseamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
-    pt->relamount = offer->ratio * iQ->relamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
+    pt->baseamount = offer->ratio * iQ->s.baseamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"baseamount"));
+    pt->relamount = offer->ratio * iQ->s.relamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
     pt->quoteid = iQ->s.quoteid;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
     pt->offerNXT = iQ->s.offerNXT;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
     strcpy(pt->exchange,exchange_str(iQ->exchangeid));
@@ -696,16 +696,16 @@ struct InstantDEX_quote *is_valid_offer(uint64_t quoteid,int32_t dir,uint64_t as
             dir = polarity;
         } else polarity = (iQ->s.isask != 0) ? -1 : 1;
         if ( Debuglevel > 1 )
-            printf("found quoteid.%llu polarity.%d %llu/%llu vs %llu dir.%d\n",(long long)quoteid,polarity,(long long)iQ->baseid,(long long)iQ->relid,(long long)assetid,dir);
+            printf("found quoteid.%llu polarity.%d %llu/%llu vs %llu dir.%d\n",(long long)quoteid,polarity,(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)assetid,dir);
         //found quoteid.7555841528599494229 polarity.1 6932037131189568014/6854596569382794790 vs 6854596569382794790 dir.1
-        if ( polarity*dir > 0 && ((polarity > 0 && iQ->baseid == assetid) || (polarity < 0 && iQ->relid == assetid)) )
+        if ( polarity*dir > 0 && ((polarity > 0 && iQ->s.baseid == assetid) || (polarity < 0 && iQ->s.relid == assetid)) )
         {
             if ( priceNQT != 0 )
                 baseamount = calc_baseamount(&relamount,assetid,qty,priceNQT);
             else baseamount = qty * get_assetmult(assetid), relamount = otherqty * get_assetmult(otherassetid);
             if ( polarity > 0 )
-                price = prices777_price_volume(&vol,baseamount,relamount), refprice = prices777_price_volume(&refvol,iQ->baseamount,iQ->relamount);
-            else price = prices777_price_volume(&vol,relamount,baseamount), refprice = prices777_price_volume(&refvol,iQ->relamount,iQ->baseamount);
+                price = prices777_price_volume(&vol,baseamount,relamount), refprice = prices777_price_volume(&refvol,iQ->s.baseamount,iQ->s.relamount);
+            else price = prices777_price_volume(&vol,relamount,baseamount), refprice = prices777_price_volume(&refvol,iQ->s.relamount,iQ->s.baseamount);
             if ( Debuglevel > 1 )
                 printf("polarity.%d dir.%d (%f %f) vs ref.(%f %f)\n",polarity,dir,price,vol,refprice,refvol);
             if ( vol >= refvol*(double)iQ->s.minperc/100. && vol <= refvol )

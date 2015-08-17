@@ -248,14 +248,6 @@ void process_userinput(char *_line)
 {
     static char *line,*line2;
     char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr; cJSON *json; int timeout,broadcastflag = 0;
-    printf("[%s]\n",_line);
-    if ( line == 0 )
-        line = calloc(1,65536), line2 = calloc(1,65536);
-    expand_aliases(line,line2,65536,_line);
-    if ( (line= localcommand(line)) == 0 )
-        return;
-    if ( line[0] == '!' )
-        broadcastflag = 1, line++;
     if ( (json= cJSON_Parse(line)) != 0 )
     {
         char *process_nn_message(int32_t sock,char *jsonstr);
@@ -267,6 +259,14 @@ void process_userinput(char *_line)
         fprintf(stderr,"console -> (%s)\n",retstr);
         return;
     } else printf("cant parse.(%s)\n",line);
+    printf("[%s]\n",_line);
+    if ( line == 0 )
+        line = calloc(1,65536), line2 = calloc(1,65536);
+    expand_aliases(line,line2,65536,_line);
+    if ( (line= localcommand(line)) == 0 )
+        return;
+    if ( line[0] == '!' )
+        broadcastflag = 1, line++;
     settoken(ipaddr,line);
     printf("expands to: %s [%s] %s\n",broadcastflag != 0 ? "broadcast": "",line,ipaddr);
     if ( is_ipaddr(ipaddr) != 0 )

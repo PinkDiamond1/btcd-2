@@ -48,7 +48,7 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl",SUPERNET.NXTAPIURL,0,0,cmdstr)
 #define fetch_URL(url) bitcoind_RPC(0,"fetch",url,0,0,0)
 
-#define INSTANTDEX_TRIGGERDEADLINE 15
+#define INSTANTDEX_TRIGGERDEADLINE 60
 
 #define NXT_ASSETID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
 #define BTC_ASSETID ('B' + ((uint64_t)'T'<<8) + ((uint64_t)'C'<<16))    // 4412482
@@ -932,7 +932,7 @@ uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint
     return(qty * get_assetmult(assetid));
 }
 
-void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,double volume)
+void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,double volume)
 {
     double checkprice,checkvol,distA,distB,metric,bestmetric = (1. / SMALLVAL);
     uint64_t baseamount,relamount,bestbaseamount = 0,bestrelamount = 0;

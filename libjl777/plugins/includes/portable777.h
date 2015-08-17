@@ -149,7 +149,7 @@ char *dumpprivkey(char *coinstr,char *serverport,char *userpass,char *coinaddr);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
 uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
-void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,double volume);
+void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,double volume);
 
 #define MAX_DEPTH 25
 #define MINUTES_FIFO (1024)
@@ -170,13 +170,13 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 #define MAX_EXCHANGES 64
 
 struct pending_trade { struct queueitem DL; struct prices777 *prices; double price,volume; int32_t dir; };
+struct NXTtx { uint64_t txid; char fullhash[MAX_JSON_FIELD],utxbytes[MAX_JSON_FIELD],txbytes[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD]; };
 
-struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,pending:1,automatch:3,minperc:7; };
+struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,pending:1,automatch:3,minperc:7; };
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
     struct InstantDEX_shared s; // must be here
-    uint64_t baseid,baseamount,relid,relamount;
     char exchangeid,gui[9];
 };
 
@@ -213,6 +213,8 @@ struct exchange_info
     portable_mutex_t mutex;
 };
 
+uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,char *comment,int32_t deadline,char *triggerhash,uint32_t triggerheight);
+
 struct exchange_info *get_exchange(int32_t exchangeid);
 char *exchange_str(int32_t exchangeid);
 struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr);
@@ -224,6 +226,7 @@ uint64_t prices777_equiv(uint64_t assetid);
 void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB);
 char *prices777_activebooks(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,int32_t maxdepth,int32_t allflag,int32_t tradeable);
 char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct prices777 *prices,struct prices777_basketinfo *OB,int32_t maxdepth,int32_t allflag);
+int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,double Hmatrix[32][32],double *RTprices,char *contracts[],int32_t num,uint32_t timestamp);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);

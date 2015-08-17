@@ -116,7 +116,7 @@ static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag
 
 static struct dKV777 *agent_initprotocol(struct plugin_info *plugin,cJSON *json,char *agent,char *path,char *protocol,double pingmillis,char *nxtsecret,struct kv777 *kps[],int32_t numkps)
 {
-    cJSON *argjson; char buf[512]; int32_t n; struct protocol_info *prot = &plugin->protocol;
+    cJSON *argjson; char buf[8192]; int32_t n; struct protocol_info *prot = &plugin->protocol;
     if ( path == 0 )
         path = protocol;
     ensure_directory(path);
