@@ -2562,7 +2562,12 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                     //bitcoindark: create peggybase transaction for this block
                     CTransaction peggy;
                     char paymentScript[256]; //temp script
-                    strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
+                    if(pindexBest->nHeight == nMinPeggyHeight) //to ensure faster staking on private mainnet -- TEST only TODO: remove in production
+                        strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":10000000, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
+                    else
+                    {
+                        strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
+                    }
                     if(wallet.CreatePeggyBase(peggy, paymentScript))
                     {
                         peggy.nTime = nTime;
