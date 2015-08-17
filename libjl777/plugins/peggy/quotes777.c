@@ -850,7 +850,7 @@ void *peggy_replay(char *path,struct txinds777_info *opreturns,void *_PEGS,uint3
                 //printf("%d: type.%d %u num.%d\n",i,Ptx.txtype,Ptx.timestamp,Ptx.details.price.num);
                 if ( PEGS == 0 && nonz == Ptx.details.price.num )
                     PEGS = peggy_genesis(lookbacks,PEGS,path,Ptx.timestamp,opreturnstr);
-                else if ( Ptx.timestamp > PEGS->genesistime )
+                else if ( PEGS != 0 && Ptx.timestamp > PEGS->genesistime )
                 {
                     Ptx.flags |= PEGGY_FLAGS_PEGGYBASE;
                     if ( peggy_process(PEGS,1,Ptx.funding.src.coinaddr,Ptx.funding.amount,&data[offset+3],(int32_t)len-3,blocknum,Ptx.timestamp,blocknum) < 0 )
