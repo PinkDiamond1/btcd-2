@@ -1763,8 +1763,21 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
     #endif
     
     // ppcoin: track money supply and mint amount info
+    #ifdef PEGGY
+    if(vtx[2].IsPeggyBase())
+    {
+        pindex->nMint = nValueOut - nValueIn + nFees - vtx[2].GetValueOut();
+        pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn - vtx[2].GetValueOut();
+    }
+    else
+    {
+        pindex->nMint = nValueOut - nValueIn + nFees;
+        pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+    }
+    #else
     pindex->nMint = nValueOut - nValueIn + nFees;
     pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+    #endif
     if (!txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
         return error("Connect() : WriteBlockIndex for pindex failed");
     
