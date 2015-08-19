@@ -301,7 +301,7 @@ uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,ui
     return(txid);
 }
 
-char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid)
+char *fill_nxtae(uint64_t *txidp,uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid)
 {
     uint64_t txid,assetid,avail,qty,priceNQT,ap_mult; char retbuf[512],*errstr;
     if ( nxt64bits != calc_nxt64bits(SUPERNET.NXTADDR) )
@@ -318,6 +318,8 @@ char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint6
     if ( errstr != 0 )
         sprintf(retbuf,"{\"error\":\"%s\"}",errstr), free(errstr);
     else sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
+    if ( txidp != 0 )
+        *txidp = txid;
     return(clonestr(retbuf));
 }
 

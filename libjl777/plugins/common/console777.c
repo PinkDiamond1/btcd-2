@@ -248,12 +248,12 @@ void process_userinput(char *_line)
 {
     static char *line,*line2;
     char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr; cJSON *json; int timeout,broadcastflag = 0;
-    if ( (json= cJSON_Parse(line)) != 0 )
+    if ( (json= cJSON_Parse(_line)) != 0 )
     {
         char *process_nn_message(int32_t sock,char *jsonstr);
         free_json(json);
         char *SuperNET_JSON(char *jsonstr);
-        retstr = SuperNET_JSON(line);
+        retstr = SuperNET_JSON(_line);
         //retstr = process_nn_message(-1,line);
         //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
         fprintf(stderr,"console -> (%s)\n",retstr);

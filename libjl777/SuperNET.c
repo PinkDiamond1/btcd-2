@@ -673,7 +673,7 @@ int main(int argc,const char *argv[])
    // sleep(60);
     uint32_t nonce;
     char *str,*teststr = "{\"offerNXT\":\"423766016895692955\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"InstantDEX\",\"base\":\"LTC\",\"rel\":\"NXT\",\"baseid\":\"2881764795164526882\",\"relid\":\"5527630\",\"baseqty\":\"-10000\",\"relqty\":\"10720000000\",\"price\":107.20000000,\"volume\":1.00000000,\"triggerhash\":\"c237c5827bf727957304faa7ef97f1a7bcc3037a0eb77190e6eee5c15d26a68c\",\"fullhash\":\"038b259a3582df5522eddb09f9c287696b8af3580bcf0ce6c200f4bef8703208\",\"utx\":\"021132a53f033c004e5bbad625df3d536fa90b1e6a28c3f5a56e1fcbe34132391c8d3fd7f671cb199b30f378f284e105000000000000000000e1f50500000000c237c5827bf727957304faa7ef97f1a7bcc3037a0eb77190e6eee5c15d26a68c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000879e070057b572fe4442d0d3012209021ed015fe271027000000000000\",\"sighash\":\"5d63be5663821581f382228a14dec02be73becfac1e6b1f1b70afc8df6d433a4\",\"otherbits\":\"5527630\",\"otherqty\":\"10720000000\"}";
-    if ( 1 && (str= busdata_sync(&nonce,clonestr(teststr),"allnodes",0)) != 0 )
+    if ( 0 && (str= busdata_sync(&nonce,clonestr(teststr),"allnodes",0)) != 0 )
     {
         printf("retstr.(%s)\n",str);
         getchar();

@@ -1006,7 +1006,7 @@ void prices777_exchangeloop(void *ptr)
 
 int32_t prices777_init(char *jsonstr)
 {
-    char *btcdexchanges[] = { "poloniex", "bittrex", "bter" };
+    char *btcdexchanges[] = { "poloniex", "bittrex" };//, "bter" };
     char *btcusdexchanges[] = { "bityes", "bitfinex", "bitstamp", "itbit", "okcoin", "coinbase", "btce", "lakebtc", "exmo" };
     cJSON *json=0,*item,*exchanges; int32_t i,n; char *exchange,*base,*rel,*contract; struct exchange_info *exchangeptr;
     if ( BUNDLE.ptrs[0] != 0 )

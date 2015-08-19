@@ -20,7 +20,7 @@
 #define INSTANTDEX_PRICESLIPPAGE 0.001
 #define FINISH_HEIGHT 7
 
-#define INSTANTDEX_TRIGGERDEADLINE 60
+#define INSTANTDEX_TRIGGERDEADLINE 120
 #define JUMPTRADE_SECONDS 100
 #define INSTANTDEX_ACCT "4383817337783094122"
 #define INSTANTDEX_FEE ((long)(2.5 * SATOSHIDEN))
@@ -48,10 +48,10 @@ struct pingpong_queue Pending_offersQ;
 cJSON *Lottostats_json;
 cJSON *InstantDEX_lottostats();
 
-#include "NXT_tx.h"
+//#include "NXT_tx.h"
 #include "trades.h"
 #include "quotes.h"
-#include "atomic.h"
+//#include "atomic.h"
 
 uint32_t prices777_NXTBLOCK;
 int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
@@ -279,7 +279,7 @@ cJSON *InstantDEX_lottostats()
     return(cJSON_Parse(buf));
 }
 
-int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json,char *origargstr)
+int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json)
 {
     uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize; char key[1024],buf[64],*methodstr;
     memset(iQ,0,sizeof(*iQ));
@@ -293,7 +293,7 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     iQ->s.minperc = juint(json,"minperc");
     iQ->s.duration = juint(json,"duration");
     copy_cJSON(exchangestr,jobj(json,"exchange"));
-    if ( find_exchange(&exchangeid,exchangestr) == 0 )
+    if ( exchangestr[0] == 0 || find_exchange(&exchangeid,exchangestr) == 0 )
         exchangeid = -1;
     iQ->exchangeid = exchangeid;
     copy_cJSON(base,jobj(json,"base")), copy_cJSON(rel,jobj(json,"rel")), copy_cJSON(name,jobj(json,"name"));
@@ -354,7 +354,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         // makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
         // autofill and automatch
         // tradehistory and other stats -> peggy integration
-        bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,jsonstr);
+        bidask_parse(exchangestr,name,base,rel,gui,&iQ,json);
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
         //printf("isask.%d\n",iQ.s.isask);
@@ -473,61 +473,10 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
     //printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
-        if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,origargstr) == 0 )
+        if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json) == 0 )
             return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr,name,base,rel,&iQ));
         else printf("error with incoming bidask\n");
     } else fprintf(stderr,"got my bidask from network (%s)\n",origargstr);
-    return(0);
-}
-
-char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
-{
-    char offerNXT[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
-    cJSON *json,*triggerjson; uint64_t otherbits,otherqty,quoteid; struct InstantDEX_quote *iQ;
-    copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
-    //printf("got (%s)\n",origargstr);
-    if ( 1 ) //strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
-    {
-        quoteid = j64bits(origjson,"quoteid");
-        if ( (iQ= find_iQ(quoteid)) == 0 )
-            return(clonestr("{\"error\":\"cant find quoteid\"}"));
-        otherbits = j64bits(origjson,"otherbits");
-        otherqty = j64bits(origjson,"otherqty");
-        triggerhash = jstr(origjson,"triggerhash");
-        fullhash = jstr(origjson,"fullhash");
-        utx = jstr(origjson,"utx");
-        sighash = jstr(origjson,"sighash");
-        if ( (jsonstr= issue_calculateFullHash(utx,sighash)) != 0 )
-        {
-            //printf("utx.(%s) sighash.(%s) -> (%s)\n",utx,sighash,jsonstr);
-            if ( (json= cJSON_Parse(jsonstr)) != 0 )
-            {
-                copy_cJSON(calchash,jobj(json,"fullHash"));
-                if ( strcmp(calchash,fullhash) == 0 )
-                {
-                    if ( (parsed= issue_parseTransaction(utx)) != 0 )
-                    {
-                        _stripwhite(parsed,' ');
-                        printf("iQ (%llu/%llu) otherbits.%llu qty %llu PARSED OFFER.(%s) triggerhash.(%s) (%s) offer sender.%s\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)otherbits,(long long)otherqty,parsed,fullhash,calchash,sender);
-                        if ( (triggerjson= cJSON_Parse(parsed)) != 0 )
-                        {
-                            if ( (cmpstr= jstr(triggerjson,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 )
-                            {
-                                // verify tx valid
-                                struct NXTtx fee,responsetx; int32_t triggerheight = 0;
-                                gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,0,INSTANTDEX_TRIGGERDEADLINE,triggerhash,0);
-                                gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,0,INSTANTDEX_TRIGGERDEADLINE,triggerhash,triggerheight);
-                                printf("fee.(%s) responsetx.(%s)\n",fee.txbytes,responsetx.txbytes);
-                            }
-                            free_json(triggerjson);
-                        }
-                    }
-                } else printf("mismatch (%s) != (%s)\n",calchash,fullhash);
-                free_json(json);
-            }
-            free(jsonstr);
-        } else printf("calchash.(%s)\n",jsonstr);
-    } else fprintf(stderr,"got my swap from network (%s)\n",origargstr);
     return(0);
 }
 
@@ -561,7 +510,7 @@ void init_exchanges(cJSON *json)
 void init_InstantDEX(uint64_t nxt64bits,int32_t testflag,cJSON *json)
 {
     int32_t a,b;
-    init_pingpong_queue(&Pending_offersQ,"pending_offers",process_Pending_offersQ,0,0);
+    init_pingpong_queue(&Pending_offersQ,"pending_offers",0,0,0);
     Pending_offersQ.offset = 0;
     init_exchanges(json);
     find_exchange(&a,INSTANTDEX_NXTAENAME), find_exchange(&b,INSTANTDEX_NAME);

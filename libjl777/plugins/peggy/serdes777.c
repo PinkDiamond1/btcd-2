@@ -77,7 +77,7 @@ struct peggy_tx
     union peggy_txtype details; char hexstr[512];
     uint8_t data[4096];
     struct acct777_sig sigs[PEGGY_MAXSIGS];
-    uint64_t required;
+   //uint64_t required;
 };
 
 /////////////////

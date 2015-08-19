@@ -35,7 +35,7 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
 
 struct InstantDEX_quote *AllQuotes;
 
-void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->s.closed = iQ->s.sent = iQ->s.matched = 0; }
+void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->s.closed = iQ->s.pending = iQ->s.responded = iQ->s.matched = 0; }
 void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->s.closed = 1; }
 
 int32_t InstantDEX_uncalcsize() { struct InstantDEX_quote iQ; return(sizeof(iQ.hh) + sizeof(iQ.s.quoteid) + sizeof(iQ.s.price) + sizeof(iQ.s.vol)); }
@@ -255,6 +255,8 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             else if ( prices777_equiv(ptr->s.relid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->relid) )
                 invert = 1;
             else continue;
+            if ( ptr->s.pending != 0 )
+                continue;
             iQ = *ptr;
             isask = iQ.s.isask;
             if ( invert != 0 )
@@ -378,7 +380,7 @@ char *autofill(char *remoteaddr,struct InstantDEX_quote *refiQ,char *NXTaddr,cha
                 price = 1. / bestiQ->s.price;
                 printf("price inverted (%f %f) -> (%f %f)\n",bestiQ->s.price,bestiQ->s.vol,price,volume);
             } else price = bestiQ->s.price, volume = bestiQ->s.vol;
-            retstr = prices777_trade(prices,dir,price,volume);
+            retstr = prices777_trade(prices,dir,price,volume,bestiQ,0,bestiQ->s.quoteid);
         }
     }
     return(retstr);
@@ -406,14 +408,8 @@ char *automatch(struct prices777 *prices,int32_t dir,double refprice,double refv
     }
     //printf("n.%d\n",n);
     if ( bestorder.source != 0 )
-        retstr = prices777_trade(bestorder.source,bestorder.s.isask!=0?-1:1,bestorder.s.price,bestorder.s.vol);
+        retstr = prices777_trade(bestorder.source,bestorder.s.isask!=0?-1:1,bestorder.s.price,bestorder.s.vol,0,&bestorder,bestorder.s.quoteid);
     return(retstr);
-}
-
-char *offer_statemachine(struct pending_trade *pend)
-{
-    // if trade is complete return str
-    return(0);
 }
 
 void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
@@ -439,7 +435,6 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
                 if ( (retstr= automatch(prices,dir,price,volume,NXTaddr,NXTACCTSECRET)) != 0 )
                 {
                     printf("automatched %s isask.%d %f %f (%s)\n",prices->contract,iQ->s.isask,iQ->s.price,iQ->s.vol,retstr);
-                    iQ->s.pending = 1;
                     free(retstr);
                 }
             }
@@ -451,9 +446,9 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
         {
            if ( (retstr= offer_statemachine(pend)) != 0 )
            {
-               printf("automatched %s %d %f %f (%s)\n",pend->prices->contract,pend->dir,pend->price,pend->volume,retstr);
+               printf("offer_statemachine %llu/%llu %d %f %f (%s)\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume,retstr);
                free(retstr);
-               free(pend);
+               free_pending(pend);
            } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
         }
     }
@@ -487,8 +482,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         {
             if ( strcmp(exchangestr,"InstantDEX") != 0 && strcmp(exchangestr,"active") != 0 && strcmp(exchangestr,"basket") != 0 )
             {
-                create_iQ(iQ);
-                return(prices777_trade(prices,dir,price,volume));
+                return(prices777_trade(prices,dir,price,volume,iQ,0,iQ->s.quoteid));
             }
             if ( iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) != 0 )
                 return(retstr);

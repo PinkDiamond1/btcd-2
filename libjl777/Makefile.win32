@@ -18,14 +18,14 @@ endif
 
 PATH := $(PWD)/mxe/usr/bin:$(PATH)
 
-PLIBS := ../libs/libjl777-win32.a ../libs/libminiupnpc-win32.a ../libs/libnanomsg-win32.a  -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 ../libs/libmman.a -lz -lssp -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB
+PLIBS := ../libs/libjl777-win32.a ../libs/libminiupnpc-win32.a ../libs/libnanomsg-win32.a -lpthread -lcurl -lgnutls -lnettle -lhogweed -lgmp -lm -liphlpapi -lws2_32 -lwsock32 -lz -lcrypt32 -lssp -lmman -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINGW_HAS_SECURE_API=1
 
-LIBS= libs/libjl777-win32.a libs/libnanomsg-win32.a libs/libminiupnpc-win32.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 libs/libmman.a -lz -lssp
+LIBS= libs/libjl777-win32.a libs/libnanomsg-win32.a libs/libminiupnpc-win32.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 -lssp -lgnutls -lnettle -lhogweed -lgmp -lz -lcrypt32 -lmman
 
 CC=i686-w64-mingw32.static-gcc
 OS=win
 
-CFLAGS= -w -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINIUPNP_STATICLIB
+CFLAGS= -w -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINIUPNP_STATICLIB -DMINGW_HAS_SECURE_API=1
 
 TARGET  = libjl777-win32.a
 
@@ -76,7 +76,7 @@ test:	all
 	(cd tests; make test)
 
 clean: doesntexist
-	rm libs/libjl777-win32.a SuperNET; rm -f libjl777-win32.a  $(OBJS) *~
+	rm libs/libjl777-win32.a SuperNET.exe; rm -f libjl777-win32.a  $(OBJS) *~
 
 PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp #-I. -Iutils -Iramchain -Icoins -Imgw -I -Isophia -I../includes -I../.. -I../coins -I../ramchain -I../sophia -I../$
 
@@ -286,13 +286,9 @@ onetime: doesntexist; \
 winpatch:
 ifeq ($(wildcard mxe),)
 	git clone http://github.com/mxe/mxe;
-	cp mxepatch/curl.mk mxe/src/curl.mk;
 	sh make_win32.sh;
 else
-	cd mxe;
-	git pull;
-	cd ..;
-	cp mxepatch/curl.mk mxe/src/curl.mk;
+	cd mxe; git pull; cd ..;
 	sh make_win32.sh;
 endif
 

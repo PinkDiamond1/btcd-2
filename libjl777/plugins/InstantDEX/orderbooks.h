@@ -168,6 +168,113 @@ uint64_t calc_qty(uint64_t mult,uint64_t assetid,uint64_t amount)
     else return(amount);
 }
 
+int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXTbits)
+{
+    int32_t typeval,subtypeval,n = 0;
+    uint64_t quantity,price,assetidbits;
+    cJSON *attachmentobj;
+    char sender[MAX_JSON_FIELD],recipient[MAX_JSON_FIELD],deadline[MAX_JSON_FIELD],feeNQT[MAX_JSON_FIELD],amountNQT[MAX_JSON_FIELD],type[MAX_JSON_FIELD],subtype[MAX_JSON_FIELD],verify[MAX_JSON_FIELD],referencedTransaction[MAX_JSON_FIELD],quantityQNT[MAX_JSON_FIELD],priceNQT[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD],fullhash[MAX_JSON_FIELD],timestamp[MAX_JSON_FIELD],transaction[MAX_JSON_FIELD];
+    if ( json == 0 )
+        return(-1);
+    if ( extract_cJSON_str(sender,sizeof(sender),json,"sender") > 0 ) n++;
+    if ( extract_cJSON_str(recipient,sizeof(recipient),json,"recipient") > 0 ) n++;
+    if ( extract_cJSON_str(referencedTransaction,sizeof(referencedTransaction),json,"referencedTransactionFullHash") > 0 ) n++;
+    if ( extract_cJSON_str(amountNQT,sizeof(amountNQT),json,"amountNQT") > 0 ) n++;
+    if ( extract_cJSON_str(feeNQT,sizeof(feeNQT),json,"feeNQT") > 0 ) n++;
+    if ( extract_cJSON_str(deadline,sizeof(deadline),json,"deadline") > 0 ) n++;
+    if ( extract_cJSON_str(type,sizeof(type),json,"type") > 0 ) n++;
+    if ( extract_cJSON_str(subtype,sizeof(subtype),json,"subtype") > 0 ) n++;
+    if ( extract_cJSON_str(verify,sizeof(verify),json,"verify") > 0 ) n++;
+    if ( extract_cJSON_str(sighash,sizeof(sighash),json,"signatureHash") > 0 ) n++;
+    if ( extract_cJSON_str(fullhash,sizeof(fullhash),json,"fullHash") > 0 ) n++;
+    if ( extract_cJSON_str(timestamp,sizeof(timestamp),json,"timestamp") > 0 ) n++;
+    if ( extract_cJSON_str(transaction,sizeof(transaction),json,"transaction") > 0 ) n++;
+    if ( calc_nxt64bits(recipient) != destNXTbits )
+    {
+        printf("recipient.%s != %llu\n",recipient,(long long)destNXTbits);
+        return(-2);
+    }
+    typeval = atoi(type), subtypeval = atoi(subtype);
+    if ( refasset == NXT_ASSETID )
+    {
+        if ( typeval != 0 || subtypeval != 0 )
+            return(-3);
+        if ( qty != calc_nxt64bits(amountNQT) )
+            return(-4);
+        return(0);
+    }
+    else
+    {
+        if ( typeval != 2 || subtypeval != 1 )
+        {
+            printf("refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
+            return(-11);
+        }
+        price = quantity = assetidbits = 0;
+        attachmentobj = cJSON_GetObjectItem(json,"attachment");
+        if ( attachmentobj != 0 )
+        {
+            if ( extract_cJSON_str(assetidstr,sizeof(assetidstr),attachmentobj,"asset") > 0 )
+                assetidbits = calc_nxt64bits(assetidstr);
+            //else if ( extract_cJSON_str(assetidstr,sizeof(assetidstr),attachmentobj,"currency") > 0 )
+            //    assetidbits = calc_nxt64bits(assetidstr);
+            if ( extract_cJSON_str(quantityQNT,sizeof(quantityQNT),attachmentobj,"quantityQNT") > 0 )
+                quantity = calc_nxt64bits(quantityQNT);
+            //else if ( extract_cJSON_str(quantityQNT,sizeof(quantityQNT),attachmentobj,"units") > 0 )
+            //    quantity = calc_nxt64bits(quantityQNT);
+            if ( extract_cJSON_str(priceNQT,sizeof(priceNQT),attachmentobj,"priceNQT") > 0 )
+                price = calc_nxt64bits(priceNQT);
+        }
+        if ( assetidbits != refasset )
+            return(-12);
+        if ( qty != quantity )
+        {
+            printf("qty.%llu != %llu\n",(long long)qty,(long long)quantity);
+            return(-13);
+        }
+        return(0);
+    }
+    return(-1);
+}
+
+int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendqty,cJSON *txobj,uint64_t recvasset,uint64_t recvqty)
+{
+    int32_t err;
+    // verify recipient, amounts in txobj
+     if ( (err= verify_NXTtx(txobj,recvasset,recvqty,destNXTaddr)) != 0 )
+    {
+        printf("InstantDEX_verify tx mismatch %d (%llu %lld) -> (%llu %lld)\n",err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
+        return(-1);
+    }
+    return(0);
+    /*if ( iQ->s.offerNXT == SUPERNET.my64bits )
+    {
+        printf("%llu/%llu qty %lld/%lld\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)iQ->s.baseamount,(long long)iQ->s.relamount);
+        if ( iQ->s.isask == 0 )
+        {
+            quantity = iQ->s.relamount;
+            if ( sendasset == iQ->s.relid )
+            {
+                //printf("baseid.%llu basemult.%llu -> %llu\n",(long long)prices->baseid,(long long)prices->basemult,(long long)baseqty);
+                if ( sendqty == quantity )
+                    return(0);
+                else printf("InstantDEX_verify bid mismatch: qty.%llu vs %llu\n",(long long)quantity,(long long)sendqty);
+            } else printf("InstantDEX_verify bid mismatch: relbits.%llu vs %llu | qty.%llu vs %llu\n",(long long)iQ->s.relid,(long long)sendasset,(long long)sendqty,(long long)quantity);
+        }
+        else
+        {
+            if ( sendasset == iQ->s.baseid )
+            {
+                quantity = iQ->s.baseamount;// / get_assetmult(sendasset);
+                if ( sendqty == quantity )
+                    return(0);
+                else printf("InstantDEX_verify bid mismatch: qty.%llu vs %llu\n",(long long)quantity,(long long)sendqty);
+            } else printf("InstantDEX_verify ask mismatch: basebits.%llu vs %llu\n",(long long)iQ->s.baseid,(long long)sendasset);
+        }
+    } else printf("InstantDEX_verify offerNXT mismatch: %llu vs %llu\n",(long long)iQ->s.offerNXT,(long long)SUPERNET.my64bits);
+    return(-1);*/
+}
+
 void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid,uint64_t quoteid)
 {
     uint64_t baseqty,relqty; char basec,relc;
@@ -310,7 +417,7 @@ void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct pri
         volume = (origvolume * origprice), price = 1./origprice;
     else price = origprice, volume = origvolume;
     jaddstr(item,"plugin","InstantDEX"), jaddstr(item,"method","tradesequence");
-    jaddnum(item,"price",price), jaddnum(item,"volume",volume);
+    jaddnum(item,"dotrade",1), jaddnum(item,"price",price), jaddnum(item,"volume",volume);
     if ( allflag != 0 )
     {
         if ( prices->basketsize == 0 )
@@ -959,15 +1066,10 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
     return(hbla);
 }
 
-int32_t match_unconfirmed(char *account,uint64_t quoteid,cJSON *txobj)
-{
-    return(-1);
-}
-
 double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 {
     char url[1024],account[1024],txidstr[1024],comment[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
-    cJSON *json,*bids,*asks,*commentobj,*array,*txobj,*attachment;
+    cJSON *json,*bids,*asks,*array,*txobj,*attachment;
     double price,vol; uint64_t assetid,accountid,quoteid,baseamount,relamount,qty,priceNQT,amount;
     bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
     prices->lastbid = prices->lastask = 0.;
@@ -1005,7 +1107,9 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                         copy_cJSON(comment,jobj(attachment,"message"));
                         if ( comment[0] != 0 )
                         {
-                            unstringify(comment);
+                            int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj);
+                            match_unconfirmed(account,comment,txobj);
+                            /*unstringify(comment);
                             if ( (commentobj= cJSON_Parse(comment)) != 0 )
                             {
                                 quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
@@ -1014,7 +1118,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                                 if ( quoteid != 0 )
                                     match_unconfirmed(account,quoteid,txobj);
                                 free_json(commentobj);
-                            }
+                            }*/
                         }
                         quoteid = calc_nxt64bits(txidstr);
                         price = prices777_price_volume(&vol,baseamount,relamount);

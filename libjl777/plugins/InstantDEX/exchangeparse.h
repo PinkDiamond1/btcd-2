@@ -130,6 +130,8 @@ struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr)
             exchange->exchangeid = exchangeid;
             exchange->nxt64bits = stringbits(exchangestr);
             printf("CREATE EXCHANGE.(%s) id.%d %llu\n",exchangestr,exchangeid,(long long)exchange->nxt64bits);
+            //if ( exchangestr[0] == 0 )
+            //    getchar();
             break;
         }
         if ( strcmp(exchangestr,exchange->name) == 0 )
@@ -185,6 +187,7 @@ double prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD
 
 int32_t bter_supports(char *base,char *rel)
 {
+    return(0);
     if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
         return(1);
     else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )

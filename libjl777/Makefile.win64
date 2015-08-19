@@ -19,9 +19,9 @@ endif
 
 PATH := $(PWD)/mxe/usr/bin:$(PATH)
 
-PLIBS := -DMINGW_HAS_SECURE_API=1 ../libs/libjl777-win64.a ../libs/libminiupnpc-win64.a ../libs/libnanomsg-win64.a  -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 ../libs/libmman.a -lz -lssp -D_win64 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB
+PLIBS := ../libs/libjl777-win64.a ../libs/libminiupnpc-win64.a ../libs/libnanomsg-win64.a -lpthread -lcurl -lgnutls -lnettle -lhogweed -lgmp -lm -liphlpapi -lws2_32 -lwsock32 -lz -lcrypt32 -lssp -lmman -D_win64 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINGW_HAS_SECURE_API=1
 
-LIBS= libs/libjl777-win64.a libs/libnanomsg-win64.a libs/libminiupnpc-win64.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 libs/libmman.a -lz -lssp
+LIBS= libs/libjl777-win64.a libs/libnanomsg-win64.a libs/libminiupnpc-win64.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 -lssp -lgnutls -lnettle -lhogweed -lgmp -lz -lcrypt32 -lmman
 
 CC=x86_64-w64-mingw32.static-gcc
 OS=win
@@ -77,7 +77,7 @@ test:	all
 	(cd tests; make test)
 
 clean: doesntexist
-	rm libs/libjl777-win64.a SuperNET; rm -f libjl777-win64.a  $(OBJS) *~
+	rm libs/libjl777-win64.a SuperNET64.exe; rm -f libjl777-win64.a  $(OBJS) *~
 
 PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp #-I. -Iutils -Iramchain -Icoins -Imgw -I -Isophia -I../includes -I../.. -I../coins -I../ramchain -I../sophia -I../$
 
@@ -139,7 +139,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-   pkill SuperNET; rm SuperNET; $(CC) -o SuperNET64.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
+   pkill SuperNET; rm SuperNET64.exe; $(CC) -o SuperNET64.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
 
 #-lz -ldl -lutil -lpcre -lexpat
 
@@ -286,13 +286,9 @@ onetime: doesntexist; \
 winpatch:
 ifeq ($(wildcard mxe),)
 	git clone http://github.com/mxe/mxe;
-	cp mxepatch/curl.mk mxe/src/curl.mk;
 	sh make_win64.sh;
 else
-	cd mxe;
-	git pull;
-	cd ..;
-	cp mxepatch/curl.mk mxe/src/curl.mk;
+	cd mxe;	git pull; cd ..;
 	sh make_win64.sh;
 endif
 

@@ -112,6 +112,8 @@ int main(int argc, char **argv)
     offset = strlen(namebuf) - 4;
     if ( offset > 0 && strcmp(".exe",namebuf + offset) == 0 )
         namebuf[offset] = 0;
+    if ( offset > 0 && strcmp(".cgi",namebuf + offset) == 0 )
+        namebuf[offset] = 0;
     if ( strcmp(namebuf,"init") == 0 || strcmp(namebuf,"") == 0 || strcmp(namebuf,"index.cgi") == 0 )
     {
         // "http://178.63.60.131/init/?requestType=status&coin=VRC"

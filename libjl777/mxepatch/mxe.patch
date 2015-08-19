@@ -1,0 +1,25 @@
+--- a/index.html	2015-08-15 16:37:55.334765779 +0700
++++ b/index.html	2015-08-15 16:58:40.786798074 +0700
+@@ -1085,6 +1085,10 @@
+         <td class="website"><a href="http://www.gnu.org/software/bison/">bison</a></td>
+     </tr>
+     <tr>
++        <td class="package">bdb48</td>
++        <td class="website"><a href="http://www.oracle.com/">bdb48</a></td>
++    </tr>
++    <tr>
+         <td class="package">blas</td>
+         <td class="website"><a href="http://www.netlib.org/blas/">blas</a></td>
+     </tr>
+@@ -1913,6 +1893,10 @@
+         <td class="website"><a href="http://www.msweet.org/projects.php?Z3">Mini-XML</a></td>
+     </tr>
+     <tr>
++        <td class="package">nanomsg</td>
++        <td class="website"><a href="http://www.gnu.org/software/bison/">nanomsg</a></td>
++    </tr>
++    <tr>
+         <td class="package">ncurses</td>
+         <td class="website"><a href="https://www.gnu.org/software/ncurses/">Ncurses</a></td>
+     </tr>
+
