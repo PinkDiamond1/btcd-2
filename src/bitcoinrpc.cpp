@@ -289,7 +289,8 @@ static const CRPCCommand vRPCCommands[] =
     { "submitblock",            &submitblock,            false,  false },
     { "listsinceblock",         &listsinceblock,         false,  false },
     { "dumpprivkey",            &dumpprivkey,            false,  false },
-    { "SuperNET",            &SuperNET,            false,  false },
+    { "SuperNET",               &SuperNET,               false,  false },
+    { "peggytx",                &peggytx,                true,   false },
     { "dumpwallet",             &dumpwallet,             true,   false },
     { "importwallet",           &importwallet,           false,  false },
     { "importprivkey",          &importprivkey,          false,  false },
@@ -1250,7 +1251,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
-    //if (strMethod == "jl777"              && n > 0) ConvertTo<Array>(params[0]);
+
+    //if (strMethod == "jl777"                && n > 0) ConvertTo<Array>(params[0]);
 
 
 

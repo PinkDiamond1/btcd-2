@@ -2438,9 +2438,10 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
 }
 
 #ifdef PEGGY
+extern "C" int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
 //bitcoindark: create a peggy base transaction
 //paymentScript looks like "{\"addr1\":amount1, \"addr2\":amount2,...}"
-bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript)
+bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, char *priceFeed)
 {
     peggyTx.vin.resize(2);
     
@@ -2457,8 +2458,18 @@ bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript)
     CBitcoinAddress address;
     CScript outScript;
 
-    cJSON *item;
+    //create peggy price feed op_return and place as first element in vout
+    peggyTx.vout.resize(1);
+    peggyTx.vout[0].nValue = (int64_t)0;
+    peggyTx.vout[0].scriptPubKey = CScript();
     int i;
+    size_t len = strlen(priceFeed)/2;
+    unsigned char buf[4096];
+    decode_hex(buf,(int)len,priceFeed);
+    for (i=0; i<(int)len; i++)
+        peggyTx.vout[0].scriptPubKey << buf[i];
+
+    cJSON *item;
     for(i=0; i<numOutputs; i++)
     {
         item = cJSON_GetArrayItem(json,i);

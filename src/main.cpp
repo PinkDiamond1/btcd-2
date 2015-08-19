@@ -2523,7 +2523,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     
     return true;
 }
-
+extern "C" char *peggybase(uint32_t blocknum,uint32_t blocktimestamp);
+extern "C" char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp);
 // novacoin: attempt to generate suitable proof-of-stake
 bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
 {
@@ -2570,6 +2571,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                 vtx.insert(vtx.begin() + 1, txCoinStake);
 
                 #ifdef PEGGY
+
                 if(pindexBest->nHeight + 1 >= nMinPeggyHeight) //latest block known is peggy time, this one should be as well
                 {
                     //bitcoindark: create peggybase transaction for this block
@@ -2581,11 +2583,13 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                     {
                         strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
                     }
-                    if(wallet.CreatePeggyBase(peggy, paymentScript))
+                    char *priceFeedHash = peggybase(pindexBest->nHeight+1, nTime);
+                    if(wallet.CreatePeggyBase(peggy, paymentScript, priceFeedHash))
                     {
                         peggy.nTime = nTime;
                         vtx.insert(vtx.begin() + 2, peggy);
                     }
+                    free(priceFeedHash);
                 }
                 #endif
                 hashMerkleRoot = BuildMerkleTree();
