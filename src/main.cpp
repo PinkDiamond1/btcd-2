@@ -52,12 +52,19 @@ unsigned int nTargetSpacing = 1 * 60; // BitcoinDark - 1 minute
 //static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 
 //static const int64_t nDiffChangeTarget = 1;
-
-unsigned int nStakeMinAge = 30 * 60; // BitcoinDark - 8 hours
+#ifdef PEGGY
+unsigned int nStakeMinAge = 2 * 60; // peggy test - 2 minutes
+#else
+unsigned int nStakeMinAge = 8 * 60 * 60; // BitcoinDark - 8 hours
+#endif
 unsigned int nStakeMaxAge = -1;
 unsigned int nModifierInterval = 10 * 60; // BitcoinDark - time to elapse before new modifier is computed
 
-int nCoinbaseMaturity = 10;
+#ifdef PEGGY
+int nCoinbaseMaturity = 1;
+#else
+int nCoinbaseMaturity = 100;
+#endif
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
 
@@ -3055,8 +3062,11 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
 // a large 4-byte int at any alignment.
+#ifdef PEGGY
 unsigned char pchMessageStart[4] = { 0xa4, 0xa2, 0xd8, 0xe7 };
-
+#else
+unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
+#endif
 //bitcoindark:
 extern "C" char *process_jl777_msg(char *from,char *msg, int32_t duration);
 
