@@ -171,7 +171,7 @@ void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,doub
 
 struct NXTtx { uint64_t txid; char fullhash[MAX_JSON_FIELD],utxbytes[MAX_JSON_FIELD],utxbytes2[MAX_JSON_FIELD],txbytes[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD]; };
 
-struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,closed:1,swap:1,responded:1,matched:1,feepaid:1,automatch:2,pending:1,minperc:7; };
+struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,expired:1,closed:1,swap:1,responded:1,matched:1,feepaid:1,automatch:1,pending:1,minperc:7; };
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
@@ -190,7 +190,7 @@ struct prices777_basketinfo
     struct prices777_orderentry book[MAX_GROUPS+1][MAX_DEPTH];
 };
 
-struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
+struct pending_trade { struct queueitem DL; struct InstantDEX_quote iQ; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type,version,size; };
 
 struct prices777
 {
@@ -233,6 +233,21 @@ int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,do
 struct InstantDEX_quote *find_iQ(uint64_t quoteid);
 int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json);
 struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ);
+double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth);
+char *hmac_sha1_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_md2_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_md4_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_md5_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_sha224_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_sha256_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_sha384_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_sha512_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_rmd128_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_rmd160_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_rmd256_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_rmd320_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_tiger_str(char *dest,char *key,int32_t key_size,char *message);
+char *hmac_whirlpool_str(char *dest,char *key,int32_t key_size,char *message);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);

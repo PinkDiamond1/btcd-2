@@ -84,6 +84,7 @@ case "$TARGET_OS" in
         PLATFORM=OS_LINUX
         COMMON_FLAGS="$MEMCMP_FLAG -pthread -DOS_LINUX"
         PLATFORM_LDFLAGS="-pthread"
+	PORTABLE_FILES="db/builder.cc db/c.cc db/dbformat.cc db/db_impl.cc db/db_iter.cc db/filename.cc db/log_reader.cc db/log_writer.cc db/memtable.cc db/repair.cc db/table_cache.cc db/version_edit.cc db/version_set.cc db/write_batch.cc table/block_builder.cc table/block.cc table/filter_block.cc table/format.cc table/iterator.cc table/merger.cc table/table_builder.cc table/table.cc table/two_level_iterator.cc util/arena.cc util/bloom.cc util/cache.cc util/coding.cc util/comparator.cc util/crc32c.cc util/env.cc util/env_posix.cc util/filter_policy.cc util/hash.cc util/histogram.cc util/logging.cc util/options.cc util/status.cc  port/port_posix.cc util/env_posix.cc"
         PORT_FILE=port/port_posix.cc
         ;;
     SunOS)
@@ -170,7 +171,8 @@ set -f # temporarily disable globbing so that our patterns aren't expanded
 PRUNE_TEST="-name *test*.cc -prune"
 PRUNE_BENCH="-name *_bench.cc -prune"
 PRUNE_TOOL="-name leveldb_main.cc -prune"
-PORTABLE_FILES=`find $DIRS $PRUNE_TEST -o $PRUNE_BENCH -o $PRUNE_TOOL -o -name '*.cc' -print | sort | sed "s,^$PREFIX/,," | tr "\n" " "`
+#static portable_files hack //to be fixed later
+#PORTABLE_FILES=`find $DIRS $PRUNE_TEST -o $PRUNE_BENCH -o $PRUNE_TOOL -o -name '*.cc' -print | sort | sed "s,^$PREFIX/,," | tr "\n" " "`
 
 set +f # re-enable globbing
 
@@ -195,6 +197,17 @@ EOF
         PLATFORM_CXXFLAGS="-std=c++0x"
     else
         COMMON_FLAGS="$COMMON_FLAGS -DLEVELDB_PLATFORM_POSIX"
+    fi
+
+    # Test whether Snappy library is installed
+    # http://code.google.com/p/snappy/
+    $CXX $CXXFLAGS -x c++ - -o $CXXOUTPUT 2>/dev/null  <<EOF
+      #include <snappy.h>
+      int main() {}
+EOF
+    if [ "$?" = 0 ]; then
+        COMMON_FLAGS="$COMMON_FLAGS -DSNAPPY"
+        PLATFORM_LIBS="$PLATFORM_LIBS -lsnappy"
     fi
 
     # Test whether tcmalloc is available

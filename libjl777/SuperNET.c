@@ -609,6 +609,33 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
+    char dest[512*2 + 1];
+    hmac_sha512_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha512.(%s)\n",dest);
+    hmac_sha384_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha384.(%s)\n",dest);
+    hmac_sha256_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha256.(%s)\n",dest);
+    hmac_sha224_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha224.(%s)\n",dest);
+    hmac_rmd160_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_rmd160.(%s)\n",dest);
+    hmac_rmd128_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_rmd128.(%s)\n",dest);
+    hmac_rmd256_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_rmd256.(%s)\n",dest);
+    hmac_rmd320_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_rmd320.(%s)\n",dest);
+    hmac_sha1_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha1.(%s)\n",dest);
+    hmac_md2_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_md2.(%s)\n",dest);
+    hmac_md4_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_md4.(%s)\n",dest);
+    hmac_md5_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_md5.(%s)\n",dest);
+    hmac_tiger_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_tiger.(%s)\n",dest);
+    hmac_whirlpool_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_whirlpool.(%s)\n",dest);
+    getchar();
+     char *hmac_sha224_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_sha256_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_sha384_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_sha512_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_rmd128_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_rmd160_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_rmd256_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_rmd320_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_tiger_str(char *dest,char *key,int32_t key_size,char *message);
+    char *hmac_whirlpool_str(char *dest,char *key,int32_t key_size,char *message);
+
     //void peggy_test();
     //portable_OS_init();
     //peggy_test();

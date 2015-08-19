@@ -10,7 +10,6 @@
 
 #define SHA512_DIGEST_SIZE (512 / 8)
 void *curl_post(CURL **cHandlep,char *url,char *postfields,char *hdr0,char *hdr1,char *hdr2);
-char *hmac_sha512_str(char dest[SHA512_DIGEST_SIZE*2 + 1],char *key,unsigned int key_size,char *message);
 
 int32_t flip_for_exchange(char *pairstr,char *fmt,char *refstr,int32_t dir,double *pricep,double *volumep,char *base,char *rel)
 {
@@ -78,7 +77,7 @@ uint64_t poloniex_trade(char **retstrp,struct exchange_info *exchange,char *base
  	char *sig,*data,cmdbuf[8192],hdr1[1024],hdr2[1024],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json; uint64_t txid = 0;
     dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
     sprintf(cmdbuf,"command=%s&nonce=%ld&currencyPair=%s&rate=%.8f&amount=%.8f",dir>0?"buy":"sell",time(NULL),pairstr,price,volume);
-    if ( (sig = hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),cmdbuf)) != 0 )
+    if ( (sig= hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),cmdbuf)) != 0 )
         sprintf(hdr2,"Sign:%s",sig);
     else hdr2[0] = 0;
     sprintf(hdr1,"Key:%s",exchange->apikey);

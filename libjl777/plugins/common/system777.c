@@ -154,7 +154,8 @@ struct teleport_info
 
 struct InstantDEX_info
 {
-    int32_t readyflag;
+    int32_t readyflag,numhist;
+    struct txinds777_info *history;
 }; extern struct InstantDEX_info INSTANTDEX;
 
 #define MAX_SERVERNAME 128

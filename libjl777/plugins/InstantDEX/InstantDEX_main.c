@@ -26,16 +26,17 @@
 #define INSTANTDEX_FEE ((long)(2.5 * SATOSHIDEN))
 
 #define DEFINES_ONLY
+#include "../includes/portable777.h"
 #include "../agents/plugin777.c"
 #include "../utils/NXT777.c"
-#include "../includes/portable777.h"
+#include "../common/txind777.c"
 #undef DEFINES_ONLY
 
 static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo", "quadriga" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
 
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory"
 
-#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "respondtx", "swap"
+#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "swap"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { INSTANTDEX_REMOTEAPI }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
@@ -291,7 +292,8 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     copy_cJSON(gui,jobj(json,"gui")), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
     iQ->s.automatch = juint(json,"automatch");
     iQ->s.minperc = juint(json,"minperc");
-    iQ->s.duration = juint(json,"duration");
+    if ( (iQ->s.duration= juint(json,"duration")) == 0 || iQ->s.duration > ORDERBOOK_EXPIRATION )
+        iQ->s.duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,jobj(json,"exchange"));
     if ( exchangestr[0] == 0 || find_exchange(&exchangeid,exchangestr) == 0 )
         exchangeid = -1;
@@ -343,7 +345,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 {
     char *prices777_allorderbooks();
     char *InstantDEX_openorders();
-    char *InstantDEX_tradehistory();
+    char *InstantDEX_tradehistory(int32_t firsti,int32_t endi);
     char *InstantDEX_cancelorder(uint64_t sequenceid,uint64_t quoteid);
     char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD]; struct InstantDEX_quote iQ;
     cJSON *json; uint64_t assetbits,sequenceid; uint32_t maxdepth; int32_t invert=0,keysize,allfields; struct prices777 *prices;
@@ -351,9 +353,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         return(0);
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        // makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
-        // autofill and automatch
-        // tradehistory and other stats -> peggy integration
+        // test: asset/asset, asset/external, external/external, autofill and automatch
+        // peggy integration
         bidask_parse(exchangestr,name,base,rel,gui,&iQ,json);
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
@@ -380,7 +381,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         else if ( strcmp(method,"orderstatus") == 0 )
             retstr = InstantDEX_orderstatus(sequenceid,iQ.s.quoteid);
         else if ( strcmp(method,"tradehistory") == 0 )
-            retstr = InstantDEX_tradehistory();
+            retstr = InstantDEX_tradehistory(juint(json,"firsti"),juint(json,"endi"));
         else if ( strcmp(method,"lottostats") == 0 )
             retstr = jprint(Lottostats_json,0);
         else if ( strcmp(method,"tradesequence") == 0 )
@@ -531,6 +532,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->allowremote = 1;
         portable_mutex_init(&plugin->mutex);
         init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0,json);
+        INSTANTDEX.history = txinds777_init(SUPERNET.DBPATH,"InstantDEX");
+        INSTANTDEX.numhist = (int32_t)INSTANTDEX.history->curitem;
+        InstantDEX_inithistory(0,INSTANTDEX.numhist);
         //update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");

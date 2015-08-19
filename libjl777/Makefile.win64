@@ -139,7 +139,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-   pkill SuperNET; rm SuperNET64.exe; $(CC) -o SuperNET64.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
+   pkill SuperNET; rm SuperNET64.exe; $(CC) -o SuperNET64.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS); strip SuperNET64.exe
 
 #-lz -ldl -lutil -lpcre -lexpat
 
@@ -147,8 +147,8 @@ special: /usr/lib/libjl777.so; \
     gcc -shared -Wl,-soname,libjl777.so -o libs/libjl777.so $(OBJS) -lstdc++ -lcurl -lm -ldl; \
     sudo cp libs/libjl777.so /usr/lib/libjl777.so
 
-btcd: ../src/BitcoinDarkd; \
-    cd ../src; rm BitcoinDarkd; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
+btcd: ../src/BitcoinDarkd64.exe; \
+    cd ../src; rm BitcoinDarkd64.exe; make clean -f Makefile.win64;  make -f Makefile.win64; strip BitcoinDarkd64.exe; cp BitcoinDarkd64.exe ../libjl777
 
 btcdmac: ../src/BitcoinDarkd; \
     cd ../src; rm BitcoinDarkd; make -f makefile.osx; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
@@ -310,7 +310,7 @@ count:
 
 .PHONY: libjl777.c
 
-../src/BitcoinDarkd: libjl777.a
+../src/BitcoinDarkd64.exe: libjl777-win64.a
 #libs/randombytes.o:
 libs/libuv.a:
 /usr/lib/libjl777.so: libs/libjl777.so

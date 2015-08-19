@@ -9,46 +9,39 @@
  * Tom St Denis, tomstdenis@gmail.com, http://libtom.org
  */
 #include "tomcrypt.h"
-#include <string.h>
 
 /**
-   @file rmd160.c
-   RMD160 hash function
-*/   
+   @file rmd320.c
+   RMD320 hash function
+*/
 
-/* Implementation of LTC_RIPEMD-160 based on the source by Antoon Bosselaers, ESAT-COSIC
- *
- * This source has been radically overhauled to be portable and work within
- * the LibTomCrypt API by Tom St Denis
- */
+#ifdef LTC_RIPEMD320
 
-//#ifdef LTC_RIPEMD160
-
-const struct ltc_hash_descriptor rmd160_desc =
+const struct ltc_hash_descriptor rmd320_desc =
 {
-    "rmd160",
+    "rmd320",
     9,
-    20,
+    40,
     64,
 
     /* OID */
-   { 1, 3, 36, 3, 2, 1,  },
-   6,
+   { 0 },
+   0,
 
-    &rmd160_init,
-    &rmd160_process,
-    &rmd160_done,
-    &rmd160_test,
+    &rmd320_init,
+    &rmd320_process,
+    &rmd320_done,
+    &rmd320_test,
     NULL
 };
 
 /* the five basic functions F(), G() and H() */
-#define F(x, y, z)        ((x) ^ (y) ^ (z)) 
-#define G(x, y, z)        (((x) & (y)) | (~(x) & (z))) 
+#define F(x, y, z)        ((x) ^ (y) ^ (z))
+#define G(x, y, z)        (((x) & (y)) | (~(x) & (z)))
 #define H(x, y, z)        (((x) | ~(y)) ^ (z))
-#define I(x, y, z)        (((x) & (z)) | ((y) & ~(z))) 
+#define I(x, y, z)        (((x) & (z)) | ((y) & ~(z)))
 #define J(x, y, z)        ((x) ^ ((y) | ~(z)))
-  
+
 /* the ten basic operations FF() through III() */
 #define FF(a, b, c, d, e, x, s)        \
       (a) += F((b), (c), (d)) + (x);\
@@ -102,12 +95,12 @@ const struct ltc_hash_descriptor rmd160_desc =
 
 
 #ifdef LTC_CLEAN_STACK
-static int _rmd160_compress(hash_state *md, unsigned char *buf)
+static int _rmd320_compress(hash_state *md, unsigned char *buf)
 #else
-static int  rmd160_compress(hash_state *md, unsigned char *buf)
+static int  rmd320_compress(hash_state *md, unsigned char *buf)
 #endif
 {
-   ulong32 aa,bb,cc,dd,ee,aaa,bbb,ccc,ddd,eee,X[16];
+   ulong32 aa,bb,cc,dd,ee,aaa,bbb,ccc,ddd,eee,tmp,X[16];
    int i;
 
    /* load words X */
@@ -116,11 +109,16 @@ static int  rmd160_compress(hash_state *md, unsigned char *buf)
    }
 
    /* load state */
-   aa = aaa = md->rmd160.state[0];
-   bb = bbb = md->rmd160.state[1];
-   cc = ccc = md->rmd160.state[2];
-   dd = ddd = md->rmd160.state[3];
-   ee = eee = md->rmd160.state[4];
+   aa = md->rmd320.state[0];
+   bb = md->rmd320.state[1];
+   cc = md->rmd320.state[2];
+   dd = md->rmd320.state[3];
+   ee = md->rmd320.state[4];
+   aaa = md->rmd320.state[5];
+   bbb = md->rmd320.state[6];
+   ccc = md->rmd320.state[7];
+   ddd = md->rmd320.state[8];
+   eee = md->rmd320.state[9];
 
    /* round 1 */
    FF(aa, bb, cc, dd, ee, X[ 0], 11);
@@ -139,78 +137,6 @@ static int  rmd160_compress(hash_state *md, unsigned char *buf)
    FF(cc, dd, ee, aa, bb, X[13],  7);
    FF(bb, cc, dd, ee, aa, X[14],  9);
    FF(aa, bb, cc, dd, ee, X[15],  8);
-                             
-   /* round 2 */
-   GG(ee, aa, bb, cc, dd, X[ 7],  7);
-   GG(dd, ee, aa, bb, cc, X[ 4],  6);
-   GG(cc, dd, ee, aa, bb, X[13],  8);
-   GG(bb, cc, dd, ee, aa, X[ 1], 13);
-   GG(aa, bb, cc, dd, ee, X[10], 11);
-   GG(ee, aa, bb, cc, dd, X[ 6],  9);
-   GG(dd, ee, aa, bb, cc, X[15],  7);
-   GG(cc, dd, ee, aa, bb, X[ 3], 15);
-   GG(bb, cc, dd, ee, aa, X[12],  7);
-   GG(aa, bb, cc, dd, ee, X[ 0], 12);
-   GG(ee, aa, bb, cc, dd, X[ 9], 15);
-   GG(dd, ee, aa, bb, cc, X[ 5],  9);
-   GG(cc, dd, ee, aa, bb, X[ 2], 11);
-   GG(bb, cc, dd, ee, aa, X[14],  7);
-   GG(aa, bb, cc, dd, ee, X[11], 13);
-   GG(ee, aa, bb, cc, dd, X[ 8], 12);
-
-   /* round 3 */
-   HH(dd, ee, aa, bb, cc, X[ 3], 11);
-   HH(cc, dd, ee, aa, bb, X[10], 13);
-   HH(bb, cc, dd, ee, aa, X[14],  6);
-   HH(aa, bb, cc, dd, ee, X[ 4],  7);
-   HH(ee, aa, bb, cc, dd, X[ 9], 14);
-   HH(dd, ee, aa, bb, cc, X[15],  9);
-   HH(cc, dd, ee, aa, bb, X[ 8], 13);
-   HH(bb, cc, dd, ee, aa, X[ 1], 15);
-   HH(aa, bb, cc, dd, ee, X[ 2], 14);
-   HH(ee, aa, bb, cc, dd, X[ 7],  8);
-   HH(dd, ee, aa, bb, cc, X[ 0], 13);
-   HH(cc, dd, ee, aa, bb, X[ 6],  6);
-   HH(bb, cc, dd, ee, aa, X[13],  5);
-   HH(aa, bb, cc, dd, ee, X[11], 12);
-   HH(ee, aa, bb, cc, dd, X[ 5],  7);
-   HH(dd, ee, aa, bb, cc, X[12],  5);
-
-   /* round 4 */
-   II(cc, dd, ee, aa, bb, X[ 1], 11);
-   II(bb, cc, dd, ee, aa, X[ 9], 12);
-   II(aa, bb, cc, dd, ee, X[11], 14);
-   II(ee, aa, bb, cc, dd, X[10], 15);
-   II(dd, ee, aa, bb, cc, X[ 0], 14);
-   II(cc, dd, ee, aa, bb, X[ 8], 15);
-   II(bb, cc, dd, ee, aa, X[12],  9);
-   II(aa, bb, cc, dd, ee, X[ 4],  8);
-   II(ee, aa, bb, cc, dd, X[13],  9);
-   II(dd, ee, aa, bb, cc, X[ 3], 14);
-   II(cc, dd, ee, aa, bb, X[ 7],  5);
-   II(bb, cc, dd, ee, aa, X[15],  6);
-   II(aa, bb, cc, dd, ee, X[14],  8);
-   II(ee, aa, bb, cc, dd, X[ 5],  6);
-   II(dd, ee, aa, bb, cc, X[ 6],  5);
-   II(cc, dd, ee, aa, bb, X[ 2], 12);
-
-   /* round 5 */
-   JJ(bb, cc, dd, ee, aa, X[ 4],  9);
-   JJ(aa, bb, cc, dd, ee, X[ 0], 15);
-   JJ(ee, aa, bb, cc, dd, X[ 5],  5);
-   JJ(dd, ee, aa, bb, cc, X[ 9], 11);
-   JJ(cc, dd, ee, aa, bb, X[ 7],  6);
-   JJ(bb, cc, dd, ee, aa, X[12],  8);
-   JJ(aa, bb, cc, dd, ee, X[ 2], 13);
-   JJ(ee, aa, bb, cc, dd, X[10], 12);
-   JJ(dd, ee, aa, bb, cc, X[14],  5);
-   JJ(cc, dd, ee, aa, bb, X[ 1], 12);
-   JJ(bb, cc, dd, ee, aa, X[ 3], 13);
-   JJ(aa, bb, cc, dd, ee, X[ 8], 14);
-   JJ(ee, aa, bb, cc, dd, X[11], 11);
-   JJ(dd, ee, aa, bb, cc, X[ 6],  8);
-   JJ(cc, dd, ee, aa, bb, X[15],  5);
-   JJ(bb, cc, dd, ee, aa, X[13],  6);
 
    /* parallel round 1 */
    JJJ(aaa, bbb, ccc, ddd, eee, X[ 5],  8);
@@ -230,8 +156,28 @@ static int  rmd160_compress(hash_state *md, unsigned char *buf)
    JJJ(bbb, ccc, ddd, eee, aaa, X[ 3], 12);
    JJJ(aaa, bbb, ccc, ddd, eee, X[12],  6);
 
+   tmp = aa; aa = aaa; aaa = tmp;
+
+   /* round 2 */
+   GG(ee, aa, bb, cc, dd, X[ 7],  7);
+   GG(dd, ee, aa, bb, cc, X[ 4],  6);
+   GG(cc, dd, ee, aa, bb, X[13],  8);
+   GG(bb, cc, dd, ee, aa, X[ 1], 13);
+   GG(aa, bb, cc, dd, ee, X[10], 11);
+   GG(ee, aa, bb, cc, dd, X[ 6],  9);
+   GG(dd, ee, aa, bb, cc, X[15],  7);
+   GG(cc, dd, ee, aa, bb, X[ 3], 15);
+   GG(bb, cc, dd, ee, aa, X[12],  7);
+   GG(aa, bb, cc, dd, ee, X[ 0], 12);
+   GG(ee, aa, bb, cc, dd, X[ 9], 15);
+   GG(dd, ee, aa, bb, cc, X[ 5],  9);
+   GG(cc, dd, ee, aa, bb, X[ 2], 11);
+   GG(bb, cc, dd, ee, aa, X[14],  7);
+   GG(aa, bb, cc, dd, ee, X[11], 13);
+   GG(ee, aa, bb, cc, dd, X[ 8], 12);
+
    /* parallel round 2 */
-   III(eee, aaa, bbb, ccc, ddd, X[ 6],  9); 
+   III(eee, aaa, bbb, ccc, ddd, X[ 6],  9);
    III(ddd, eee, aaa, bbb, ccc, X[11], 13);
    III(ccc, ddd, eee, aaa, bbb, X[ 3], 15);
    III(bbb, ccc, ddd, eee, aaa, X[ 7],  7);
@@ -247,6 +193,26 @@ static int  rmd160_compress(hash_state *md, unsigned char *buf)
    III(bbb, ccc, ddd, eee, aaa, X[ 9], 15);
    III(aaa, bbb, ccc, ddd, eee, X[ 1], 13);
    III(eee, aaa, bbb, ccc, ddd, X[ 2], 11);
+
+   tmp = bb; bb = bbb; bbb = tmp;
+
+   /* round 3 */
+   HH(dd, ee, aa, bb, cc, X[ 3], 11);
+   HH(cc, dd, ee, aa, bb, X[10], 13);
+   HH(bb, cc, dd, ee, aa, X[14],  6);
+   HH(aa, bb, cc, dd, ee, X[ 4],  7);
+   HH(ee, aa, bb, cc, dd, X[ 9], 14);
+   HH(dd, ee, aa, bb, cc, X[15],  9);
+   HH(cc, dd, ee, aa, bb, X[ 8], 13);
+   HH(bb, cc, dd, ee, aa, X[ 1], 15);
+   HH(aa, bb, cc, dd, ee, X[ 2], 14);
+   HH(ee, aa, bb, cc, dd, X[ 7],  8);
+   HH(dd, ee, aa, bb, cc, X[ 0], 13);
+   HH(cc, dd, ee, aa, bb, X[ 6],  6);
+   HH(bb, cc, dd, ee, aa, X[13],  5);
+   HH(aa, bb, cc, dd, ee, X[11], 12);
+   HH(ee, aa, bb, cc, dd, X[ 5],  7);
+   HH(dd, ee, aa, bb, cc, X[12],  5);
 
    /* parallel round 3 */
    HHH(ddd, eee, aaa, bbb, ccc, X[15],  9);
@@ -266,7 +232,27 @@ static int  rmd160_compress(hash_state *md, unsigned char *buf)
    HHH(eee, aaa, bbb, ccc, ddd, X[ 4],  7);
    HHH(ddd, eee, aaa, bbb, ccc, X[13],  5);
 
-   /* parallel round 4 */   
+   tmp = cc; cc = ccc; ccc = tmp;
+
+   /* round 4 */
+   II(cc, dd, ee, aa, bb, X[ 1], 11);
+   II(bb, cc, dd, ee, aa, X[ 9], 12);
+   II(aa, bb, cc, dd, ee, X[11], 14);
+   II(ee, aa, bb, cc, dd, X[10], 15);
+   II(dd, ee, aa, bb, cc, X[ 0], 14);
+   II(cc, dd, ee, aa, bb, X[ 8], 15);
+   II(bb, cc, dd, ee, aa, X[12],  9);
+   II(aa, bb, cc, dd, ee, X[ 4],  8);
+   II(ee, aa, bb, cc, dd, X[13],  9);
+   II(dd, ee, aa, bb, cc, X[ 3], 14);
+   II(cc, dd, ee, aa, bb, X[ 7],  5);
+   II(bb, cc, dd, ee, aa, X[15],  6);
+   II(aa, bb, cc, dd, ee, X[14],  8);
+   II(ee, aa, bb, cc, dd, X[ 5],  6);
+   II(dd, ee, aa, bb, cc, X[ 6],  5);
+   II(cc, dd, ee, aa, bb, X[ 2], 12);
+
+   /* parallel round 4 */
    GGG(ccc, ddd, eee, aaa, bbb, X[ 8], 15);
    GGG(bbb, ccc, ddd, eee, aaa, X[ 6],  5);
    GGG(aaa, bbb, ccc, ddd, eee, X[ 4],  8);
@@ -283,6 +269,26 @@ static int  rmd160_compress(hash_state *md, unsigned char *buf)
    GGG(eee, aaa, bbb, ccc, ddd, X[ 7],  5);
    GGG(ddd, eee, aaa, bbb, ccc, X[10], 15);
    GGG(ccc, ddd, eee, aaa, bbb, X[14],  8);
+
+   tmp = dd; dd = ddd; ddd = tmp;
+
+   /* round 5 */
+   JJ(bb, cc, dd, ee, aa, X[ 4],  9);
+   JJ(aa, bb, cc, dd, ee, X[ 0], 15);
+   JJ(ee, aa, bb, cc, dd, X[ 5],  5);
+   JJ(dd, ee, aa, bb, cc, X[ 9], 11);
+   JJ(cc, dd, ee, aa, bb, X[ 7],  6);
+   JJ(bb, cc, dd, ee, aa, X[12],  8);
+   JJ(aa, bb, cc, dd, ee, X[ 2], 13);
+   JJ(ee, aa, bb, cc, dd, X[10], 12);
+   JJ(dd, ee, aa, bb, cc, X[14],  5);
+   JJ(cc, dd, ee, aa, bb, X[ 1], 12);
+   JJ(bb, cc, dd, ee, aa, X[ 3], 13);
+   JJ(aa, bb, cc, dd, ee, X[ 8], 14);
+   JJ(ee, aa, bb, cc, dd, X[11], 11);
+   JJ(dd, ee, aa, bb, cc, X[ 6],  8);
+   JJ(cc, dd, ee, aa, bb, X[15],  5);
+   JJ(bb, cc, dd, ee, aa, X[13],  6);
 
    /* parallel round 5 */
    FFF(bbb, ccc, ddd, eee, aaa, X[12] ,  8);
@@ -302,23 +308,29 @@ static int  rmd160_compress(hash_state *md, unsigned char *buf)
    FFF(ccc, ddd, eee, aaa, bbb, X[ 9] , 11);
    FFF(bbb, ccc, ddd, eee, aaa, X[11] , 11);
 
+   tmp = ee; ee = eee; eee = tmp;
+
    /* combine results */
-   ddd += cc + md->rmd160.state[1];               /* final result for md->rmd160.state[0] */
-   md->rmd160.state[1] = md->rmd160.state[2] + dd + eee;
-   md->rmd160.state[2] = md->rmd160.state[3] + ee + aaa;
-   md->rmd160.state[3] = md->rmd160.state[4] + aa + bbb;
-   md->rmd160.state[4] = md->rmd160.state[0] + bb + ccc;
-   md->rmd160.state[0] = ddd;
+   md->rmd320.state[0] += aa;
+   md->rmd320.state[1] += bb;
+   md->rmd320.state[2] += cc;
+   md->rmd320.state[3] += dd;
+   md->rmd320.state[4] += ee;
+   md->rmd320.state[5] += aaa;
+   md->rmd320.state[6] += bbb;
+   md->rmd320.state[7] += ccc;
+   md->rmd320.state[8] += ddd;
+   md->rmd320.state[9] += eee;
 
    return CRYPT_OK;
 }
 
 #ifdef LTC_CLEAN_STACK
-static int rmd160_compress(hash_state *md, unsigned char *buf)
+static int rmd320_compress(hash_state *md, unsigned char *buf)
 {
    int err;
-   err = _rmd160_compress(md, buf);
-   burn_stack(sizeof(ulong32) * 26 + sizeof(int));
+   err = _rmd320_compress(md, buf);
+   burn_stack(sizeof(ulong32) * 27 + sizeof(int));
    return err;
 }
 #endif
@@ -328,16 +340,21 @@ static int rmd160_compress(hash_state *md, unsigned char *buf)
    @param md   The hash state you wish to initialize
    @return CRYPT_OK if successful
 */
-int rmd160_init(hash_state * md)
+int rmd320_init(hash_state * md)
 {
    LTC_ARGCHK(md != NULL);
-   md->rmd160.state[0] = 0x67452301UL;
-   md->rmd160.state[1] = 0xefcdab89UL;
-   md->rmd160.state[2] = 0x98badcfeUL;
-   md->rmd160.state[3] = 0x10325476UL;
-   md->rmd160.state[4] = 0xc3d2e1f0UL;
-   md->rmd160.curlen   = 0;
-   md->rmd160.length   = 0;
+   md->rmd320.state[0] = 0x67452301UL;
+   md->rmd320.state[1] = 0xefcdab89UL;
+   md->rmd320.state[2] = 0x98badcfeUL;
+   md->rmd320.state[3] = 0x10325476UL;
+   md->rmd320.state[4] = 0xc3d2e1f0UL;
+   md->rmd320.state[5] = 0x76543210UL;
+   md->rmd320.state[6] = 0xfedcba98UL;
+   md->rmd320.state[7] = 0x89abcdefUL;
+   md->rmd320.state[8] = 0x01234567UL;
+   md->rmd320.state[9] = 0x3c2d1e0fUL;
+   md->rmd320.curlen   = 0;
+   md->rmd320.length   = 0;
    return CRYPT_OK;
 }
 
@@ -348,7 +365,7 @@ int rmd160_init(hash_state * md)
    @param inlen  The length of the data (octets)
    @return CRYPT_OK if successful
 */
-HASH_PROCESS(rmd160_process, rmd160_compress, rmd160, 64)
+HASH_PROCESS(rmd320_process, rmd320_compress, rmd320, 64)
 
 /**
    Terminate the hash to get the digest
@@ -356,48 +373,48 @@ HASH_PROCESS(rmd160_process, rmd160_compress, rmd160, 64)
    @param out [out] The destination of the hash (20 bytes)
    @return CRYPT_OK if successful
 */
-int rmd160_done(hash_state * md, unsigned char *out)
+int rmd320_done(hash_state * md, unsigned char *out)
 {
     int i;
 
     LTC_ARGCHK(md  != NULL);
     LTC_ARGCHK(out != NULL);
 
-    if (md->rmd160.curlen >= sizeof(md->rmd160.buf)) {
+    if (md->rmd320.curlen >= sizeof(md->rmd320.buf)) {
        return CRYPT_INVALID_ARG;
     }
 
 
     /* increase the length of the message */
-    md->rmd160.length += md->rmd160.curlen * 8;
+    md->rmd320.length += md->rmd320.curlen * 8;
 
     /* append the '1' bit */
-    md->rmd160.buf[md->rmd160.curlen++] = (unsigned char)0x80;
+    md->rmd320.buf[md->rmd320.curlen++] = (unsigned char)0x80;
 
     /* if the length is currently above 56 bytes we append zeros
      * then compress.  Then we can fall back to padding zeros and length
      * encoding like normal.
      */
-    if (md->rmd160.curlen > 56) {
-        while (md->rmd160.curlen < 64) {
-            md->rmd160.buf[md->rmd160.curlen++] = (unsigned char)0;
+    if (md->rmd320.curlen > 56) {
+        while (md->rmd320.curlen < 64) {
+            md->rmd320.buf[md->rmd320.curlen++] = (unsigned char)0;
         }
-        rmd160_compress(md, md->rmd160.buf);
-        md->rmd160.curlen = 0;
+        rmd320_compress(md, md->rmd320.buf);
+        md->rmd320.curlen = 0;
     }
 
     /* pad upto 56 bytes of zeroes */
-    while (md->rmd160.curlen < 56) {
-        md->rmd160.buf[md->rmd160.curlen++] = (unsigned char)0;
+    while (md->rmd320.curlen < 56) {
+        md->rmd320.buf[md->rmd320.curlen++] = (unsigned char)0;
     }
 
     /* store length */
-    STORE64L(md->rmd160.length, md->rmd160.buf+56);
-    rmd160_compress(md, md->rmd160.buf);
+    STORE64L(md->rmd320.length, md->rmd320.buf+56);
+    rmd320_compress(md, md->rmd320.buf);
 
     /* copy output */
-    for (i = 0; i < 5; i++) {
-        STORE32L(md->rmd160.state[i], out+(4*i));
+    for (i = 0; i < 10; i++) {
+        STORE32L(md->rmd320.state[i], out+(4*i));
     }
 #ifdef LTC_CLEAN_STACK
     zeromem(md, sizeof(hash_state));
@@ -408,50 +425,62 @@ int rmd160_done(hash_state * md, unsigned char *out)
 /**
   Self-test the hash
   @return CRYPT_OK if successful, CRYPT_NOP if self-tests have been disabled
-*/  
-int rmd160_test(void)
+*/
+int rmd320_test(void)
 {
 #ifndef LTC_TEST
    return CRYPT_NOP;
 #else
    static const struct {
         char *msg;
-        unsigned char md[20];
+        unsigned char md[40];
    } tests[] = {
    { "",
-     { 0x9c, 0x11, 0x85, 0xa5, 0xc5, 0xe9, 0xfc, 0x54, 0x61, 0x28,
-       0x08, 0x97, 0x7e, 0xe8, 0xf5, 0x48, 0xb2, 0x25, 0x8d, 0x31 }
+     { 0x22, 0xd6, 0x5d, 0x56, 0x61, 0x53, 0x6c, 0xdc, 0x75, 0xc1,
+       0xfd, 0xf5, 0xc6, 0xde, 0x7b, 0x41, 0xb9, 0xf2, 0x73, 0x25,
+       0xeb, 0xc6, 0x1e, 0x85, 0x57, 0x17, 0x7d, 0x70, 0x5a, 0x0e,
+       0xc8, 0x80, 0x15, 0x1c, 0x3a, 0x32, 0xa0, 0x08, 0x99, 0xb8 }
    },
    { "a",
-     { 0x0b, 0xdc, 0x9d, 0x2d, 0x25, 0x6b, 0x3e, 0xe9, 0xda, 0xae,
-       0x34, 0x7b, 0xe6, 0xf4, 0xdc, 0x83, 0x5a, 0x46, 0x7f, 0xfe }
+     { 0xce, 0x78, 0x85, 0x06, 0x38, 0xf9, 0x26, 0x58, 0xa5, 0xa5,
+       0x85, 0x09, 0x75, 0x79, 0x92, 0x6d, 0xda, 0x66, 0x7a, 0x57,
+       0x16, 0x56, 0x2c, 0xfc, 0xf6, 0xfb, 0xe7, 0x7f, 0x63, 0x54,
+       0x2f, 0x99, 0xb0, 0x47, 0x05, 0xd6, 0x97, 0x0d, 0xff, 0x5d }
    },
    { "abc",
-     { 0x8e, 0xb2, 0x08, 0xf7, 0xe0, 0x5d, 0x98, 0x7a, 0x9b, 0x04,
-       0x4a, 0x8e, 0x98, 0xc6, 0xb0, 0x87, 0xf1, 0x5a, 0x0b, 0xfc }
+     { 0xde, 0x4c, 0x01, 0xb3, 0x05, 0x4f, 0x89, 0x30, 0xa7, 0x9d,
+       0x09, 0xae, 0x73, 0x8e, 0x92, 0x30, 0x1e, 0x5a, 0x17, 0x08,
+       0x5b, 0xef, 0xfd, 0xc1, 0xb8, 0xd1, 0x16, 0x71, 0x3e, 0x74,
+       0xf8, 0x2f, 0xa9, 0x42, 0xd6, 0x4c, 0xdb, 0xc4, 0x68, 0x2d }
    },
    { "message digest",
-     { 0x5d, 0x06, 0x89, 0xef, 0x49, 0xd2, 0xfa, 0xe5, 0x72, 0xb8,
-       0x81, 0xb1, 0x23, 0xa8, 0x5f, 0xfa, 0x21, 0x59, 0x5f, 0x36 }
+     { 0x3a, 0x8e, 0x28, 0x50, 0x2e, 0xd4, 0x5d, 0x42, 0x2f, 0x68,
+       0x84, 0x4f, 0x9d, 0xd3, 0x16, 0xe7, 0xb9, 0x85, 0x33, 0xfa,
+       0x3f, 0x2a, 0x91, 0xd2, 0x9f, 0x84, 0xd4, 0x25, 0xc8, 0x8d,
+       0x6b, 0x4e, 0xff, 0x72, 0x7d, 0xf6, 0x6a, 0x7c, 0x01, 0x97 }
    },
    { "abcdefghijklmnopqrstuvwxyz",
-     { 0xf7, 0x1c, 0x27, 0x10, 0x9c, 0x69, 0x2c, 0x1b, 0x56, 0xbb,
-       0xdc, 0xeb, 0x5b, 0x9d, 0x28, 0x65, 0xb3, 0x70, 0x8d, 0xbc }
+     { 0xca, 0xbd, 0xb1, 0x81, 0x0b, 0x92, 0x47, 0x0a, 0x20, 0x93,
+       0xaa, 0x6b, 0xce, 0x05, 0x95, 0x2c, 0x28, 0x34, 0x8c, 0xf4,
+       0x3f, 0xf6, 0x08, 0x41, 0x97, 0x51, 0x66, 0xbb, 0x40, 0xed,
+       0x23, 0x40, 0x04, 0xb8, 0x82, 0x44, 0x63, 0xe6, 0xb0, 0x09 }
    },
    { "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
-     { 0x12, 0xa0, 0x53, 0x38, 0x4a, 0x9c, 0x0c, 0x88, 0xe4, 0x05,
-       0xa0, 0x6c, 0x27, 0xdc, 0xf4, 0x9a, 0xda, 0x62, 0xeb, 0x2b }
+     { 0xd0, 0x34, 0xa7, 0x95, 0x0c, 0xf7, 0x22, 0x02, 0x1b, 0xa4,
+       0xb8, 0x4d, 0xf7, 0x69, 0xa5, 0xde, 0x20, 0x60, 0xe2, 0x59,
+       0xdf, 0x4c, 0x9b, 0xb4, 0xa4, 0x26, 0x8c, 0x0e, 0x93, 0x5b,
+       0xbc, 0x74, 0x70, 0xa9, 0x69, 0xc9, 0xd0, 0x72, 0xa1, 0xac }
    }
    };
    int x;
-   unsigned char buf[20];
+   unsigned char buf[40];
    hash_state md;
 
    for (x = 0; x < (int)(sizeof(tests)/sizeof(tests[0])); x++) {
-       rmd160_init(&md);
-       rmd160_process(&md, (unsigned char *)tests[x].msg, strlen(tests[x].msg));
-       rmd160_done(&md, buf);
-       if (XMEMCMP(buf, tests[x].md, 20) != 0) {
+       rmd320_init(&md);
+       rmd320_process(&md, (unsigned char *)tests[x].msg, strlen(tests[x].msg));
+       rmd320_done(&md, buf);
+       if (XMEMCMP(buf, tests[x].md, 40) != 0) {
 #if 0
           printf("Failed test %d\n", x);
 #endif
@@ -475,9 +504,5 @@ int rmd160_test(void)
 #undef I
 #undef J
 
-//#endif
+#endif
 
-
-/* $Source: /cvs/libtom/libtomcrypt/src/hashes/rmd160.c,v $ */
-/* $Revision: 1.10 $ */
-/* $Date: 2007/05/12 14:25:28 $ */

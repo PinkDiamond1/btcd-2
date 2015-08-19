@@ -139,7 +139,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; $(CC) -o SuperNET.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
+    pkill SuperNET; rm SuperNET; $(CC) -o SuperNET.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS); strip SuperNET.exe 
 
 #-lz -ldl -lutil -lpcre -lexpat
 
