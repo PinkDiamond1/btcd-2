@@ -1,3 +1,4 @@
+#ifdef PEGGY
 //
 // Created by BTCDDev on 8/17/15.
 // Distributed under the MIT/X11 software license, see the accompanying
@@ -49,3 +50,4 @@ Value peggytx(const Array& params, bool fHelp)
     return result;
 
 }
+#endif

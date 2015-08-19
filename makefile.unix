@@ -92,6 +92,7 @@ SOURCES       = src/txdb-leveldb.cpp \
 		src/rpcdump.cpp \
 		src/rpcnet.cpp \
 		src/rpcmining.cpp \
+		src/rpcpeggy.cpp \
 		src/rpcwallet.cpp \
 		src/rpcblockchain.cpp \
 		src/rpcrawtransaction.cpp \
