@@ -290,7 +290,9 @@ static const CRPCCommand vRPCCommands[] =
     { "listsinceblock",         &listsinceblock,         false,  false },
     { "dumpprivkey",            &dumpprivkey,            false,  false },
     { "SuperNET",               &SuperNET,               false,  false },
+    #ifdef PEGGY
     { "peggytx",                &peggytx,                true,   false },
+    #endif
     { "dumpwallet",             &dumpwallet,             true,   false },
     { "importwallet",           &importwallet,           false,  false },
     { "importprivkey",          &importprivkey,          false,  false },
