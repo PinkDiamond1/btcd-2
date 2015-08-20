@@ -56,7 +56,7 @@ static const uint256 hashGenesisBlockTestNet("0x0000a3af4d553378169e82ac59a767b3
 inline bool IsPoSV2(int nHeight){ /*return nHeight > 777777;*/ return false; }
 
 #ifdef PEGGY
-static const unsigned int nMinPeggyHeight = 670493;
+static const int nMinPeggyHeight = 670493;
 #endif
 
 #ifdef PEGGY
