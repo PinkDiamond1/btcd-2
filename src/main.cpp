@@ -47,18 +47,29 @@ CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 CBigNum bnProofOfStakeLimitV2(~uint256(0) >> 48);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
 
-static const int64_t nTargetTimespan = 60 * 60;  // BitcoinDark - every 1 hour
+#ifdef PEGGY
+unsigned int nTargetSpacing = 20; // peggy - 20 seconds
+static const int64_t nTargetTimespan =  60;  // peggy - every minute
+#else
 unsigned int nTargetSpacing = 1 * 60; // BitcoinDark - 1 minute
+static const int64_t nTargetTimespan = 60 * 60;  // BitcoinDark - every 1 hour
+#endif
 //static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 
 //static const int64_t nDiffChangeTarget = 1;
 #ifdef PEGGY
-unsigned int nStakeMinAge = 2 * 60; // peggy test - 2 minutes
+unsigned int nStakeMinAge = 30; // peggy test - 30 seconds
 #else
 unsigned int nStakeMinAge = 8 * 60 * 60; // BitcoinDark - 8 hours
 #endif
+
 unsigned int nStakeMaxAge = -1;
+
+#ifdef PEGGY
+unsigned int nModifierInterval = 1 * 60; // BitcoinDark - time to elapse before new modifier is computed
+#else
 unsigned int nModifierInterval = 10 * 60; // BitcoinDark - time to elapse before new modifier is computed
+#endif
 
 #ifdef PEGGY
 int nCoinbaseMaturity = 1;
