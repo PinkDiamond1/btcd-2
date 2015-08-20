@@ -2598,12 +2598,14 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                 {
                     //bitcoindark: create peggybase transaction for this block
                     CTransaction peggy;
-                    char paymentScript[256]; //temp script
-                    if(pindexBest->nHeight == nMinPeggyHeight) //to ensure faster staking on private mainnet -- TEST only TODO: remove in production
+                    char *paymentScript;
+                    if(pindexBest->nHeight == nMinPeggyHeight){ //to ensure faster staking on private mainnet -- TEST only TODO: remove in production
+                        paymentScript = (char*)malloc(256);
                         strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":10000000, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
+                    }
                     else
                     {
-                        strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
+                         paymentScript = peggypayments(pindexBest->nHeight + 1, nTime); // temp. TODO: add peggypaments here
                     }
                     char *priceFeedHash = peggybase(pindexBest->nHeight+1, nTime);
                     if(wallet.CreatePeggyBase(peggy, paymentScript, priceFeedHash))
@@ -2612,6 +2614,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                         vtx.insert(vtx.begin() + 2, peggy);
                     }
                     free(priceFeedHash);
+                    free(paymentScript);
                 }
                 #endif
                 hashMerkleRoot = BuildMerkleTree();

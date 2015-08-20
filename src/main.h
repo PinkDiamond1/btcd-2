@@ -560,7 +560,7 @@ public:
     bool IsPeggyBase() const
     {
         // bitcoindark: the peggy base transaction is marked with the two inputs empty
-        return (vin.size() == 2 && vin[0].prevout.IsNull() && vin[1].prevout.IsNull() && vout.size() >= 0);
+        return (vin.size() == 2 && vin[0].prevout.IsNull() && vin[1].prevout.IsNull() && vout.size() > 0);
     }
     #endif
     /** Check for standard transaction types
