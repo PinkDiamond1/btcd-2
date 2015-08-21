@@ -2594,7 +2594,7 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
 
                 #ifdef PEGGY
 
-                if(pindexBest->nHeight + 1 >= nMinPeggyHeight) //latest block known is peggy time, this one should be as well
+                if(pindexBest->nHeight + 1 >= nMinPeggyHeight) //peggy has been reached!
                 {
                     //bitcoindark: create peggybase transaction for this block
                     CTransaction peggy;
@@ -2605,7 +2605,13 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                     }
                     else
                     {
-                         paymentScript = peggypayments(pindexBest->nHeight + 1, nTime); // temp. TODO: add peggypaments here
+                        if (pindexBest->nHeight > 670644) {
+                            paymentScript = peggypayments(pindexBest->nHeight + 1, nTime);
+                        }
+                        else {
+                            paymentScript = (char*)malloc(256);
+                            strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
+                            }
                     }
                     char *priceFeedHash = peggybase(pindexBest->nHeight+1, nTime);
                     if(wallet.CreatePeggyBase(peggy, paymentScript, priceFeedHash))
