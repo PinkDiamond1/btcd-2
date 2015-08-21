@@ -366,7 +366,8 @@ void SuperNET_apiloop(void *ipaddr)
                     }
                     if ( retstr == 0 && (retstr= process_nn_message(sock,jsonstr)) != 0 )
                         free(retstr);
-                } else msleep(SUPERNET.recvtimeout);
+                }
+                msleep(SUPERNET.recvtimeout);
             }
         }
         nn_shutdown(sock,0);
@@ -610,6 +611,8 @@ int main(int argc,const char *argv[])
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
     char dest[512*2 + 1];
+    uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
+//    getchar();
     hmac_sha512_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha512.(%s)\n",dest);
     hmac_sha384_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha384.(%s)\n",dest);
     hmac_sha256_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_sha256.(%s)\n",dest);
@@ -624,18 +627,7 @@ int main(int argc,const char *argv[])
     hmac_md5_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_md5.(%s)\n",dest);
     hmac_tiger_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_tiger.(%s)\n",dest);
     hmac_whirlpool_str(dest,"exchange->apisecret",(int32_t)strlen("exchange->apisecret"),"helloworld"); printf("hmac_whirlpool.(%s)\n",dest);
-    getchar();
-     char *hmac_sha224_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_sha256_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_sha384_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_sha512_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_rmd128_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_rmd160_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_rmd256_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_rmd320_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_tiger_str(char *dest,char *key,int32_t key_size,char *message);
-    char *hmac_whirlpool_str(char *dest,char *key,int32_t key_size,char *message);
-
+    //getchar();
     //void peggy_test();
     //portable_OS_init();
     //peggy_test();

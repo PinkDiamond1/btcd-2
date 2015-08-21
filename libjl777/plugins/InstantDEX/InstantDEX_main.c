@@ -34,7 +34,7 @@
 
 static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo", "quadriga" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
 
-#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory"
+#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges"
 
 #define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "swap"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
@@ -347,7 +347,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     char *InstantDEX_openorders();
     char *InstantDEX_tradehistory(int32_t firsti,int32_t endi);
     char *InstantDEX_cancelorder(uint64_t sequenceid,uint64_t quoteid);
-    char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD]; struct InstantDEX_quote iQ;
+    char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD]; struct InstantDEX_quote iQ; struct exchange_info *exchange;
     cJSON *json; uint64_t assetbits,sequenceid; uint32_t maxdepth; int32_t invert=0,keysize,allfields; struct prices777 *prices;
     if ( INSTANTDEX.readyflag == 0 )
         return(0);
@@ -376,6 +376,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
             retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
+        else if ( strcmp(method,"allexchanges") == 0 )
+            retstr = jprint(exchanges_json(),1);
         else if ( strcmp(method,"cancelorder") == 0 )
             retstr = InstantDEX_cancelorder(sequenceid,iQ.s.quoteid);
         else if ( strcmp(method,"orderstatus") == 0 )
@@ -384,6 +386,13 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = InstantDEX_tradehistory(juint(json,"firsti"),juint(json,"endi"));
         else if ( strcmp(method,"lottostats") == 0 )
             retstr = jprint(Lottostats_json,0);
+        else if ( strcmp(method,"balance") == 0 )
+        {
+            if ( (exchange= exchange_find(exchangestr)) != 0 && exchange->trade != 0 )
+                (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
+            else retstr = clonestr("{\"error\":\"cant find exchange\"}");
+            printf("%s ptr%.p trade.%p\n",exchangestr,exchange,exchange!=0?exchange->trade:0);
+        }
         else if ( strcmp(method,"tradesequence") == 0 )
         {
             printf("call tradesequence.(%s)\n",jsonstr);

@@ -557,7 +557,9 @@ int32_t ismyaddress(char *server)
     {
         if ( SUPERNET.hostname[0] != 0 && strcmp(SUPERNET.hostname,server) == 0 )
             return(1);
-        if ( conv_domainname(ipaddr,server) == 0 && (strcmp(SUPERNET.myipaddr,ipaddr) == 0 || strcmp(SUPERNET.hostname,ipaddr) == 0) )
+        else if ( (ipbits= conv_domainname(ipaddr,server)) != 0 || SUPERNET.my64bits == ipbits )
+            return(1);
+        else if ( (strcmp(SUPERNET.myipaddr,ipaddr) == 0 || strcmp(SUPERNET.hostname,ipaddr) == 0) )
             return(1);
     }
     //printf("(%s) is not me (%s)\n",server,SUPERNET.myipaddr);

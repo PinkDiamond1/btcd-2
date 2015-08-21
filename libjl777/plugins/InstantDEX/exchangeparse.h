@@ -67,14 +67,17 @@ cJSON *exchanges_json()
             break;
         cJSON_AddItemToObject(item,"name",cJSON_CreateString(exchange->name));
         memset(api,0,sizeof(api));
+        n = 0;
         if ( exchange->trade != 0 )
         {
+            //printf("%s.(%s/%s/%s).%p\n",exchange->name,exchange->apikey,exchange->apisecret,exchange->userid,exchange);
             if ( exchange->apikey[0] != 0 )
                 api[n++] = 'K';
             if ( exchange->apisecret[0] != 0 )
                 api[n++] = 'S';
             if ( exchange->userid[0] != 0 )
                 api[n++] = 'U';
+            api[n] = 0;
             cJSON_AddItemToObject(item,"trade",cJSON_CreateString(api));
         }
         cJSON_AddItemToArray(array,item);
@@ -185,7 +188,7 @@ double prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD
     return(hbla);
 }
 
-int32_t bter_supports(char *base,char *rel)
+/*int32_t bter_supports(char *base,char *rel)
 {
     return(0);
     if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
@@ -193,7 +196,7 @@ int32_t bter_supports(char *base,char *rel)
     else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )
         return(-1);
     else return(0);
-    /*char *bterassets[][8] = { { "UNITY", "12071612744977229797" },  { "ATOMIC", "11694807213441909013" },  { "DICE", "18184274154437352348" },  { "MRKT", "134138275353332190" },  { "MGW", "10524562908394749924" } };
+    char *bterassets[][8] = { { "UNITY", "12071612744977229797" },  { "ATOMIC", "11694807213441909013" },  { "DICE", "18184274154437352348" },  { "MRKT", "134138275353332190" },  { "MGW", "10524562908394749924" } };
      uint64_t unityid = calc_nxt64bits("12071612744977229797");
      n = add_exchange_assetids(assetids,n,BTC_ASSETID,baseid,relid,exchangeid,bterassets,(int32_t)(sizeof(bterassets)/sizeof(*bterassets)));
      if ( baseid == unityid || relid == unityid )
@@ -202,7 +205,7 @@ int32_t bter_supports(char *base,char *rel)
      n = add_exchange_assetid(assetids,n,unityid,NXT_ASSETID,exchangeid);
      n = add_exchange_assetid(assetids,n,unityid,CNY_ASSETID,exchangeid);
      }
-     return(n);*/
+     return(n);
 }
 
 double prices777_bter(struct prices777 *prices,int32_t maxdepth)
@@ -232,7 +235,7 @@ double prices777_bter(struct prices777 *prices,int32_t maxdepth)
         free(jsonstr);
     }
     return(hbla);
-}
+}*/
 
 double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,char *price,char *volume,int32_t maxdepth,char *field)
 {

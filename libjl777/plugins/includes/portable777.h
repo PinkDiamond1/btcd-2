@@ -217,6 +217,7 @@ struct exchange_info
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight);
 int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendqty,cJSON *txobj,uint64_t recvasset,uint64_t recvqty);
 int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXTbits);
+cJSON *exchanges_json();
 
 struct exchange_info *get_exchange(int32_t exchangeid);
 char *exchange_str(int32_t exchangeid);
@@ -248,6 +249,8 @@ char *hmac_rmd256_str(char *dest,char *key,int32_t key_size,char *message);
 char *hmac_rmd320_str(char *dest,char *key,int32_t key_size,char *message);
 char *hmac_tiger_str(char *dest,char *key,int32_t key_size,char *message);
 char *hmac_whirlpool_str(char *dest,char *key,int32_t key_size,char *message);
+int nn_base64_encode(const uint8_t *in,size_t in_len,char *out,size_t out_len);
+int nn_base64_decode(const char *in,size_t in_len,uint8_t *out,size_t out_len);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);
