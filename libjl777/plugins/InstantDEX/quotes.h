@@ -391,7 +391,7 @@ char *autofill(char *remoteaddr,struct InstantDEX_quote *refiQ,char *NXTaddr,cha
                 price = 1. / bestiQ->s.price;
                 printf("price inverted (%f %f) -> (%f %f)\n",bestiQ->s.price,bestiQ->s.vol,price,volume);
             } else price = bestiQ->s.price, volume = bestiQ->s.vol;
-            retstr = prices777_trade(prices,dir,price,volume,bestiQ,0,bestiQ->s.quoteid);
+            retstr = prices777_trade(prices,dir,price,volume,bestiQ,0,bestiQ->s.quoteid,0);
         }
     }
     return(retstr);
@@ -419,7 +419,7 @@ char *automatch(struct prices777 *prices,int32_t dir,double refprice,double refv
     }
     //printf("n.%d\n",n);
     if ( bestorder.source != 0 )
-        retstr = prices777_trade(bestorder.source,bestorder.s.isask!=0?-1:1,bestorder.s.price,bestorder.s.vol,0,&bestorder,bestorder.s.quoteid);
+        retstr = prices777_trade(bestorder.source,bestorder.s.isask!=0?-1:1,bestorder.s.price,bestorder.s.vol,0,&bestorder,bestorder.s.quoteid,0);
     return(retstr);
 }
 
@@ -469,7 +469,7 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
     }
 }
 
-char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr,char *name,char *base,char *rel,struct InstantDEX_quote *iQ)
+char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr,char *name,char *base,char *rel,struct InstantDEX_quote *iQ,char *extra)
 {
     extern queue_t InstantDEXQ;
     char *retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume;
@@ -497,7 +497,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         {
             if ( strcmp(exchangestr,"InstantDEX") != 0 && strcmp(exchangestr,"active") != 0 && strcmp(exchangestr,"basket") != 0 )
             {
-                return(prices777_trade(prices,dir,price,volume,iQ,0,iQ->s.quoteid));
+                return(prices777_trade(prices,dir,price,volume,iQ,0,iQ->s.quoteid,extra));
             }
             if ( iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) != 0 )
                 return(retstr);

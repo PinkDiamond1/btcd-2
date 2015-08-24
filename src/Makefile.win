@@ -2,16 +2,24 @@
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-USE_UPNP:=-
+USE_UPNP:=0
 PATH:=../libjl777/mxe/usr/bin:$(PATH)
 
-CXX:=x86_64-w64-mingw32.static-g++
+ifeq ($(OS),win32)
+	CXX=i686-w64-mingw32.static-g++
+	MXEPATH=../libjl777/mxe/usr/i686-w64-mingw32.static
+else
+	OS=win64
+	CXX=x86_64-w64-mingw32.static-g++
+	MXEPATH=../libjl777/mxe/usr/x86_64-w64-mingw32.static
+endif
+
 ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
 
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 
-DEFS += $(addprefix -I,$(CURDIR) obj ../libjl777/mxe/usr/x86_64-w64-mingw32.static/include ../libjl777/plugins/includes ../libjl777/plugins/includes/miniupnp ../libjl777/plugins ../libjl777 $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
-LIBS = $(addprefix -L,../libjl777/mxe/usr/x86_64-w64-mingw32.static/lib ../libjl777/libs ../libjl777/miniupnpc $(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
+DEFS += $(addprefix -I,$(CURDIR) obj $(MXEPATH)/include ../libjl777/plugins/includes ../libjl777/plugins/includes/miniupnp ../libjl777/plugins ../libjl777 $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
+LIBS = $(addprefix -L,$(MXEPATH)/lib ../libjl777/libs ../libjl777/miniupnpc $(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
 
 LMODE = static
 LMODE2 = static
@@ -25,7 +33,7 @@ endif
 # for boost 1.37, add -mt to the boost libraries
 LIBS += \
  -Wl,-B$(LMODE) \
-	leveldb/libleveldb.a \
+	leveldb/libleveldb-$(OS).a \
    -l boost_system-mt \
    -l boost_filesystem-mt \
    -l boost_program_options-mt \
@@ -36,14 +44,14 @@ LIBS += \
 	-l ssl \
 	-l crypto \
 	-l gdi32 \
-	../libjl777/libs/libjl777-win64.a -l curl ../libjl777/libs/libnanomsg-win64.a ../libjl777/libs/libminiupnpc-win64.a -l m -l iphlpapi -l ws2_32 -l wsock32 -l ssp -l gnutls -l nettle -l hogweed -l gmp -l crypt32 -l z -l mman
+	../libjl777/libs/libjl777-$(OS).a -l curl $(MXEPATH)/lib/libnanomsg.a ../libjl777/libs/libminiupnpc-$(OS).a -l m -l iphlpapi -l ws2_32 -l wsock32 -l ssp -l gnutls -l nettle -l hogweed -l gmp -l crypt32 -l z -l mman
 
 
 ifndef USE_UPNP
 	override USE_UPNP = -
 endif
 ifneq (${USE_UPNP}, -)
-	LIBS += -l miniupnp
+#	LIBS += -l miniupnp
 	DEFS += -DUSE_UPNP=$(USE_UPNP)
 endif
 
@@ -143,7 +151,7 @@ OBJS= \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o
 
-all: BitcoinDarkd64.exe
+all: BitcoinDarkd-$(OS).exe
 
 # LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a libjl777.a libuv.a libnacl.a -lcurl -lm -ldl
 #LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a -ljl777 ../libjl777/libs/libuv.a ../libjl777/libs/randombytes.o -lm
@@ -155,9 +163,9 @@ all: BitcoinDarkd64.exe
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 OBJS += obj/txdb-leveldb.o
-leveldb/libleveldb.a:
-	@echo "Building LevelDB ..."; cd leveldb; make clean -f Makefile.win64; make -f Makefile.win64; cd ..;
-obj/txdb-leveldb.o: leveldb/libleveldb.a
+leveldb/libleveldb-$(OS).a:
+	@echo "Building LevelDB ..."; cd leveldb; $(MAKE) clean -f Makefile.win OS=$(OS); $(MAKE) -f Makefile.win OS=$(OS); cd ..;
+obj/txdb-leveldb.o: leveldb/libleveldb-$(OS).a
 
 # auto-generated dependencies:
 -include obj/*.P
@@ -185,12 +193,12 @@ obj/%.o: %.cpp
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
-BitcoinDarkd64.exe: $(OBJS:obj/%=obj/%); \
+BitcoinDarkd-$(OS).exe: $(OBJS:obj/%=obj/%); \
     $(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
     #$(LINK) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
 clean:
-	-rm -f BitcoinDarkd64.exe
+	-rm -f BitcoinDarkd-$(OS).exe
 	-rm -f obj/*.o
 	-rm -f obj/*.P
 	-rm -f obj/build.h

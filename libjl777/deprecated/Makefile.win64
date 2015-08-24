@@ -19,14 +19,14 @@ endif
 
 PATH := $(PWD)/mxe/usr/bin:$(PATH)
 
-PLIBS := ../libs/libjl777-win64.a ../libs/libminiupnpc-win64.a ../libs/libnanomsg-win64.a -lpthread -lcurl -lgnutls -lnettle -lhogweed -lgmp -lm -liphlpapi -lws2_32 -lwsock32 -lz -lcrypt32 -lssp -lmman -D_win64 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINGW_HAS_SECURE_API=1
+PLIBS := ../libs/libjl777-win64.a ../libs/libminiupnpc-win64.a mxe/usr/x86_64-w64-mingw32.static/lib/libnanomsg.a -lpthread -lcurl -lgnutls -lnettle -lhogweed -lgmp -lm -liphlpapi -lws2_32 -lwsock32 -lz -lcrypt32 -lssp -lmman -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINGW_HAS_SECURE_API=1
 
-LIBS= libs/libjl777-win64.a libs/libnanomsg-win64.a libs/libminiupnpc-win64.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 -lssp -lgnutls -lnettle -lhogweed -lgmp -lz -lcrypt32 -lmman
+LIBS= libs/libjl777-win64.a mxe/usr/x86_64-w64-mingw32.static/lib/libnanomsg.a libs/libminiupnpc-win64.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 -lssp -lgnutls -lnettle -lhogweed -lgmp -lz -lcrypt32 -lmman
 
 CC=x86_64-w64-mingw32.static-gcc
 OS=win
 
-CFLAGS= -w -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -D_win64 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINIUPNP_STATICLIB -DMINGW_HAS_SECURE_API=1
+CFLAGS= -w -O2  -pedantic -g -fPIC -Imxe/usr/x86_64-w64-mingw32.static/include -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS) -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINIUPNP_STATICLIB -DMINGW_HAS_SECURE_API=1
 
 TARGET  = libjl777-win64.a
 
@@ -74,7 +74,7 @@ $(TARGET): $(OBJS)
 	ar rcu  libs/libjl777-win64.a  $(OBJS)
 
 test:	all
-	(cd tests; make test)
+	(cd tests; $(MAKE) test)
 
 clean: doesntexist
 	rm libs/libjl777-win64.a SuperNET64.exe; rm -f libjl777-win64.a  $(OBJS) *~
@@ -94,7 +94,7 @@ _eth := rm agents/eth; gcc -o agents/eth -O2 $(PINCLUDES) agents/two/eth.c $(PLI
 
 _two := rm agents/two; gcc -o agents/two -O2 $(PINCLUDES) agents/two/two.c $(PLIBS)
 
-_stockfish := cd agents/stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../agents; cd ../..
+_stockfish := cd agents/stockfish; rm stockfish; $(MAKE) build ARCH=x86-64-modern; cp stockfish ../agents; cd ../..
 
 agents: plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
 	cd plugins; \
@@ -139,7 +139,7 @@ MGW: lib/MGW; \
 	cd plugins; $(_MGW); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-   pkill SuperNET; rm SuperNET64.exe; $(CC) -o SuperNET64.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS); strip SuperNET64.exe
+   rm SuperNET64.exe; $(CC) -o SuperNET64.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS); strip SuperNET64.exe
 
 #-lz -ldl -lutil -lpcre -lexpat
 
@@ -148,10 +148,10 @@ special: /usr/lib/libjl777.so; \
     sudo cp libs/libjl777.so /usr/lib/libjl777.so
 
 btcd: ../src/BitcoinDarkd64.exe; \
-    cd ../src; rm BitcoinDarkd64.exe; make clean -f Makefile.win64;  make -f Makefile.win64; strip BitcoinDarkd64.exe; cp BitcoinDarkd64.exe ../libjl777
+    cd ../src; $(MAKE) clean -f Makefile.win64; cd leveldb; $(MAKE) clean; cd ..; $(MAKE) -f Makefile.win64; strip BitcoinDarkd64.exe; cp BitcoinDarkd64.exe ../libjl777
 
 btcdmac: ../src/BitcoinDarkd; \
-    cd ../src; rm BitcoinDarkd; make -f makefile.osx; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
+    cd ../src; rm BitcoinDarkd; $(MAKE) -f makefile.osx; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
 install: doesntexist; \
     sudo add-apt-repository ppa:fkrull/deadsnakes; sudo apt-get update; sudo aptitude install python-software-properties software-properties-common autotools-dev ; add-apt-repository ppa:bitcoin/bitcoin; echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | tee /etc/apt/sources.list.d/webupd8team-java.list ; echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list ; apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886 ; aptitude update; aptitude install git build-essential libdb++-dev libtool libtool-bin autoconf pkg-config libssl-dev libboost-all-dev libminiupnpc-dev clang libcurl4-gnutls-dev oracle-java8-installer libwebsockets3 libwebsockets-dev cmake qt4-qmake libqt4-dev build-essential libboost-dev libboost-system-dev libboost-filesystem-dev libboost-program-options-dev libboost-thread-dev libssl-dev libdb++-dev libminiupnpc-dev python3-dev libpcre-ocaml-dev #openjdk-7-jdk openjdk-7-jre-lib
@@ -179,19 +179,19 @@ chessjs:  doesntexist; \
     git clone https://github.com/exoticorn/stockfish-js
 
 nanomsg:  doesntexist; \
-    git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make -lanl; make check; cp .libs/libnanomsg.a ../libs/libnanomsg-win64.a; cp src/*.h ../includes; cd ..
+    git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; $(MAKE) -lanl; $(MAKE) check; cp .libs/libnanomsg.a ../libs/libnanomsg-win64.a; cp src/*.h ../includes; cd ..
 
 python: doesntexist; \
-    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
+    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; $(MAKE) all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
 
 patch: doesntexist; \
     #sudo apt-get install csync-owncloud librsync-dev libsmbclient-dev liblog4c-dev flex libsqlite3-dev bison csync2; \
     #git clone http://git.linbit.com/csync2.git; \
-    #cd csync2; ./autogen.sh; ./configure  --prefix=/usr --localstatedir=/var --sysconfdir=/etc; make; sudo make install; sudo make cert; cd ..; \
+    #cd csync2; ./autogen.sh; ./configure  --prefix=/usr --localstatedir=/var --sysconfdir=/etc; $(MAKE); sudo $(MAKE) install; sudo $(MAKE) cert; cd ..; \
     #echo "add: csync2          30865/tcp       # to /etc/services"; \
     #echo "http://oss.linbit.com/csync2/paper.pdf is useful"; \
     #git clone git://git.csync.org/projects/csync.git; \
-    #cd csync; cmake ..; make; \
+    #cd csync; cmake ..; $(MAKE); \
     #echo "neon can be installed from: http://www.linuxfromscratch.org/blfs/view/svn/basicnet/neon.html"; \
     sudo apt-get install openjdk-7-jdk openjdk-7-jre-lib; \
     sudo apt-get install mercurial; \
@@ -216,7 +216,7 @@ patch: doesntexist; \
 
 patch3: doesntexist; \
     cd miniupnpc; \
-    make libminiupnpc.a; \
+    $(MAKE) libminiupnpc.a; \
     cp libminiupnpc.a ../libs; \
     cd ..;\
 
@@ -232,7 +232,7 @@ patch1: doesntexist; \
     cd db-6.1.19/build_unix; \
     ../dist/configure; \
     cp ../../env_region.c ../src/env; \
-    make; \
+    $(MAKE); \
     cp *.h ../../includes; \
     cp libdb.a ../../libs;
 
@@ -243,7 +243,7 @@ patch2: doesntexist; \
     cp libwebsockets.h lws_config.h ../../includes; \
     cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
     cp libwebsockets-test-server.pem ../../SuperNET.pem; \
-    make; \
+    $(MAKE); \
     cp lib/*  ../../libs; \
     cd ../..;
 
@@ -255,21 +255,21 @@ patch2: doesntexist; \
     #cp libwebsockets.h lws_config.h ../../includes; \
     #cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
     #cp libwebsockets-test-server.pem ../../SuperNET.pem; \
-    #make; \
+    #$(MAKE); \
     #cp lib/*  ../../libs; \
     #cd ../..; \
     #unzip db-6.1.19.zip; \
     #cd db-6.1.19/build_unix; \
     #../dist/configure; \
     #cp ../../env_region.c ../src/env; \
-    #make; \
+    #$(MAKE); \
     #cp libdb.a ../../libs; \
     #cp *.h ../../includes; \
     #cd ../..; \
     #cd libuv; \
     #sh autogen.sh; \
     #./configure; \
-    #make; \
+    #$(MAKE); \
     #cp .libs/libuv.a ../libs; \
     #cp .libs/libuv.so ../libs; \
     #cd ..; \
@@ -278,9 +278,9 @@ dependencies: doesntexist; \
     sudo apt-get install autopoint bison bzip2 cmake flex gcc g++ gperf intltool libtool libtool-bin ruby scons wine zlib1g-dev libffi-dev;
 
 onetime: doesntexist; \
-    cd nanomsg; ./autogen.sh; ./configure; make -lanl; cp .libs/libnanomsg.a ../libs/libnanomsg-win64.a cd ..; \
-    cd miniupnpc; make; cp libminiupnpc.a ../libs/libminiupnpc.a-win64.a; cd ..; \
-    git clone https://github.com/joewalnes/websocketd; cd websocketd; make; cp websocketd ../libs/websocketd-win64; cd ..; \
+    cd nanomsg; ./autogen.sh; ./configure; $(MAKE) -lanl; cp .libs/libnanomsg.a ../libs/libnanomsg-win64.a cd ..; \
+    cd miniupnpc; $(MAKE); cp libminiupnpc.a ../libs/libminiupnpc.a-win64.a; cd ..; \
+    git clone https://github.com/joewalnes/websocketd; cd websocketd; $(MAKE); cp websocketd ../libs/websocketd-win64; cd ..; \
 
 
 winpatch:
