@@ -585,7 +585,7 @@ uint64_t okcoin_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     return(txid);
 }
 
-uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     /* LakeBTC provides trading JSON-RPC API interface. HMAC (Hash-based Message Authentication Code) is employed as our authentication mechanisms. You need at 0.1 BTC in your account to retrieve your private key.
      
@@ -613,19 +613,32 @@ uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *base,
      params= (i.e., blank)*/
     
     static CURL *cHandle;
- 	char *data,*method,buf64[4096],params[1024],dest[512],url[1024],cmdbuf[8192],*sig,hdr1[4096],hdr2[4096],buf[4096]; cJSON *json; uint64_t tonce,txid = 0;
+    char *baserels[][2] = { {"btc","usd"}, {"btc","cny"} };
+    char *data,*method,buf64[4096],paramstr[128],jsonbuf[1024],base[64],rel[64],pairstr[64],params[1024],dest[512],url[1024],cmdbuf[8192],*sig,hdr1[4096],hdr2[4096],buf[4096]; cJSON *json; uint64_t tonce,txid = 0;
     *retstrp = 0;
     params[0] = 0;
     tonce = ((uint64_t)time(NULL) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
     if ( dir == 0 )
     {
         method = "getAccountInfo";
+        sprintf(buf,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=",(long long)tonce,exchange->userid,method);
+        sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,params);
     }
     else
     {
-        method = "notyet";
+        strcpy(base,_base), strcpy(rel,_rel);
+        tolowercase(base), tolowercase(rel);
+        if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        {
+            printf("cant find baserel (%s/%s)\n",base,rel);
+            return(0);
+        }
+        method = (dir > 0) ? "buyOrder" : "sellOrder";
+        touppercase(rel);
+        sprintf(paramstr,"%.2f,%.4f,%s",price,volume,rel);
+        sprintf(buf,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=%s",(long long)tonce,exchange->userid,method,paramstr);
+        sprintf(jsonbuf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,paramstr);
     }
-    sprintf(buf,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=",(long long)tonce,exchange->userid,method);
     if ( (sig= hmac_sha1_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),buf)) != 0 )
     {
         sprintf(cmdbuf,"%s:%s",exchange->userid,sig);
@@ -633,12 +646,12 @@ uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *base,
         sprintf(url,"https://www.lakebtc.com/api_v1");
         sprintf(hdr1,"Authorization:Basic %s",buf64);
         sprintf(hdr2,"Json-Rpc-Tonce: %llu",(long long)tonce);
-        sprintf(buf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,params);
-        if ( (data= curl_post(&cHandle,url,0,buf,hdr1,hdr2,0,0)) != 0 )
+        if ( (data= curl_post(&cHandle,url,0,jsonbuf,hdr1,hdr2,0,0)) != 0 )
         {
-            printf("submit cmd.(%s) [%s]\n",buf,data);
+            printf("submit cmd.(%s) [%s]\n",jsonbuf,data);
             if ( (json= cJSON_Parse(data)) != 0 )
             {
+                txid = j64bits(json,"order_id");
                 free_json(json);
             }
         } else fprintf(stderr,"submit err cmd.(%s)\n",cmdbuf);

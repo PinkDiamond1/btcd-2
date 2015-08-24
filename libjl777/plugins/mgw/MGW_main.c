@@ -1313,7 +1313,7 @@ uint64_t MGWtransfer_asset(cJSON **transferjsonp,int32_t forceflag,uint64_t nxt6
     expand_nxt64bits(NXTaddr,nxt64bits);
     conv_rsacctstr(rsacct,nxt64bits);
     issue_getpubkey(&haspubkey,rsacct);
-    if ( haspubkey != 0 && depositors_pubkey[0] == 0 )
+    if ( haspubkey != 0 )//&& depositors_pubkey[0] == 0 )
     {
         set_NXTpubkey(depositors_pubkey,NXTaddr);
         printf("set.%s pubkey.(%s)\n",NXTaddr,depositors_pubkey);
@@ -1669,7 +1669,7 @@ int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status)
 int32_t mgw_isrealtime(struct coin777 *coin)
 {
     printf("verified.%d lag.%d (coin->ramchain.RTblocknum - coin->ramchain.blocknum) <= coin->minconfirms %d vs %d\n",coin->verified,coin->lag,(coin->ramchain.RTblocknum - coin->ramchain.blocknum),coin->minconfirms);
-    if ( (coin->lag > 0 && coin->lag <= coin->minconfirms) && coin->verified != 0 )
+    if ( (coin->lag >= 0 && coin->lag <= coin->minconfirms) && coin->verified != 0 )
         return(1);
     return(0);
 }
@@ -1735,11 +1735,14 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
                     }
                     else if ( coin->mgw.firstunspentind == 0 || unspentind >= coin->mgw.firstunspentind )
                     {
-                        printf("pending deposit.%u (%s).v%d %.8f -> %s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,Ustatus,status);
-                        if ( (nxt64bits % msig->n) == SUPERNET.gatewayid && mgw_isrealtime(coin) != 0 )
+                        printf("pending deposit.%u (%s).v%d %.8f -> %s nxt.%llu pubkey.%s | Ustatus.%d status.%d\n",unspentind,txidstr,vout,dstr(atx_value),msig->multisigaddr,(long long)nxt64bits,msig->NXTpubkey,Ustatus,status);
+                        if ( (nxt64bits % msig->n) == SUPERNET.gatewayid )
                         {
-                            if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION) != 0 )
-                                mgw_markunspent(txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                            if ( mgw_isrealtime(coin) != 0 )
+                            {
+                                if ( MGWtransfer_asset(0,1,nxt64bits,msig->NXTpubkey,coin,atx_value,msig->multisigaddr,txidstr,vout,&msig->buyNXT,DEPOSIT_XFER_DURATION) != 0 )
+                                    mgw_markunspent(txidstr,vout,Ustatus | MGW_PENDINGXFER);
+                            }
                         } else mgw_markunspent(txidstr,vout,Ustatus | MGW_PENDINGXFER);
                     }
                     else

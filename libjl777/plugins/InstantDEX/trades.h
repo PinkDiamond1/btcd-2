@@ -448,10 +448,10 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
             sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",reftx);
         if ( phaselink != 0 && phaselink[0] != 0 )
             sprintf(cmd+strlen(cmd),"&phased=true&phasingFinishHeight=%u&phasingVotingModel=4&phasingQuorum=1&phasingLinkedFullHash=%s",finishheight,phaselink);
-//printf("generated cmd.(%s)\n",cmd);
+printf("generated cmd.(%s)\n",cmd);
         if ( (retstr= issue_NXTPOST(cmd)) != 0 )
         {
-//printf("(%s)\n",retstr);
+printf("(%s)\n",retstr);
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
                 if ( extract_cJSON_str(tx->txbytes,MAX_JSON_FIELD,json,"transactionBytes") > 0 &&
@@ -495,14 +495,16 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
     return(fee.txid);
 }
 
-uint64_t prices777_swapbuf(uint64_t *txidp,char *triggertx,char *txbytes,char *swapbuf,struct prices777 *prices,struct prices777_order *order,uint64_t orderid)
+uint64_t prices777_swapbuf(uint64_t *txidp,char *triggertx,char *txbytes,char *swapbuf,struct prices777 *prices,struct prices777_order *order,uint64_t orderid,int32_t finishoffset)
 {
     char swapstr[4096]; uint64_t txid = 0;
     *txidp = 0;
+    if ( finishoffset == 0 )
+        finishoffset = 7;
     sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseqty\":\"%lld\",\"relqty\":\"%lld\"}",(long long)orderid,(long long)order->s.quoteid,SUPERNET.NXTADDR,order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap"),prices->exchange,prices->base,prices->rel,(long long)order->s.baseid,(long long)order->s.relid,(long long)order->s.baseamount,(long long)order->s.relamount);
     if ( order->s.price > SMALLVAL )
         sprintf(swapbuf + strlen(swapbuf) - 1,",\"price\":%.8f,\"volume\":%.8f}",order->s.price,order->s.vol);
-    txid = InstantDEX_swapstr(txidp,triggertx,txbytes,swapstr,orderid,order,0,0,5);
+    txid = InstantDEX_swapstr(txidp,triggertx,txbytes,swapstr,orderid,order,0,0,finishoffset);
     strcpy(swapbuf+strlen(swapbuf)-1,swapstr);
     //printf("swapbuf.(%s)\n",swapbuf);
     return(txid);
@@ -552,10 +554,10 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
             printf("must call prices777_trade with swapbuf or order to do InstantDEX swap trade\n");
             return(clonestr("{\"error\":\"need to specify swapbuf\"}\n"));
         }
-        pend->triggertxid = prices777_swapbuf(&pend->txid,triggertx,txbytes,swapbuf,prices,order,orderid);
+        pend->triggertxid = prices777_swapbuf(&pend->txid,triggertx,txbytes,swapbuf,prices,order,orderid,extra==0?0:atoi(extra));
         if ( triggertx[0] != 0 )
             pend->triggertx = clonestr(triggertx);
-        if ( txbytes != 0 )
+        if ( txbytes[0] != 0 )
             pend->txbytes = clonestr(txbytes);
         pend->tradesjson = cJSON_Parse(swapbuf);
         pend->type = 'T';
@@ -597,7 +599,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
         quoteid = j64bits(origjson,"quoteid");
         if ( (iQ= find_iQ(quoteid)) == 0 )
         {
-            printf("cant find quoteid.%llu\n",(long long)quoteid);
+            printf("swap_func: cant find quoteid.%llu\n",(long long)quoteid);
             iQ = &_iQ, memset(iQ,0,sizeof(*iQ));
             //return(clonestr("{\"error\":\"cant find quoteid\"}"));
         }
@@ -843,7 +845,7 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade,uint64
         exchange = prices->exchange;
         swapbuf[0] = 0;
         if ( strcmp(exchange,INSTANTDEX_NAME) == 0 )
-            prices777_swapbuf(&txid,triggertx,txbytes,swapbuf,prices,order,orderid);
+            prices777_swapbuf(&txid,triggertx,txbytes,swapbuf,prices,order,orderid,extra==0?0:atoi(extra));
         if ( dotrade == 0 )
         {
             if ( strcmp(exchange,INSTANTDEX_NAME) != 0 )

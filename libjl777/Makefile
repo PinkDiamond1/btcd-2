@@ -68,7 +68,7 @@ $(TARGET): $(OBJS)
 	ar rcu  libs/libjl777.a  $(OBJS)
 
 test:	all
-	(cd tests; $(MAKE) test)
+	(cd tests; make test)
 
 clean: doesntexist
 	rm libs/libjl777.a SuperNET; rm -f libjl777.a libs/libjl777.so $(OBJS) *~
@@ -79,7 +79,7 @@ _echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) agents/
 
 #_rps := rm agents/rps; gcc -o agents/rps -O2 $(PINCLUDES) common/rps777.c $(PLIBS)
 
-_api := rm cgi/*; gcc -o cgi/api -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c ccgi/prefork.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api cgi/nxt; ln cgi/api cgi/nxts; ln cgi/api cgi/port; ln cgi/api cgi/stringified; ln cgi/api cgi/ports; ln cgi/api cgi/InstantDEX; ln cgi/api cgi/init;  ln cgi/api cgi/public
+_api := rm cgi/*; gcc -o cgi/api -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api cgi/nxt; ln cgi/api cgi/nxts; ln cgi/api cgi/port; ln cgi/api cgi/stringified; ln cgi/api cgi/ports; ln cgi/api cgi/InstantDEX; ln cgi/api cgi/init;  ln cgi/api cgi/public
 
 _msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) agents/two/msc.c $(PLIBS)
 
@@ -89,7 +89,7 @@ _eth := rm agents/eth; gcc -o agents/eth -O2 $(PINCLUDES) agents/two/eth.c $(PLI
 
 _two := rm agents/two; gcc -o agents/two -O2 $(PINCLUDES) agents/two/two.c $(PLIBS)
 
-_stockfish := cd agents/stockfish; rm stockfish; $(MAKE) build ARCH=x86-64-modern; cp stockfish ../agents; cd ../..
+_stockfish := cd agents/stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../agents; cd ../..
 
 agents: plugins/agents/echodemo plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
 	cd plugins; \
@@ -146,10 +146,10 @@ special: /usr/lib/libjl777.so; \
     sudo cp libs/libjl777.so /usr/lib/libjl777.so
 
 btcd: ../src/BitcoinDarkd; \
-    cd ../src; rm BitcoinDarkd; $(MAKE) -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
+    cd ../src; rm BitcoinDarkd; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
 btcdmac: ../src/BitcoinDarkd; \
-    cd ../src; rm BitcoinDarkd; $(MAKE) -f makefile.osx; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
+    cd ../src; rm BitcoinDarkd; make -f makefile.osx; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
 install: doesntexist; \
     sudo add-apt-repository ppa:fkrull/deadsnakes; sudo apt-get update; sudo aptitude install python-software-properties software-properties-common autotools-dev ; add-apt-repository ppa:bitcoin/bitcoin; echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | tee /etc/apt/sources.list.d/webupd8team-java.list ; echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list ; apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys EEA14886 ; aptitude update; aptitude install git build-essential libdb++-dev  libtool  autoconf pkg-config libssl-dev libboost-all-dev libminiupnpc-dev clang libcurl4-gnutls-dev oracle-java8-installer libwebsockets3 libwebsockets-dev cmake qt4-qmake libqt4-dev build-essential libboost-dev libboost-system-dev libboost-filesystem-dev libboost-program-options-dev libboost-thread-dev libssl-dev libdb++-dev libminiupnpc-dev python3-dev libpcre-ocaml-dev #openjdk-7-jdk openjdk-7-jre-lib
@@ -177,19 +177,19 @@ chessjs:  doesntexist; \
     git clone https://github.com/exoticorn/stockfish-js
 
 nanomsg:  doesntexist; \
-    git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; $(MAKE) -lanl; $(MAKE) check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..
+    git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make -lanl; make check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..
 
 python: doesntexist; \
-    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; $(MAKE) all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
+    tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
 
 patch: doesntexist; \
     #sudo apt-get install csync-owncloud librsync-dev libsmbclient-dev liblog4c-dev flex libsqlite3-dev bison csync2; \
     #git clone http://git.linbit.com/csync2.git; \
-    #cd csync2; ./autogen.sh; ./configure  --prefix=/usr --localstatedir=/var --sysconfdir=/etc; $(MAKE); sudo $(MAKE) install; sudo $(MAKE) cert; cd ..; \
+    #cd csync2; ./autogen.sh; ./configure  --prefix=/usr --localstatedir=/var --sysconfdir=/etc; make; sudo make install; sudo make cert; cd ..; \
     #echo "add: csync2          30865/tcp       # to /etc/services"; \
     #echo "http://oss.linbit.com/csync2/paper.pdf is useful"; \
     #git clone git://git.csync.org/projects/csync.git; \
-    #cd csync; cmake ..; $(MAKE); \
+    #cd csync; cmake ..; make; \
     #echo "neon can be installed from: http://www.linuxfromscratch.org/blfs/view/svn/basicnet/neon.html"; \
     sudo apt-get install openjdk-7-jdk openjdk-7-jre-lib; \
     sudo apt-get install mercurial; \
@@ -214,7 +214,7 @@ patch: doesntexist; \
 
 patch3: doesntexist; \
     cd miniupnpc; \
-    $(MAKE) libminiupnpc.a; \
+    make libminiupnpc.a; \
     cp libminiupnpc.a ../libs; \
     cd ..;\
 
@@ -230,7 +230,7 @@ patch1: doesntexist; \
     cd db-6.1.19/build_unix; \
     ../dist/configure; \
     cp ../../env_region.c ../src/env; \
-    $(MAKE); \
+    make; \
     cp *.h ../../includes; \
     cp libdb.a ../../libs;
 
@@ -241,7 +241,7 @@ patch2: doesntexist; \
     cp libwebsockets.h lws_config.h ../../includes; \
     cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
     cp libwebsockets-test-server.pem ../../SuperNET.pem; \
-    $(MAKE); \
+    make; \
     cp lib/*  ../../libs; \
     cd ../..;
 
@@ -253,21 +253,21 @@ patch2: doesntexist; \
     #cp libwebsockets.h lws_config.h ../../includes; \
     #cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
     #cp libwebsockets-test-server.pem ../../SuperNET.pem; \
-    #$(MAKE); \
+    #make; \
     #cp lib/*  ../../libs; \
     #cd ../..; \
     #unzip db-6.1.19.zip; \
     #cd db-6.1.19/build_unix; \
     #../dist/configure; \
     #cp ../../env_region.c ../src/env; \
-    #$(MAKE); \
+    #make; \
     #cp libdb.a ../../libs; \
     #cp *.h ../../includes; \
     #cd ../..; \
     #cd libuv; \
     #sh autogen.sh; \
     #./configure; \
-    #$(MAKE); \
+    #make; \
     #cp .libs/libuv.a ../libs; \
     #cp .libs/libuv.so ../libs; \
     #cd ..; \
@@ -276,9 +276,9 @@ dependencies: doesntexist; \
     sudo apt-get install make clang-3.4 autoconf  libtool libcurl4-gnutls-dev unzip autogen g++ libssl-dev libdb++-dev  libminiupnpc-dev libboost-all-dev;
 
 onetime: doesntexist; \
-    cd nanomsg; ./autogen.sh; ./configure; $(MAKE) -lanl; cd ..; \
-    cd miniupnpc; $(MAKE); cp libminiupnpc.a ../libs; cd ..; \
-    git clone https://github.com/joewalnes/websocketd; cd websocketd; $(MAKE); cp websocketd ../libs; cd ..; \
+    cd nanomsg; ./autogen.sh; ./configure; make -lanl; cd ..; \
+    cd miniupnpc; make; cp libminiupnpc.a ../libs; cd ..; \
+    git clone https://github.com/joewalnes/websocketd; cd websocketd; make; cp websocketd ../libs; cd ..; \
     #git clone https://go.googlesource.com/go; cd go; git checkout go1.4.1; cd src; ./all.bash; cd ..; mkdir gocode; mkdir gocode/src; cd ..; \
     #mkdir go/gocode; mkdir go/gocode/src; export GOPATH=`pwd`/go/gocode;  export GOROOT=`pwd`/go; echo $$GOPATH; echo $$GOROOT; \
     #go get golang.org/x/tools/cmd; go get golang.org/x/crypto; go get golang.org/x/image; go get golang.org/x/sys; go get golang.org/x/net; go get golang.org/x/text; go get golang.org/x/tools;\
@@ -334,6 +334,6 @@ plugins/agents/nxt: plugins/agents/two/nxt.c
 plugins/agents/two: plugins/agents/two/two.c
 plugins/InstantDEX/InstantDEX_main.o: plugins/InstantDEX/InstantDEX_main.c plugins/InstantDEX/assetids.h plugins/InstantDEX/atomic.h plugins/InstantDEX/bars.h plugins/InstantDEX/exchangepairs.h plugins/InstantDEX/feeds.h plugins/InstantDEX/NXT_tx.h plugins/InstantDEX/orderbooks.h plugins/InstantDEX/quotes.h plugins/InstantDEX/rambooks.h plugins/InstantDEX/signals.h plugins/InstantDEX/tradebot.h plugins/InstantDEX/trades.h plugins/InstantDEX/InstantDEX.h
 
-plugins/cgi/api: plugins/agents/api_main.c plugins/ccgi/ccgi.c plugins/ccgi/prefork.c
+plugins/cgi/api: plugins/agents/api_main.c plugins/ccgi/ccgi.c #plugins/ccgi/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/kv777.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c

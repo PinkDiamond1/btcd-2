@@ -6,9 +6,9 @@ ps aux | grep SuperNET
 ps aux | grep BitcoinDarkd
 echo "there should only be the entries for grep in the above lines"
 rm SuperNET 
-make -j4 SuperNET
-make -j4 api
-if make -j4 btcd; then
+make SuperNET
+make api
+if make btcd; then
 	rm ~/.BitcoinDark/debug.log
 	./BitcoinDarkd
     pkill websocketd; sleep 1

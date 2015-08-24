@@ -303,6 +303,7 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     iQ->s.basebits = stringbits(base);
     iQ->s.relbits = stringbits(rel);
     iQ->s.offerNXT = j64bits(json,"offerNXT");
+    printf("GOT OFFERNXT.(%llu)\n",(long long)iQ->s.offerNXT);
     iQ->s.quoteid = j64bits(json,"quoteid");
     if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"placeask") == 0 || strcmp(methodstr,"ask") == 0) )
         iQ->s.isask = 1;
@@ -480,7 +481,7 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
     char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD];
     struct InstantDEX_quote iQ;
     copy_cJSON(offerNXT,jobj(json,"offerNXT"));
-    //printf("got (%s)\n",origargstr);
+printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json) == 0 )

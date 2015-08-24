@@ -1305,14 +1305,14 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
 
 uint64_t calc_txid(unsigned char *buf,int32_t len)
 {
-    uint64_t txid,hash[4];
-    calc_sha256(0,(unsigned char *)&hash[0],buf,len);
-    if ( sizeof(hash) >= sizeof(txid) )
-        memcpy(&txid,hash,sizeof(txid));
-    else memcpy(&txid,hash,sizeof(txid));
+    bits256 hash;
+    calc_sha256(0,hash.bytes,buf,len);
+    //if ( sizeof(hash) >= sizeof(txid) )
+    //    memcpy(&txid,hash,sizeof(txid));
+    //else memcpy(&txid,hash,sizeof(txid));
     //printf("calc_txid.(%llu)\n",(long long)txid);
     //return(hash[0] ^ hash[1] ^ hash[2] ^ hash[3]);
-    return(txid);
+    return(hash.txid);
 }
 
 /*
