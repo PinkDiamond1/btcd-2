@@ -155,7 +155,7 @@ extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex)
 
 extern "C" char* GetPeggyByHeight(uint32_t blocknum) //(0-based)
 {
-    CBlockIndex *pindex = FindBlockByHeight(blocknum+1);
+    CBlockIndex *pindex = FindBlockByHeight(blocknum);
     CBlock block;
     if(!block.ReadFromDisk(pindex, true))
         throw runtime_error(
@@ -259,7 +259,7 @@ Value peggypayments(const Array& params, bool fHelp)
             nBlockTime = pindexBest->GetBlockTime();
         }
         CWallet wallet;
-        char *paymentScript = peggypayments(nHeight+1, nBlockTime);
+        char *paymentScript = peggypayments(nHeight, nBlockTime);
         //char *priceFeedHash = peggybase(nHeight, nBlockTime);
 
         std::string retVal = std::string(paymentScript);

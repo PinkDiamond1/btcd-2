@@ -2199,7 +2199,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     #ifdef PEGGY
     char* peggy = GetPeggyByBlock(this, pindexNew);
 
-    if (pindexBest->nHeight > 670644) { //TODO: replace with nMinPeggyHeight in production
+    if (pindexBest->nHeight > nMinPeggyHeight) {
         if(peggyblock(peggy) < 0){
             free(peggy);
             return error("AddToBlockIndex() : peggyblock() failed! peggy rejected");
@@ -2619,17 +2619,11 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
                     char *paymentScript;
                     if(pindexBest->nHeight == nMinPeggyHeight){ //to ensure faster staking on private mainnet -- TEST only TODO: remove in production
                         paymentScript = (char*)malloc(256);
-                        strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":10000000, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
+                        strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":10000000}"); // temp.
                     }
                     else
                     {
-                        if (pindexBest->nHeight > 670644) {
-                            paymentScript = peggypayments(pindexBest->nHeight + 1, nTime);
-                        }
-                        else {
-                            paymentScript = (char*)malloc(256);
-                            strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":2.5, \"REmJPPBwv1aQDruKn1ibj7aPHfAyaEWLB6\": 3.889}"); // temp. TODO: add peggypaments here
-                            }
+                        paymentScript = peggypayments(pindexBest->nHeight+1, nTime);
                     }
                     char *priceFeedHash = peggybase(pindexBest->nHeight+1, nTime);
                     if(wallet.CreatePeggyBase(peggy, paymentScript, priceFeedHash))
