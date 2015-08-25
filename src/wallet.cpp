@@ -11,7 +11,9 @@
 #include "base58.h"
 #include "kernel.h"
 #include "coincontrol.h"
+#ifdef PEGGY
 #include "../libjl777/plugins/includes/cJSON.h"
+#endif
 #include <boost/algorithm/string/replace.hpp>
 
 using namespace std;
@@ -2462,10 +2464,19 @@ bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, char *
     peggyTx.vout.resize(1);
     peggyTx.vout[0].nValue = (int64_t)0;
     peggyTx.vout[0].scriptPubKey = CScript();
+    size_t len;
     int i;
-    size_t len = strlen(priceFeed)/2;
+    if(priceFeed != 0){
+        len = strlen(priceFeed)/2;
+    }
+    else{
+        len = 0;
+    }
     unsigned char buf[4096];
-    decode_hex(buf,(int)len,priceFeed);
+
+    if(len > 0)
+        decode_hex(buf,(int)len,priceFeed);
+
     for (i=0; i<(int)len; i++)
         peggyTx.vout[0].scriptPubKey << buf[i];
 
@@ -2478,6 +2489,7 @@ bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, char *
         CTxOut out((uint64_t)(jdouble(item, 0) * SATOSHIDEN), outScript);
         peggyTx.vout.push_back(out);
     }
+
     return true;
 
 }

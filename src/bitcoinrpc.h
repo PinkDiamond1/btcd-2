@@ -225,6 +225,8 @@ extern json_spirit::Value getcheckpoint(const json_spirit::Array& params, bool f
 
 #ifdef PEGGY
 extern json_spirit::Value peggytx(const json_spirit::Array& params, bool fHelp); // in rpcpeggy.cpp
+extern json_spirit::Value peggypayments(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value getpeggyblock(const json_spirit::Array& params, bool fHelp);
 #endif
 
 #endif

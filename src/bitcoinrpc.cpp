@@ -292,6 +292,8 @@ static const CRPCCommand vRPCCommands[] =
     { "SuperNET",               &SuperNET,               false,  false },
     #ifdef PEGGY
     { "peggytx",                &peggytx,                true,   false },
+    { "peggypayments",          &peggypayments,          true,   false },
+    { "getpeggyblock",          &getpeggyblock,          true,   false },
     #endif
     { "dumpwallet",             &dumpwallet,             true,   false },
     { "importwallet",           &importwallet,           false,  false },
@@ -1256,7 +1258,13 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 
     //if (strMethod == "jl777"                && n > 0) ConvertTo<Array>(params[0]);
 
-
+    #ifdef PEGGY
+    if (strMethod == "getpeggyblock"           && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "peggypayments"           && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "peggypayments"           && n > 1) ConvertTo<int64_t>(params[1]);
+    if (strMethod == "peggytx"   && n > 1) ConvertTo<Object>(params[1]);
+    if (strMethod == "peggytx"   && n > 2) ConvertTo<bool>(params[2]);
+    #endif
 
     return params;
 }

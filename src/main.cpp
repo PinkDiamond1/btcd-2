@@ -2147,7 +2147,10 @@ bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
         printf("block coin age total nCoinDays=%"PRId64"\n", nCoinAge);
     return true;
 }
-
+#ifdef PEGGY
+extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex);
+extern "C" int32_t peggyblock(char *jsonstr);
+#endif
 bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProof)
 {
     // Check for duplicate
@@ -2192,7 +2195,22 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     if (pindexNew->IsProofOfStake())
         setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
     pindexNew->phashBlock = &((*mi).first);
-    
+
+    #ifdef PEGGY
+    char* peggy = GetPeggyByBlock(this, pindexNew);
+
+    if (pindexBest->nHeight > 670644) { //TODO: replace with nMinPeggyHeight in production
+        if(peggyblock(peggy) < 0){
+            free(peggy);
+            return error("AddToBlockIndex() : peggyblock() failed! peggy rejected");
+        }
+        else
+            free(peggy);
+    }
+    else
+        free(peggy);
+    #endif
+
     // Write to disk block index
     CTxDB txdb;
     if (!txdb.TxnBegin())
@@ -2798,8 +2816,6 @@ bool LoadBlockIndex(bool fAllowNew)
         block.nTime    = 1403138561;
         block.nBits    = bnProofOfWorkLimit.GetCompact();
         block.nNonce   = !fTestNet ? 8359109 : 294567;
-        
-        
         
         assert(block.hashMerkleRoot == uint256("0xfd1751cc6963d88feca94c0d01da8883852647a37a0a67ce254d62dd8c9d5b2b"));
         
