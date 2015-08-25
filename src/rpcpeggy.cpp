@@ -40,7 +40,7 @@ extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex)
     array = cJSON_CreateArray();
     arrayObj = cJSON_CreateObject();
     //header
-    jaddnum(header, "blocknum", pindex->nHeight+1);
+    jaddnum(header, "blocknum", pindex->nHeight);
     jaddnum(header, "blocktimestamp", pblock->nTime);
     jaddstr(header, "blockhash", (char*)pindex->GetBlockHash().ToString().c_str());
 
