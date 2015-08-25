@@ -252,7 +252,7 @@ cJSON *prices777_orderjson(struct InstantDEX_quote *iQ)
     cJSON *item = cJSON_CreateArray();
     jaddinum(item,iQ->s.price);
     jaddinum(item,iQ->s.vol);
-    jaddinum(item,iQ->s.quoteid);
+    jaddi64bits(item,iQ->s.quoteid);
     return(item);
 }
 
@@ -267,7 +267,7 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
         {
             if ( iQ.s.timestamp > (now + ORDERBOOK_EXPIRATION) )
                 iQ.s.expired = iQ.s.closed = 1;
-            //printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
+            printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
             if ( prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.relid) == prices777_equiv(prices->relid) )
                 invert = 0;
             else if ( prices777_equiv(ptr->s.relid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->relid) )
@@ -512,7 +512,9 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
             if ( iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) != 0 )
                 return(retstr);
             retstr = InstantDEX_str(0,1,iQ);
-            create_iQ(iQ);
+            printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
+            iQ = create_iQ(iQ);
+            printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
             prices777_InstantDEX(prices,MAX_DEPTH);
             queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
         }
@@ -522,6 +524,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
             {
                 printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
                 iQ = create_iQ(iQ);
+                prices777_InstantDEX(prices,MAX_DEPTH);
                 printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
             }
             return(retstr);

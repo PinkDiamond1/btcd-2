@@ -294,7 +294,7 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
         jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
         if ( (iQ= find_iQ(quoteid)) != 0 )
             jadd64bits(item,"offerNXT",iQ->s.offerNXT);
-        else printf("cant find offerNXT.%llu\n",(long long)quoteid);
+        else if ( quoteid != 0 ) printf("cant find offerNXT.%llu\n",(long long)quoteid);
         jadd64bits(item,"baseid",prices->baseid), jadd64bits(item,"relid",prices->relid);
         if ( strcmp(prices->exchange,"InstantDEX") == 0 )
         {
@@ -1112,7 +1112,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                     {
                         timestamp = get_blockutime(juint(attachment,"height"));
                         amount = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"amountNQT"));
-                         assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
+                        assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
                         comment[0] = 0;
                         qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));
                         priceNQT = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"priceNQT"));
