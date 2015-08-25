@@ -2199,7 +2199,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     #ifdef PEGGY
     char* peggy = GetPeggyByBlock(this, pindexNew);
 
-    if (pindexBest->nHeight > nMinPeggyHeight) {
+    if (pindexBest->nHeight >= nMinPeggyHeight) {
         if(peggyblock(peggy) < 0){
             free(peggy);
             return error("AddToBlockIndex() : peggyblock() failed! peggy rejected");
