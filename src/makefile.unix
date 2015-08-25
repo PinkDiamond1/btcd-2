@@ -145,7 +145,7 @@ all: BitcoinDarkd
 LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a  ../libjl777/libs/libjl777.a   ../libjl777/nanomsg/.libs/libnanomsg.a -lcurl -lm -lanl
 
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
-DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers) -I../libjl777/nanomsg/src/utils
 OBJS += obj/txdb-leveldb.o
 leveldb/libleveldb.a:
 	@echo "Building LevelDB ..."; cd leveldb; $(MAKE) libleveldb.a libmemenv.a; cd ..;
