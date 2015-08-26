@@ -7,16 +7,24 @@
 #include "main.h"
 #include "bitcoinrpc.h"
 #include "kernel.h"
+#include "init.h"
+#include "wallet.h"
+#include "walletdb.h"
 #include "wallet.h"
 #include "../libjl777/plugins/includes/cJSON.h"
 #include <stdlib.h>
 #include <stdio.h>
 using namespace json_spirit;
 using namespace std;
+
+//libjl777 function declarations
 extern "C" char *peggybase(uint32_t blocknum,uint32_t blocktimestamp);
 extern "C" char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp);
+extern "C" char *peggy_tx(char *jsonstr);
 extern "C" int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry);
+
 
 extern "C" int8_t isOpReturn(char *hexbits)
 {
@@ -167,7 +175,6 @@ extern "C" char* GetPeggyByHeight(uint32_t blocknum) //(0-based)
 
 /*
 *
-*
 *   Begin RPC functions
 *
 */
@@ -194,16 +201,50 @@ Value peggytx(const Array& params, bool fHelp)
 
     int64_t amountLocked = AmountFromValue(out.value_);
 
+    char *peggytx = peggy_tx((char*)peggyJson.c_str());
 
-    retVal = "Json: " + peggyJson + "\n";
-    retVal += "Address: " + out.name_;
-    retVal += "\nAmount: ";
-    stringstream ss;
-    ss << amountLocked;
-    retVal += ss.str() + "\n";
-    retVal += "Send: ";
-    retVal += signAndSend ? "yes" : "no\n";
-    return retVal;
+    int i;
+    CWallet wallet;
+    CWalletTx wtx;
+    CScript scriptPubKey = CScript();
+
+    unsigned char buf[4096];
+
+    if(strlen(peggytx) > 0)
+        decode_hex(buf,(int)strlen(peggytx)/2,peggytx);
+
+    for (i=0; i<(int)strlen(peggytx)/2; i++){
+        scriptPubKey << buf[i];
+        }
+
+
+    CReserveKey reservekey(pwalletMain);
+    int64_t nFeeRequired;
+    if(!pwalletMain->CreateTransaction(scriptPubKey, amountLocked, wtx, reservekey, nFeeRequired))
+        return std::string("Failed to Create the Transaction. Is your wallet unlocked?\n");
+
+
+    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+    ssTx << wtx;
+    string strHex = HexStr(ssTx.begin(), ssTx.end());
+
+    cJSON *obj = cJSON_CreateObject();
+
+    jaddstr(obj, "txid", (char*)wtx.GetHash().ToString().c_str());
+    jaddstr(obj, "rawtx", (char*)strHex.c_str());
+    jaddstr(obj, "opreturnstr", peggytx);
+
+    free(peggytx);
+
+    if(signAndSend){
+        if(!pwalletMain->CommitTransaction(wtx, reservekey))
+            return std::string("The transaction was Rejected\n");
+        else
+            return jprint(obj, 1);
+    }
+    else{
+        return jprint(obj, 1);
+    }
 }
 
 Value getpeggyblock(const Array& params, bool fHelp)
