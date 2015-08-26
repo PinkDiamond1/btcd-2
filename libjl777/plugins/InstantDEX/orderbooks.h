@@ -184,7 +184,10 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     cJSON *attachmentobj;
     char sender[MAX_JSON_FIELD],recipient[MAX_JSON_FIELD],deadline[MAX_JSON_FIELD],feeNQT[MAX_JSON_FIELD],amountNQT[MAX_JSON_FIELD],type[MAX_JSON_FIELD],subtype[MAX_JSON_FIELD],verify[MAX_JSON_FIELD],referencedTransaction[MAX_JSON_FIELD],quantityQNT[MAX_JSON_FIELD],priceNQT[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD],fullhash[MAX_JSON_FIELD],timestamp[MAX_JSON_FIELD],transaction[MAX_JSON_FIELD];
     if ( json == 0 )
+    {
+        printf("verify_NXTtx cant parse json\n");
         return(-1);
+    }
     if ( extract_cJSON_str(sender,sizeof(sender),json,"sender") > 0 ) n++;
     if ( extract_cJSON_str(recipient,sizeof(recipient),json,"recipient") > 0 ) n++;
     if ( extract_cJSON_str(referencedTransaction,sizeof(referencedTransaction),json,"referencedTransactionFullHash") > 0 ) n++;
@@ -200,23 +203,29 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     if ( extract_cJSON_str(transaction,sizeof(transaction),json,"transaction") > 0 ) n++;
     if ( calc_nxt64bits(recipient) != destNXTbits )
     {
-        printf("recipient.%s != %llu\n",recipient,(long long)destNXTbits);
+        fprintf(stderr,"recipient.%s != %llu\n",recipient,(long long)destNXTbits);
         return(-2);
     }
     typeval = atoi(type), subtypeval = atoi(subtype);
     if ( refasset == NXT_ASSETID )
     {
         if ( typeval != 0 || subtypeval != 0 )
+        {
+            fprintf(stderr,"unexpected typeval.%d subtypeval.%d\n",typeval,subtypeval);
             return(-3);
+        }
         if ( qty != calc_nxt64bits(amountNQT) )
+        {
+            fprintf(stderr,"unexpected qty.%llu vs.%s\n",(long long)qty,amountNQT);
             return(-4);
+        }
         return(0);
     }
     else
     {
         if ( typeval != 2 || subtypeval != 1 )
         {
-            printf("refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
+            fprintf(stderr,"refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
             return(-11);
         }
         price = quantity = assetidbits = 0;
@@ -235,10 +244,13 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
                 price = calc_nxt64bits(priceNQT);
         }
         if ( assetidbits != refasset )
+        {
+            fprintf(stderr,"assetidbits %llu != %llu refasset\n",(long long)assetidbits,(long long)refasset);
             return(-12);
+        }
         if ( qty != quantity )
         {
-            printf("qty.%llu != %llu\n",(long long)qty,(long long)quantity);
+            fprintf(stderr,"qty.%llu != %llu\n",(long long)qty,(long long)quantity);
             return(-13);
         }
         return(0);
@@ -252,7 +264,7 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
     // verify recipient, amounts in txobj
      if ( (err= verify_NXTtx(txobj,recvasset,recvqty,destNXTaddr)) != 0 )
     {
-        printf("InstantDEX_verify tx mismatch %d (%llu %lld) -> (%llu %lld)\n",err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
+        printf("InstantDEX_verify dest.(%llu) tx mismatch %d (%llu %lld) -> (%llu %lld)\n",(long long)destNXTaddr,err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
         return(-1);
     }
     return(0);
@@ -573,6 +585,12 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
                 quoteid = orderid;
             if ( price > SMALLVAL && volume > SMALLVAL )
             {
+                if ( prices->commission != 0. )
+                {
+                    if ( bidask == 0 )
+                        price -= prices->commission * price;
+                    else price += prices->commission * price;
+                }
                 order = (bidask == 0) ? &gp->bid : &gp->ask;
                 order->s.price = price, order->s.vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid, order->s.quoteid = quoteid;
                 if ( bidask == 0 )
@@ -1081,7 +1099,7 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
 
 double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 {
-    char url[1024],account[1024],txidstr[1024],comment[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
+    char url[1024],account[1024],txidstr[1024],comment[1024],recipient[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
     cJSON *json,*bids,*asks,*array,*txobj,*attachment;
     double price,vol; uint64_t assetid,accountid,quoteid,baseamount,relamount,qty,priceNQT,amount;
     bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
@@ -1098,20 +1116,33 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                 for (i=0; i<n; i++)
                 {
       //{"senderPublicKey":"45c9266036e705a9559ccbd2b2c92b28ea6363d2723e8d42433b1dfaa421066c","signature":"9d6cefff4c67f8cf4e9487122e5e6b1b65725815127063df52e9061036e78c0b49ba38dbfc12f03c158697f0af5811ce9398702c4acb008323df37dc55c1b43d","feeNQT":"100000000","type":2,"fullHash":"6a2cd914b9d4a5d8ebfaecaba94ef4e7d2b681c236a4bee56023aafcecd9b704","version":1,"phased":false,"ecBlockId":"887016880740444200","signatureHash":"ba8eee4beba8edbb6973df4243a94813239bf57b91cac744cb8d6a5d032d5257","attachment":{"quantityQNT":"50","priceNQT":"18503000003","asset":"13634675574519917918","version.BidOrderPlacement":1},"senderRS":"NXT-FJQN-8QL2-BMY3-64VLK","subtype":3,"amountNQT":"0","sender":"5245394173527769812","ecBlockHeight":495983,"deadline":1440,"transaction":"15611117574733507690","timestamp":54136768,"height":2147483647},{"senderPublicKey":"c42956d0a9abc5a2e455e69c7e65ff9a53de2b697e913b25fcb06791f127af06","signature":"ca2c3f8e32d3aa003692fef423193053c751235a25eb5b67c21aefdeb7a41d0d37bc084bd2e33461606e25f09ced02d1e061420da7e688306e76de4d4cf90ae0","feeNQT":"100000000","type":2,"fullHash":"51c04de7106a5d5a2895db05305b53dd33fa8b9935d549f765aa829a23c68a6b","version":1,"phased":false,"ecBlockId":"887016880740444200","signatureHash":"d76fce4c081adc29f7e60eba2a930ab5050dd79b6a1355fae04863dddf63730c","attachment":{"version.AskOrderPlacement":1,"quantityQNT":"11570","priceNQT":"110399999","asset":"979292558519844732"},"senderRS":"NXT-ANWW-C5BZ-SGSB-8LGZY","subtype":2,"amountNQT":"0","sender":"8033808554894054300","ecBlockHeight":495983,"deadline":1440,"transaction":"6511477257080258641","timestamp":54136767,"height":2147483647}],"requestProcessingTime":0}
+                    
+                   /* "senderRS": "NXT-M6QF-Q5WK-2UXK-5D3HR",
+                    "subtype": 0,
+                    "amountNQT": "137700000000",
+                    "sender": "4304363382952792781",
+                    "recipientRS": "NXT-6AC7-V9BD-NL5W-5BUWF",
+                    "recipient": "3959589697280418117",
+                    "ecBlockHeight": 506207,
+                    "deadline": 1440,
+                    "transaction": "5605109208989354417",
+                    "timestamp": 55276659,
+                    "height": 2147483647*/
                     if ( (txobj= jitem(array,i)) == 0 )
                         continue;
                     copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
+                    copy_cJSON(recipient,cJSON_GetObjectItem(txobj,"recipient"));
                     copy_cJSON(account,cJSON_GetObjectItem(txobj,"account"));
                     if ( account[0] == 0 )
                         copy_cJSON(account,cJSON_GetObjectItem(txobj,"sender"));
                     accountid = calc_nxt64bits(account);
                     type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
                     subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
+                    timestamp = get_blockutime(juint(txobj,"timestamp"));
+                    amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                     qty = amount = assetid = 0;
                     if ( (attachment= cJSON_GetObjectItem(txobj,"attachment")) != 0 )
                     {
-                        timestamp = get_blockutime(juint(attachment,"height"));
-                        amount = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"amountNQT"));
                         assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
                         comment[0] = 0;
                         qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));
@@ -1120,18 +1151,9 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                         copy_cJSON(comment,jobj(attachment,"message"));
                         if ( comment[0] != 0 )
                         {
-                            int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj);
-                            match_unconfirmed(account,comment,txobj);
-                            /*unstringify(comment);
-                            if ( (commentobj= cJSON_Parse(comment)) != 0 )
-                            {
-                                quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
-                                if ( strcmp(SUPERNET.NXTADDR,account) == 0 || Debuglevel > 2 )
-                                    printf("acct.(%s) pending quoteid.%llu asset.%llu qty.%llu %.8f amount %.8f %d:%d tx.%s\n",account,(long long)quoteid,(long long)assetid,(long long)qty,dstr(priceNQT),dstr(amount),type,subtype,txidstr);
-                                if ( quoteid != 0 )
-                                    match_unconfirmed(account,quoteid,txobj);
-                                free_json(commentobj);
-                            }*/
+                            int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient);
+                            //printf("sender.%s -> recv.(%s)\n",account,recipient);
+                            match_unconfirmed(account,comment,txobj,txidstr,account,amount,qty,assetid,recipient);
                         }
                         quoteid = calc_nxt64bits(txidstr);
                         price = prices777_price_volume(&vol,baseamount,relamount);

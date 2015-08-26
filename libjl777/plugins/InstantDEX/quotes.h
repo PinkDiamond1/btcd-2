@@ -265,9 +265,11 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
     {
         HASH_ITER(hh,AllQuotes,ptr,tmp)
         {
+            iQ = *ptr;
             if ( iQ.s.timestamp > (now + ORDERBOOK_EXPIRATION) )
                 iQ.s.expired = iQ.s.closed = 1;
-            printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
+            if ( Debuglevel > 2 )
+                printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
             if ( prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.relid) == prices777_equiv(prices->relid) )
                 invert = 0;
             else if ( prices777_equiv(ptr->s.relid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->relid) )
@@ -275,7 +277,6 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             else continue;
             if ( ptr->s.pending != 0 )
                 continue;
-            iQ = *ptr;
             isask = iQ.s.isask;
             if ( invert != 0 )
                 isask ^= 1;
@@ -473,7 +474,12 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
                InstantDEX_history(1,pend,retstr);
                free(retstr);
                free_pending(pend);
-           } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
+           }
+           else
+           {
+               printf("requeue %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
+               queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
+           }
         }
     }
 }

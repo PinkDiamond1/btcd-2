@@ -136,6 +136,7 @@ int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t ba
 int32_t get_assetname(char *name,uint64_t assetid)
 {
     char assetidstr[64],*jsonstr; cJSON *json;
+    name[0] = 0;
     if ( is_native_crypto(name,assetid) != 0 )
         return((int32_t)strlen(name));
     expand_nxt64bits(assetidstr,assetid);
@@ -489,14 +490,14 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
     char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD];
     struct InstantDEX_quote iQ;
     copy_cJSON(offerNXT,jobj(json,"offerNXT"));
-printf("got (%s)\n",origargstr);
+//printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json) == 0 )
             return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr,name,base,rel,&iQ,jstr(json,"extra")));
         else printf("error with incoming bidask\n");
     } else fprintf(stderr,"got my bidask from network (%s)\n",origargstr);
-    return(0);
+    return(clonestr("{\"result\":\"got loopback bidask\"}"));
 }
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)

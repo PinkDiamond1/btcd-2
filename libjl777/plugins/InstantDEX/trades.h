@@ -196,7 +196,10 @@ void free_pending(struct pending_trade *pend)
 {
     struct InstantDEX_quote *iQ;
     if ( (iQ= find_iQ(pend->quoteid)) != 0 )
+    {
         iQ->s.closed = 1;
+        delete_iQ(pend->quoteid);
+    }
     else printf("free_pending: cant find pending tx for %llu\n",(long long)pend->quoteid);
     if ( pend->triggertx != 0 )
         free(pend->triggertx);
@@ -338,16 +341,19 @@ int32_t InstantDEX_inithistory(int32_t firsti,int32_t endi)
 cJSON *InstantDEX_tradeitem(struct pending_trade *pend)
 {
     // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
-    char str[64]; cJSON *json = cJSON_CreateObject();
+    struct InstantDEX_quote *iQ; char str[64]; cJSON *json = cJSON_CreateObject();
     str[0] = (pend->type == 0) ? '0' : pend->type;
     str[1] = 0;
     jaddstr(json,"type",str);
     jaddnum(json,"timestamp",pend->timestamp);
     jadd64bits(json,"orderid",pend->orderid), jadd64bits(json,"quoteid",pend->quoteid);
-    if ( pend->iQ.s.baseid != 0 && pend->iQ.s.relid != 0 )
-        jadd64bits(json,"baseid",pend->iQ.s.baseid), jadd64bits(json,"relid",pend->iQ.s.relid);
-    if ( pend->iQ.s.baseamount != 0 && pend->iQ.s.relamount != 0 )
-        jaddnum(json,"baseqty",pend->iQ.s.baseamount), jaddnum(json,"relqty",pend->iQ.s.relamount);
+    if ( (iQ= find_iQ(pend->quoteid)) != 0 )
+    {
+        if ( iQ->s.baseid != 0 && iQ->s.relid != 0 )
+            jadd64bits(json,"baseid",iQ->s.baseid), jadd64bits(json,"relid",iQ->s.relid);
+        if ( iQ->s.baseamount != 0 && iQ->s.relamount != 0 )
+            jaddnum(json,"baseqty",iQ->s.baseamount), jaddnum(json,"relqty",iQ->s.relamount);
+    } else printf("tradeitem cant find quoteid.%llu\n",(long long)pend->quoteid);
     if ( pend->dir != 0 )
         jaddnum(json,"dir",pend->dir);
     if ( pend->price > SMALLVAL && pend->volume > SMALLVAL )
@@ -415,11 +421,6 @@ int32_t substr128(char *dest,char *src)
     return(0);
 }
 
-
-// for bigger value ones, the finish height at 10, 20 or even 30
-// but I should scale the duration accordingly too at the larger finish heights
-// with finish height 30 blocks ahead and duration of 6 hours, then it is very unlikely for any problems
-
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight)
 {
     char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; uint8_t msgbuf[17]; cJSON *json; int32_t len; uint64_t phasecost = 0;
@@ -438,15 +439,9 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
     else
     {
         expand_nxt64bits(assetidstr,assetidbits);
-        //if ( utx->type == 2 && utx->subtype == 1 )
-        sprintf(cmd,"requestType=transferAsset&asset=%s&quantityQNT=%lld",assetidstr,(long long)qty);
-        /*else if ( utx->type == 5 && utx->subtype == 3 )
-         sprintf(cmd,"requestType=transferCurrency&currency=%s&units=%lld",assetidstr,(long long)(utx->U.quantityQNT));
-         else
-         {
-         printf("unsupported type.%d subtype.%d\n",utx->type,utx->subtype);
-         return(0);
-         }*/
+        if ( is_mscoin(assetidstr) == 0 )
+            sprintf(cmd,"requestType=transferAsset&asset=%s&quantityQNT=%lld",assetidstr,(long long)qty);
+        else sprintf(cmd,"requestType=transferCurrency&currency=%s&units=%lld",assetidstr,(long long)qty);
     }
     if ( quoteid != 0 )
     {
@@ -498,12 +493,12 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
     swapstr[0] = triggertx[0] = txbytes[0] = 0;
     *txidp = 0;
     printf("genNXTtx.(%llu/%llu)\n",(long long)orderid,(long long)order->s.quoteid);
-    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,deadline,triggerhash,0,0);
+    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,order->s.quoteid,deadline,triggerhash,0,0);
     strcpy(triggertx,fee.txbytes);
     if ( order->s.baseamount < 0 )
         assetidbits = order->s.baseid, qty = -order->s.baseamount, otherassetbits = order->s.relid, otherqty = order->s.relamount;
     else if ( order->s.relamount < 0 )
-        assetidbits = order->s.baseid, qty = -order->s.relamount, otherassetbits = order->s.baseid, otherqty = order->s.baseamount;
+        assetidbits = order->s.relid, qty = -order->s.relamount, otherassetbits = order->s.baseid, otherqty = order->s.baseamount;
     if ( assetidbits != 0 && qty != 0 )
     {
         if ( triggerhash == 0 || triggerhash[0] == 0 )
@@ -562,7 +557,6 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
     } else iQ = create_iQ(iQ);
     iQ->s.pending = 1;
     pend->quoteid = iQ->s.quoteid;
-    pend->iQ = *iQ;
     if ( order != 0 )
         pend->order = *order;
     else pend->order.s = iQ->s;
@@ -583,7 +577,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         pend->tradesjson = cJSON_Parse(swapbuf);
         pend->type = 'T';
         iQ->s.swap = 1;
-        printf("quoteid.%llu SWAP and pending.%d\n",(long long)iQ->s.quoteid,iQ->s.pending);
+        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
             free(str);
         InstantDEX_history(0,pend,swapbuf);
@@ -612,16 +606,16 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
     char offerNXT[MAX_JSON_FIELD],UTX[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
-    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,deadline,finishheight; struct InstantDEX_quote *iQ,_iQ;
+    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,deadline,timestamp,now,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
-    //printf("got (%s)\n",origargstr);
+    //printf("swap_func got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         orderid = j64bits(origjson,"orderid");
         quoteid = j64bits(origjson,"quoteid");
         if ( (iQ= find_iQ(quoteid)) == 0 )
         {
-            printf("swap_func: cant find quoteid.%llu\n",(long long)quoteid);
+            fprintf(stderr,"swap_func: cant find quoteid.%llu\n",(long long)quoteid);
             iQ = &_iQ, memset(iQ,0,sizeof(*iQ));
             //return(clonestr("{\"error\":\"cant find quoteid\"}"));
         }
@@ -663,17 +657,20 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                         //printf("iQ (%llu/%llu) otherbits.%llu qty %llu PARSED OFFER.(%s) triggerhash.(%s) (%s) offer sender.%s\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)otherbits,(long long)otherqty,parsed,fullhash,calchash,sender);
                         if ( (txobj= cJSON_Parse(parsed)) != 0 )
                         {
-                            if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 && (deadline= juint(txobj,"deadline")) > 0 )
+                            deadline = juint(txobj,"deadline");
+                            timestamp = juint(txobj,"timestamp");
+                            now = issue_getTime();
+                            if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 && deadline >= INSTANTDEX_TRIGGERDEADLINE/2 && ((long)now - timestamp) < 60 )
                             {
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
                                 if ( iQ->s.isask == 0 )
                                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
-                                else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount / get_assetmult(recvasset);
-                                printf("GEN RESPONDTX deadline.%d (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",deadline,(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
+                                else recvasset = iQ->s.relid, recvqty = iQ->s.relamount / get_assetmult(recvasset);
+                                printf("GEN RESPONDTX lag.%d deadline.%d (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",now-timestamp,deadline,(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
-                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,deadline,fullhash,0,0);
+                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,fullhash,0,0);
                                     gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,orderid,quoteid,deadline,triggerhash,fullhash,finishheight);
                                     if ( (fee.txid= issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
                                     {
@@ -681,8 +678,9 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                         {
                                             pend = calloc(1,sizeof(*pend));
                                             pend->orderid = orderid, pend->quoteid = quoteid;
-                                            iQ->s.responded = 1;
+                                            //iQ->s.responded = 1;
                                             iQ->s.pending = 1;
+                                            iQ->s.swap = 1;
                                             pend->triggertx = clonestr(triggerhash);
                                             pend->txbytes = clonestr(fullhash);
                                             pend->type = 'R';
@@ -704,35 +702,39 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                     free(txstr);
                                 if ( txstr2 != 0 )
                                     free(txstr2);
-                            }
+                            } else fprintf(stderr,"swap rejects tx deadline %d >= INSTANTDEX_TRIGGERDEADLINE/2 && (now %d - %d timestamp) %d < 60\n",deadline,now,timestamp,now-timestamp);
                             free_json(txobj);
-                        }
-                    }
-                } else printf("mismatch (%s) != (%s)\n",calchash,fullhash);
+                        } else fprintf(stderr,"swap cant parse tx.(%s)\n",parsed);
+                    } else fprintf(stderr,"swap cant parse UTX.(%s)\n",UTX);
+                } else fprintf(stderr,"mismatch (%s) != (%s)\n",calchash,fullhash);
                 free_json(json);
-            }
+            } else fprintf(stderr,"swap cant parse.(%s)\n",jsonstr);
             free(jsonstr);
-        } else printf("calchash.(%s)\n",jsonstr);
+        } else fprintf(stderr,"calchash.(%s)\n",jsonstr);
     } else fprintf(stderr,"got my swap from network (%s)\n",origargstr);
-    return(0);
+    return(clonestr("{\"result\":\"processed swap\"}"));
 }
 
-int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quoteid)
+int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quoteid,int32_t err)
 {
-    int32_t errcode,errcode2; char *txstr,*txstr2; int32_t iter; struct pending_trade *pend;
+    int32_t errcode=-1,errcode2=-2; char *txstr,*txstr2; int32_t iter; struct pending_trade *pend;
     for (iter=0; iter<2; iter++)
     {
         while ( (pend= queue_dequeue(&Pending_offersQ.pingpong[iter],0)) != 0 )
         {
-            if ( issue_broadcastTransaction(&errcode2,&txstr2,pend->txbytes,SUPERNET.NXTACCTSECRET) == pend->txid && errcode2 == 0 )
+            if ( pend->quoteid == quoteid )
             {
-                if ( issue_broadcastTransaction(&errcode,&txstr,pend->triggertx,SUPERNET.NXTACCTSECRET) == pend->triggertxid && errcode == 0 )
+                if ( err == 0 && issue_broadcastTransaction(&errcode2,&txstr2,pend->txbytes,SUPERNET.NXTACCTSECRET) == pend->txid && errcode2 == 0 )
+                {
+                    if ( err == 0 && (issue_broadcastTransaction(&errcode,&txstr,pend->triggertx,SUPERNET.NXTACCTSECRET) != pend->triggertxid || errcode != 0) )
+                        err = -13;
+                }
+                if ( err == 0 && errcode == 0 && errcode2 == 0 )
                 {
                     iQ->s.matched = 1;
-                    iQ->s.closed = 1;
-                    printf("COMPLETED %llu/%llu %d %f %f with txids %llu %llu\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume,(long long)pend->triggertxid,(long long)pend->txid);
                     InstantDEX_history(1,pend,0);
                 } else InstantDEX_history(-1,pend,0);
+                printf("errs.(%d %d %d) COMPLETED %llu/%llu %d %f %f with txids %llu %llu\n",err,errcode,errcode2,(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume,(long long)pend->triggertxid,(long long)pend->txid);
                 free_pending(pend);
                 return(1);
             }
@@ -742,43 +744,60 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
     return(-1);
 }
 
-int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
+int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient)
 {
     // ok, the bug here is that on a delayed respondtx, the originator should refuse to release the trigger (and the money tx)
-    uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
+    uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; uint32_t bidask,deadline,timestamp,now; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
     //printf("match_unconfirmed.(%s) orderid.%llu %llx quoteid.%llu %llx\n",hexstr,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
+    deadline = juint(txobj,"deadline");
+    timestamp = juint(txobj,"timestamp");
+    now = issue_getTime();
+    if ( deadline < INSTANTDEX_TRIGGERDEADLINE/2 || (now - timestamp) > 60 )
+        return(0);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
-        printf("match unconfirmed %llu/%llu feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
-        if ( iQ->s.swap != 0 )
+        printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) -> recv.(%s) me.(%s) offer.(%llu)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,recipient,SUPERNET.NXTADDR,(long long)iQ->s.offerNXT);
+        if ( iQ->s.swap != 0 && (strcmp(recipient,INSTANTDEX_ACCT) == 0 || strcmp(recipient,SUPERNET.NXTADDR) == 0) )
         {
-            if ( verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) == 0 )
+            if ( iQ->s.feepaid == 0 )
             {
-                iQ->s.feepaid = 1;
-                printf("FEE DETECTED\n");
-                complete_swap(iQ,orderid,quoteid);
-            }
-            else
-            {
-                if ( iQ->s.isask != 0 )
+                if ( verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) == 0 )
                 {
-                    sendasset = iQ->s.relid, sendqty = -iQ->s.relamount;
+                    iQ->s.feepaid = 1;
+                    printf("FEE DETECTED\n");
+                } else printf("notfee: dest.%s src.%s amount.%llu qty.%llu assetid.%llu\n",recipient,sender,(long long)amount,(long long)qty,(long long)assetid);
+            }
+            if ( iQ->s.responded == 0 )
+            {
+                bidask = iQ->s.isask;
+                if ( iQ->s.offerNXT == SUPERNET.my64bits )
+                    bidask ^= 1;
+                if ( bidask != 0 )
+                {
+                    sendasset = iQ->s.relid, sendqty = iQ->s.relamount;
                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
                 }
                 else
                 {
-                    sendasset = iQ->s.baseid, sendqty = -iQ->s.baseamount;
+                    sendasset = iQ->s.baseid, sendqty = iQ->s.baseamount;
                     recvasset = iQ->s.relid, recvqty = iQ->s.relamount;
                 }
-                printf("iQ: %llu/%llu %lld/%lld | recv %llu %lld offerNXT.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)iQ->s.baseamount,(long long)iQ->s.relamount,(long long)recvasset,(long long)recvqty,(long long)iQ->s.offerNXT);
+                sendqty /= get_assetmult(sendasset);
+                recvqty /= get_assetmult(recvasset);
+                printf("sendasset.%llu sendqty.%llu mult.%llu, recvasset.%llu recvqty.%llu mult.%llu\n",(long long)sendasset,(long long)sendqty,(long long)get_assetmult(sendasset),(long long)recvasset,(long long)recvqty,(long long)get_assetmult(recvasset));
                 if ( InstantDEX_verify(SUPERNET.my64bits,sendasset,sendqty,txobj,recvasset,recvqty) == 0 )
                 {
                     iQ->s.responded = 1;
+                    printf("iQ: %llu/%llu %lld/%lld | recv %llu %lld offerNXT.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)iQ->s.baseamount,(long long)iQ->s.relamount,(long long)recvasset,(long long)recvqty,(long long)iQ->s.offerNXT);
                     printf("RESPONSE DETECTED\n");
-                    complete_swap(iQ,orderid,quoteid);
-                } else printf("mismatched response\n");
+                }
+            }
+            if ( iQ->s.responded != 0 && iQ->s.feepaid != 0 )
+            {
+                printf("both detected\n");
+                complete_swap(iQ,orderid,quoteid,iQ->s.offerNXT != SUPERNET.my64bits);
             }
         }
     }
@@ -796,6 +815,11 @@ int offer_checkitem(struct pending_trade *pend,cJSON *item)
 char *offer_statemachine(struct pending_trade *pend)
 {
     int32_t i,n,pending = 0; cJSON *array,*item;
+    if ( time(NULL) > pend->timestamp+INSTANTDEX_TRIGGERDEADLINE*60 )
+    {
+        printf("now.%ld vs timestamp.%u + %u\n",time(NULL),pend->timestamp,INSTANTDEX_TRIGGERDEADLINE*60);
+        return(clonestr("{\"status\":\"timeout\",\"trade sequence completed\"}"));
+    }
     if ( pend->type == 'R' )
     {
         // wait for alice tx
@@ -815,7 +839,10 @@ char *offer_statemachine(struct pending_trade *pend)
                     pending++;
             }
             if ( pending == 0 )
+            {
+                delete_iQ(pend->orderid);
                 return(clonestr("{\"status\":\"success\",\"trade sequence completed\"}"));
+            }
         }
     }
     else

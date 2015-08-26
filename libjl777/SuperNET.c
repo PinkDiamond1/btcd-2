@@ -575,11 +575,19 @@ int SuperNET_start(char *fname,char *myip)
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
-        jsonstr = clonestr("{}");
+    {
+        printf("ERROR >>>>>>>>>>> SuperNET.conf file doesnt exist\n");
+        exit(-666);
+    }
     else
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
             SuperNET_initconf(json), free_json(json);
+        else
+        {
+            printf("ERROR >>>>>>>>>>> SuperNET.conf file couldnt be parsed\n");
+            exit(-666);
+        }
     }
     strcpy(SUPERNET.myipaddr,ipaddr);
     init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);

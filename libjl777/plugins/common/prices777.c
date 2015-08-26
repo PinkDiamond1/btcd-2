@@ -714,7 +714,7 @@ char *prices777_allorderbooks()
     return(jprint(json,1));
 }
 
-struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize)
+struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *_base,char *_rel,double decay,char *_name,uint64_t baseid,uint64_t relid,int32_t basketsize)
 {
     static long allocated;
     struct exchange_pair { char *exchange; double (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(char *base,char *rel); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
@@ -730,8 +730,11 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {"exmo", prices777_exmo, exmo_supports, exmo_trade }, {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
-    int32_t i,rellen; char basebuf[64],relbuf[64]; struct exchange_info *exchangeptr;
+    int32_t i,rellen; char basebuf[64],relbuf[64],base[64],rel[64],name[64]; struct exchange_info *exchangeptr;
     struct prices777 *prices;
+    safecopy(base,_base,sizeof(base));
+    safecopy(rel,_rel,sizeof(rel));
+    safecopy(name,_name,sizeof(name));
     if ( needfunc < 0 )
     {
         for (i=0; i<sizeof(pairs)/sizeof(*pairs); i++)
@@ -773,12 +776,6 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     }
     prices = calloc(1,sizeof(*prices) + basketsize*sizeof(*prices->basket));
    // printf("new prices %ld\n",sizeof(*prices));
-    if ( base == 0 )
-        base = "";
-    if ( rel == 0 )
-        rel = "";
-    if ( name == 0 )
-        name = "";
     strcpy(prices->exchange,exchange), strcpy(prices->contract,name), strcpy(prices->base,base), strcpy(prices->rel,rel);
     prices->baseid = baseid, prices->relid = relid;
     prices->contractnum = InstantDEX_name(prices->key,&prices->keysize,exchange,prices->contract,prices->base,&prices->baseid,prices->rel,&prices->relid);
@@ -811,7 +808,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         safecopy(prices->lbase,base,sizeof(prices->lbase)), tolowercase(prices->lbase);
         if ( rel == 0 && prices777_ispair(basebuf,relbuf,base) >= 0 )
         {
-            base = basebuf, rel = relbuf;
+            strcpy(base,basebuf), strcpy(rel,relbuf);
             //printf("(%s) is a pair (%s)+(%s)\n",base,basebuf,relbuf);
         }
         if ( rel != 0 && rel[0] != 0 )
@@ -928,7 +925,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             prices->dependents = realloc(prices->dependents,sizeof(*prices->dependents) * (prices->numdependents + 1));
                             prices->dependents[prices->numdependents++] = &firstprices->changed;
                         }
-                        else if ( strcmp(exchangestr,"nxtae") == 0 && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
+                        else if ( (strcmp(exchangestr,"InstantDEX") == 0 || strcmp(exchangestr,"nxtae") == 0) && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
                         {
                             struct prices777_basket basket[2]; int32_t valid;
                             basket[0].prices = firstprices, basket[1].prices = prices;
@@ -940,10 +937,11 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             if ( valid >= 0 )
                             {
                                 _set_assetname(&mult,name,0,refbaseid), strcat(name,"/"), _set_assetname(&mult,name+strlen(name),0,refrelid);
-                                BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(1,name,_base,_rel,refbaseid,refrelid,basket,2,"basket");
-                                //prices->lastprice = prices777_basket(prices,MAX_DEPTH);
+                                BUNDLE.ptrs[BUNDLE.num] = prices = prices777_createbasket(1,name,_base,_rel,refbaseid,refrelid,basket,2,"basket");
+                                prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                                 printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                                 printf("B total polling.%d added.(%s) (%s/%s) {%s && %s}\n",BUNDLE.num,prices->contract,_base,_rel,firstprices->contract,basket[1].prices->contract);
+                                BUNDLE.num++;
                             } else //if ( Debuglevel > 2 )
                                 printf("basket.(%s) already there\n",prices->contract);
                             return(prices);
@@ -962,15 +960,50 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
     return(firstprices);
 }
 
-void prices777_propagate(struct prices777 *prices)
+int32_t prices777_propagate(struct prices777 *prices)
 {
-    int32_t i;
+    int32_t i,n = 0;
     for (i=0; i<prices->numdependents; i++)
     {
+        n++;
         if ( (*prices->dependents[i]) < 0xff )
             (*prices->dependents[i])++;
         if ( Debuglevel > 2 )
             printf("numdependents.%d of %d %p %d\n",i,prices->numdependents,prices->dependents[i],*prices->dependents[i]);
+    }
+    return(n);
+}
+
+int32_t prices777_updated;
+void prices777_basketsloop(void *ptr)
+{
+    extern int32_t prices777_NXTBLOCK;
+    int32_t i,n; uint32_t updated; struct prices777 *prices;
+    while ( 1 )
+    {
+        for (i=n=0; i<BUNDLE.num; i++)
+        {
+            updated = (uint32_t)time(NULL);
+            if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->changed != 0 )
+            {
+                prices->pollnxtblock = prices777_NXTBLOCK;
+                n++;
+                //if ( Debuglevel > 2 )
+                printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
+                prices->lastupdate = updated;
+                if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
+                {
+                    if ( prices->O.numbids > 0 || prices->O.numasks > 0 )
+                    {
+                        prices777_jsonstrs(prices,&prices->O);
+                        prices777_updated += prices777_propagate(prices);
+                    }
+                }
+                prices->changed = 0;
+            }
+        }
+        if ( prices777_updated == 0 )
+            msleep(250);
     }
 }
 
@@ -980,6 +1013,7 @@ void prices777_exchangeloop(void *ptr)
     struct prices777 *prices; int32_t i,n,pollflag,isnxtae = 0; double updated = 0.; struct exchange_info *exchange = ptr;
     if ( strcmp(exchange->name,"nxtae") == 0 || strcmp(exchange->name,"unconf") == 0 )
         isnxtae = 1;
+    printf("POLL.(%s)\n",exchange->name);
     while ( 1 )
     {
         for (i=n=0; i<BUNDLE.num; i++)
@@ -999,9 +1033,10 @@ void prices777_exchangeloop(void *ptr)
                     prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
                     portable_mutex_unlock(&exchange->mutex);
                     updated = exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
-                    if ( prices->lastprice != 0. && strcmp(exchange->name,"unconf") != 0 )
+                    if ( prices->lastprice != 0. )
                     {
-                        printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,prices->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
+                        if ( strcmp(exchange->name,"unconf") != 0 )
+                            printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,prices->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
                         prices777_propagate(prices);
                     }
                     prices->pollnxtblock = prices777_NXTBLOCK;
@@ -1011,30 +1046,8 @@ void prices777_exchangeloop(void *ptr)
             }
         }
         if ( n == 0 )
-            sleep(6);
-        else
-        {
-            for (i=n=0; i<BUNDLE.num; i++)
-            {
-                if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->changed != 0 )
-                {
-                    prices->pollnxtblock = prices777_NXTBLOCK;
-                    //if ( Debuglevel > 2 )
-                    printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
-                    prices->lastupdate = updated;
-                    if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
-                    {
-                        if ( prices->O.numbids > 0 || prices->O.numasks > 0 )
-                        {
-                            prices777_jsonstrs(prices,&prices->O);
-                            prices777_propagate(prices);
-                        }
-                    }
-                    prices->changed = 0;
-                }
-            }
-            sleep(1);
-        }
+            sleep(15);
+        else sleep(1);
     }
 }
 
@@ -1045,7 +1058,8 @@ int32_t prices777_init(char *jsonstr)
     cJSON *json=0,*item,*exchanges; int32_t i,n; char *exchange,*base,*rel,*contract; struct exchange_info *exchangeptr;
     if ( BUNDLE.ptrs[0] != 0 )
         return(0);
-   // "BTCUSD", "NXTBTC", "SuperNET", "ETHBTC", "LTCBTC", "XMRBTC", "BTSBTC", "XCPBTC",  // BTC priced
+    if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"unconf","NXT","BTC",0,"NXT/BTC",NXT_ASSETID,calc_nxt64bits("12659653638116877017"),0)) != 0 )
+        BUNDLE.num++;
     if ( SUPERNET.peggy != 0 )
     {
         if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"huobi","BTC","USD",0.,0,0,0,0)) != 0 )
@@ -1086,6 +1100,8 @@ int32_t prices777_init(char *jsonstr)
                 extract_cJSON_str(exchangeptr->apikey,sizeof(exchangeptr->apikey),item,"key");
                 extract_cJSON_str(exchangeptr->userid,sizeof(exchangeptr->userid),item,"userid");
                 extract_cJSON_str(exchangeptr->apisecret,sizeof(exchangeptr->apisecret),item,"secret");
+                if ( exchangeptr->commission == 0. )
+                    exchangeptr->commission = jdouble(item,"commission");
                 //printf("%p ADDEXCHANGE.(%s) [%s, %s, %s]\n",exchangeptr,exchange,exchangeptr->apikey,exchangeptr->userid,exchangeptr->apisecret);
             }
             if ( strcmp(exchange,"truefx") == 0 )
@@ -1095,7 +1111,11 @@ int32_t prices777_init(char *jsonstr)
                 printf("truefx.(%s %s)\n",BUNDLE.truefxuser,BUNDLE.truefxpass);
             }
             else if ( base != 0 && rel != 0 && base[0] != 0 && rel[0] != 0 && (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,exchange,base,rel,jdouble(item,"decay"),contract,stringbits(base),stringbits(rel),0)) != 0 )
+            {
+                if ( (BUNDLE.ptrs[BUNDLE.num]->commission= jdouble(item,"commission")) == 0. )
+                    BUNDLE.ptrs[BUNDLE.num]->commission = exchangeptr->commission;
                 BUNDLE.num++;
+            }
         }
     }
     if ( json != 0 )
@@ -1106,6 +1126,7 @@ int32_t prices777_init(char *jsonstr)
         if ( exchangeptr->refcount > 0 || strcmp(exchangeptr->name,"unconf") == 0 )
             portable_thread_create((void *)prices777_exchangeloop,exchangeptr);
     }
+    portable_thread_create((void *)prices777_basketsloop,0);
     return(0);
 }
 
