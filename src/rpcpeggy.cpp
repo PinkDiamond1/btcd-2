@@ -71,7 +71,6 @@ extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex)
     for(index=0; index<pblock->vtx.size(); index++){
         fPeggy = false;
         const CTransaction tempTx = pblock->vtx[index];
-
         if(tempTx.IsCoinBase() || tempTx.IsCoinStake())
             continue;
 
@@ -96,13 +95,11 @@ extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex)
             const CTxOut tempVout = tempTx.vout[vouts];
 
             const CScript tempScriptPubKey = tempVout.scriptPubKey;
-
             CTxDestination destAddress;
-            strcpy(hex, (char*)HexStr(tempScriptPubKey.begin(), tempScriptPubKey.end(), false).c_str()+2);
+            strcpy(hex, (char*)HexStr(tempScriptPubKey.begin(), tempScriptPubKey.end(), false).c_str());
             sprintf(hex, "%s", hex);
 
-            if(fPeggy && vouts != 0){
-
+            if(fPeggy && (vouts != 0)){
                 cJSON *peggyOut = cJSON_CreateObject();
 
 
@@ -125,8 +122,7 @@ extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex)
                 jaddi(peggypayments, peggyOut);
             }
 
-            else if(!fPeggy && isOpReturn(hex) == 0){ //peggy lock found
-
+            else if(!fPeggy && (isOpReturn(hex) == 0)){ //peggy lock found
                 cJSON *lockVout = cJSON_CreateObject();
 
                 jaddstr(lockVout, "txid", (char*)tempTx.GetHash().ToString().c_str());
