@@ -220,11 +220,11 @@ Value peggytx(const Array& params, bool fHelp)
     strcpy(test, (char*)hex.c_str());
     if(strlen(test) > 0)
         decode_hex(buf,(int)strlen(test),test);
-
+    fprintf(stderr, "peggytx=%s\n", peggytx);
     scriptPubKey << OP_RETURN;
-
-    for(i=0;i<strlen((const char*)buf);i++)
-        scriptPubKey << test[i];
+    scriptPubKey << ParseHex(peggytx);
+    //for(i=0;i<strlen((const char*)buf);i++)
+       // scriptPubKey << test[i];
     //scriptPubKey << ParseHex(hex);
     //scriptPubKey.SetDestination(returnAddr.Get());
     CReserveKey reservekey(pwalletMain);
@@ -256,6 +256,20 @@ Value peggytx(const Array& params, bool fHelp)
     else{
        return jprint(obj, 1);
     }
+/*
+                  CTransaction peggy;
+                    char *paymentScript= "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":10000000}"; // temp.
+
+                    char *priceFeedHash = "5f43ac64";
+                    if(wallet.CreatePeggyBase(peggy, paymentScript, priceFeedHash))
+                    {
+                        peggy.nTime = 0;
+
+                    }
+
+                    Object o;
+                            TxToJSON(peggy, 0, o);
+                           return o;*/
 }
 
 Value getpeggyblock(const Array& params, bool fHelp)
