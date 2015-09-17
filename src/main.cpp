@@ -343,7 +343,6 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
     CTxIndex txindex;
     return ReadFromDisk(txdb, prevout, txindex);
 }
-#define trace fprintf(stderr, "line %d\n", __LINE__);
 bool CTransaction::IsStandard() const
 {
     if (nVersion > CTransaction::CURRENT_VERSION)
@@ -383,7 +382,6 @@ bool CTransaction::IsStandard() const
             fprintf(stderr,"vout is not standard\n");
             return false;
         }
-        trace
         if ( whichType == TX_NULL_DATA )
             nDataOut++;
         /* else */ if (txout.nValue == 0)
@@ -402,7 +400,6 @@ bool CTransaction::IsStandard() const
         fprintf(stderr,"nDataOut.%d is too many\n",nDataOut);
         return false;
     }
-    trace
     return true;
 }
 
