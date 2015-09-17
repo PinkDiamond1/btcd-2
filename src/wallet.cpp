@@ -2476,10 +2476,10 @@ bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, char *
     unsigned char buf[4096];
 
     if(len > 0)
-        decode_hex(buf,(int)len,priceFeed);
-
-    for (i=0; i<(int)len; i++)
-        peggyTx.vout[0].scriptPubKey << buf[i];
+        //decode_hex(buf,(int)len,priceFeed);
+        peggyTx.vout[0].scriptPubKey << ParseHex((const char*)priceFeed);
+    //for (i=0; i<(int)len; i++)
+        //peggyTx.vout[0].scriptPubKey << buf[i];
 
     cJSON *item;
     for(i=0; i<numOutputs; i++)
