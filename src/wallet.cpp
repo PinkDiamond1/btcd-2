@@ -1470,6 +1470,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
             }
         }
     }
+
     return true;
 }
 

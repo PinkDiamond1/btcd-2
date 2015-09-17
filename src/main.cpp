@@ -343,7 +343,7 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
     CTxIndex txindex;
     return ReadFromDisk(txdb, prevout, txindex);
 }
-
+#define trace fprintf(stderr, "line %d\n", __LINE__);
 bool CTransaction::IsStandard() const
 {
     if (nVersion > CTransaction::CURRENT_VERSION)
@@ -383,6 +383,7 @@ bool CTransaction::IsStandard() const
             fprintf(stderr,"vout is not standard\n");
             return false;
         }
+        trace
         if ( whichType == TX_NULL_DATA )
             nDataOut++;
         /* else */ if (txout.nValue == 0)
@@ -401,7 +402,7 @@ bool CTransaction::IsStandard() const
         fprintf(stderr,"nDataOut.%d is too many\n",nDataOut);
         return false;
     }
-    
+    trace
     return true;
 }
 
@@ -652,7 +653,7 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
     return nMinFee;
 }
 
-
+extern "C" int8_t isOpReturn(char *hexbits);
 bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
                         bool* pfMissingInputs)
 {
@@ -751,22 +752,8 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
         
         // Don't accept it if it can't get into a block
-        
-        
-		//bitcoindark: value checks for teleport/multisig fees
         int64_t txMinFee;
-        /*bool isTeleport;
 
-        isTeleport = is_teleport_denomination(tx.vout[0].nValue);
-        if ( 0 && isTeleport != 0 )
-        {
-            std::cout << "tx.vout[0] = " << tx.vout[0].nValue << std::endl;
-            std::cout << "amount: " << (double)COIN/tx.vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
-        }
-		if (isTeleport)
-			txMinFee = tx.GetMinFee(1000, GMF_TELEPORT, nSize);
-        //TODO: add another if stmt here to set min fee if multisig
-		else*/
 			txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize); //standard tx
         if (nFees < txMinFee)
             return error("CTxMemPool::accept() : not enough fees %s, %"PRId64" < %"PRId64,

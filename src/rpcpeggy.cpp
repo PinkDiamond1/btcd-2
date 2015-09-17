@@ -179,14 +179,19 @@ extern "C" char* GetPeggyByHeight(uint32_t blocknum) //(0-based)
 *
 */
 
+/*
+peggytx '{"BitcoinDark": "A revolution in cryptocurrency"}' '{"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc":1}' false
+*/
 Value peggytx(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2)
         throw runtime_error(
             "peggytx\n"
             "Creates a peggy transaction: \n"
-            "'<json string>' '{\"<btcd addr>\" : <amount>}' [send?]\n"
-            );
+            "'<json string>' '{\"<btcd addr>\" : <amount>}' [send?] \n"
+            "!WARNING!: adding true as an option will attempt to automatically send coins from your wallet."
+            "You will not be able to get them back until you redeem an equivalent number of BTCD."
+        );
     std::string retVal("");
     const std::string peggyJson = params[0].get_str();
     const Object& sendTo = params[1].get_obj();
@@ -194,13 +199,14 @@ Value peggytx(const Array& params, bool fHelp)
     if (params.size() > 2)
         signAndSend = params[2].get_bool();
     const Pair& out = sendTo[0];
-
     CBitcoinAddress returnAddr = CBitcoinAddress(out.name_);
     if (!returnAddr.IsValid())
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string("Invalid BitcoinDark address: ")+out.name_);
 
     int64_t amountLocked = AmountFromValue(out.value_);
+    std::string hex = HexStr(peggyJson.begin(), peggyJson.end(), false);
 
+    //Construct a peggy locking hexstr from the json and the redeem address/lock amount.
     char *peggytx = peggy_tx((char*)peggyJson.c_str());
 
     int i;
@@ -209,15 +215,18 @@ Value peggytx(const Array& params, bool fHelp)
     CScript scriptPubKey = CScript();
 
     unsigned char buf[4096];
+    char test[100];
 
-    if(strlen(peggytx) > 0)
-        decode_hex(buf,(int)strlen(peggytx)/2,peggytx);
+    strcpy(test, (char*)hex.c_str());
+    if(strlen(test) > 0)
+        decode_hex(buf,(int)strlen(test),test);
 
-    for (i=0; i<(int)strlen(peggytx)/2; i++){
-        scriptPubKey << buf[i];
-        }
+    scriptPubKey << OP_RETURN;
 
-
+    for(i=0;i<strlen((const char*)buf);i++)
+        scriptPubKey << test[i];
+    //scriptPubKey << ParseHex(hex);
+    //scriptPubKey.SetDestination(returnAddr.Get());
     CReserveKey reservekey(pwalletMain);
     int64_t nFeeRequired;
     if(!pwalletMain->CreateTransaction(scriptPubKey, amountLocked, wtx, reservekey, nFeeRequired))
@@ -228,22 +237,24 @@ Value peggytx(const Array& params, bool fHelp)
     ssTx << wtx;
     string strHex = HexStr(ssTx.begin(), ssTx.end());
 
+
     cJSON *obj = cJSON_CreateObject();
 
     jaddstr(obj, "txid", (char*)wtx.GetHash().ToString().c_str());
     jaddstr(obj, "rawtx", (char*)strHex.c_str());
-    jaddstr(obj, "opreturnstr", peggytx);
+    jaddstr(obj, "opreturnstr", (char*)HexStr(scriptPubKey.begin(), scriptPubKey.end(), false).c_str());
 
     free(peggytx);
 
     if(signAndSend){
         if(!pwalletMain->CommitTransaction(wtx, reservekey))
             return std::string("The transaction was Rejected\n");
-        else
-            return jprint(obj, 1);
+        else{
+           return jprint(obj, 1);
+        }
     }
     else{
-        return jprint(obj, 1);
+       return jprint(obj, 1);
     }
 }
 
@@ -251,14 +262,14 @@ Value getpeggyblock(const Array& params, bool fHelp)
 {
     if(fHelp || params.size() != 1)
         throw runtime_error(
-            "getpeggyblock <blockheight>\n"
+            "getpeggyblock <blockheight> "
             "returns all peggy information about a block\n"
         );
     int64_t nHeight = params[0].get_int64();
 
     if(nHeight < nMinPeggyHeight)
         throw runtime_error(
-            "getpeggyblock <blockheight>\n"
+            "getpeggyblock <blockheight> "
             "the block height you entered is not a peggy block\n"
         );
 
