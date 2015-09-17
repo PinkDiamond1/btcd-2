@@ -200,13 +200,13 @@ char *add_instanceid(struct daemon_info *dp,uint64_t instanceid)
 
 void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
 {
-    cJSON *json; int32_t permflag,sendlen,broadcastflag,retsock; uint64_t instanceid,tag = 0; char request[8192],**dest,*retstr=0,*sendstr;
+    cJSON *json; int32_t permflag,sendlen,broadcastflag,retsock; uint64_t instanceid,tag = 0; char **dest,*retstr=0,*sendstr; struct destbuf request;
     if ( (json= cJSON_Parse(str)) != 0 )
     {
         //printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
-        if ( get_API_int(cJSON_GetObjectItem(json,"allowremote"),0) > 0 )
+        if ( juint(json,"allowremote") > 0 )
             dp->allowremote = 1;
-        permflag = get_API_int(cJSON_GetObjectItem(json,"permanentflag"),0);
+        permflag = juint(json,"permanentflag");
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
         if ( dp->readyflag == 0 || Debuglevel > 2 )
@@ -217,8 +217,8 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
             if ( (sendstr= add_instanceid(dp,instanceid)) != 0 )
                 nn_local_broadcast(dp->pushsock,instanceid,LOCALCAST,(uint8_t *)sendstr,(int32_t)strlen(sendstr)+1), dp->numsent++, free(sendstr);
         }
-        copy_cJSON(request,cJSON_GetObjectItem(json,"pluginrequest"));
-        if ( strcmp(request,"SuperNET") == 0 )
+        copy_cJSON(&request,cJSON_GetObjectItem(json,"pluginrequest"));
+        if ( strcmp(request.buf,"SuperNET") == 0 )
         {
             char *call_SuperNET_JSON(char *JSONstr);
             //fprintf(stderr,"processing pluginrequest.(%s)\n",str);
@@ -230,7 +230,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
                 free(str), str = retstr, retstr = 0;
             }
         }
-        else if ( instanceid != 0 && (broadcastflag= get_API_int(cJSON_GetObjectItem(json,"broadcast"),0)) > 0 )
+        else if ( instanceid != 0 && (broadcastflag= juint(json,"broadcast")) > 0 )
         {
             fprintf(stderr,"send to other <<<<<<<<<<<<<<<<<<<<< \n");
             nn_local_broadcast(dp->pushsock,instanceid,broadcastflag,(uint8_t *)str,(int32_t)strlen(str)+1), dp->numsent++;
@@ -323,21 +323,20 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
         int32_t kv777_main(int32_t,char *args[]);
         int32_t SuperNET_main(int32_t,char *args[]);
         int32_t coins_main(int32_t,char *args[]);
-        //int32_t peers_main(int32_t,char *args[]);
-        int32_t teleport_main(int32_t,char *args[]);
         int32_t relay_main(int32_t,char *args[]);
         int32_t InstantDEX_main(int32_t,char *args[]);
-        int32_t rps_main(int32_t,char *args[]);
+        int32_t dcnet_main(int32_t,char *args[]);
         int32_t prices_main(int32_t,char *args[]);
-        int32_t cashier_main(int32_t,char *args[]);
+        int32_t jumblr_main(int32_t,char *args[]);
+        //int32_t cashier_main(int32_t,char *args[]);
         if ( strcmp(dp->name,"coins") == 0 ) return(coins_main(n,args));
         else if ( strcmp(dp->name,"InstantDEX") == 0 ) return(InstantDEX_main(n,args));
         else if ( strcmp(dp->name,"prices") == 0 ) return(prices_main(n,args));
         else if ( strcmp(dp->name,"kv777") == 0 ) return(kv777_main(n,args));
         else if ( strcmp(dp->name,"relay") == 0 ) return(relay_main(n,args));
-        //else if ( strcmp(dp->name,"peers") == 0 ) return(peers_main(n,args));
+        else if ( strcmp(dp->name,"jumblr") == 0 ) return(jumblr_main(n,args));
         else if ( strcmp(dp->name,"SuperNET") == 0 ) return(SuperNET_main(n,args));
-        //else if ( strcmp(dp->name,"rps") == 0 ) return(rps_main(n,args));
+        else if ( strcmp(dp->name,"dcnet") == 0 ) return(dcnet_main(n,args));
         //else if ( strcmp(dp->name,"cashier") == 0 ) return(cashier_main(n,args));
         //else if ( strcmp(dp->name,"teleport") == 0 ) return(teleport_main(n,args));
 #ifdef INSIDE_MGW
@@ -351,12 +350,12 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
 
 int32_t is_bundled_plugin(char *plugin)
 {
-    if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"kv777") == 0 || strcmp(plugin,"coins") == 0 || strcmp(plugin,"relay") == 0 ||strcmp(plugin,"prices") == 0 ||
-        strcmp(plugin,"cashier") == 0 || strcmp(plugin,"rps") == 0 || strcmp(plugin,"teleport") == 0
+    if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"kv777") == 0 || strcmp(plugin,"coins") == 0 || strcmp(plugin,"relay") == 0 ||strcmp(plugin,"prices") == 0 || strcmp(plugin,"dcnet") == 0 || strcmp(plugin,"jumblr") == 0 ||
+        //strcmp(plugin,"cashier") == 0 || strcmp(plugin,"teleport") == 0
 #ifdef INSIDE_MGW
-        || strcmp(plugin,"ramchain") == 0 || strcmp(plugin,"MGW") == 0
+        strcmp(plugin,"ramchain") == 0 || strcmp(plugin,"MGW") == 0 ||
 #endif
-        )
+        0 )
         return(1);
     else return(0);
 }
@@ -513,6 +512,8 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
     {
         if ( is_bundled_plugin(plugin) != 0 )
         {
+            if ( strcmp("jumblr",plugin) == 0 && SUPERNET.iamrelay > 0 )
+                return(clonestr("{\"error\":\"jumblr not for relays\"}"));
             if ( SUPERNET.iamrelay <= 1 )
                 language_func((char *)plugin,"",0,0,1,(char *)plugin,origargstr,call_system);
             return(clonestr("{\"error\":\"cant find plugin, AUTOLOAD\"}"));
@@ -538,9 +539,10 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         }
         else if ( in_jsonarray(localaccess != 0 ? dp->methodsjson : dp->pubmethods,method) == 0 )
         {
+            static uint32_t counter;
             methodsstr = cJSON_Print(localaccess != 0 ? dp->methodsjson : dp->pubmethods);
-            //if ( Debuglevel > 2 )
-                fprintf(stderr,"available.%s methods.(%s) vs (%s)\n",plugin,methodsstr,method);
+            if ( Debuglevel > 2 || counter++ < 3 )
+                fprintf(stderr,"available.%s methods.(%s) vs (%s) orig.(%s)\n",plugin,methodsstr,method,origargstr);//, getchar();
             sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\",\"daemonid\":\"%llu\",\"myid\":\"%llu\"}",plugin,method,methodsstr,(long long)dp->daemonid,(long long)dp->myid);
             free(methodsstr);
             return(clonestr(retbuf));

@@ -15,10 +15,10 @@
 
 #include <stdint.h>
 #include "../ccgi/ccgi.h"
-#include "nn.h"
 #include "../includes/cJSON.h"
-#include "pair.h"
-#include "pipeline.h"
+#include "../../nanomsg/src/nn.h"
+#include "../../nanomsg/src/pair.h"
+#include "../../nanomsg/src/pipeline.h"
 #include "nonportable.h"
 #ifdef _WIN32
 #define setenv(x, y, z) _putenv_s(x, y)
@@ -41,7 +41,8 @@ void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
     apitag = _crc32(0,jsonstr,len);
     sprintf(endpoint,"ipc://api.%u",apitag);
     free(jsonstr);
-    recvtimeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),30000);
+    if ( (recvtimeout= juint(json,"timeout")) == 0 )
+        recvtimeout = 30000;
     sendtimeout = 30000;
     randombytes((uint8_t *)&tag,sizeof(tag));
     if ( cJSON_GetObjectItem(json,"tag") == 0 )
@@ -82,11 +83,11 @@ void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
     free(jsonstr);
 }
 
-int32_t setnxturl(char *urlbuf)
+int32_t setnxturl(struct destbuf *urlbuf)
 {
     FILE *fp; cJSON *json; char confname[512],buf[65536];
     strcpy(confname,"../../SuperNET.conf"), os_compatible_path(confname);
-    urlbuf[0] = 0;
+    urlbuf->buf[0] = 0;
     if ( (fp= fopen(confname,"rb")) != 0 )
     {
         if ( fread(buf,1,sizeof(buf),fp) > 0 )
@@ -94,20 +95,20 @@ int32_t setnxturl(char *urlbuf)
             if ( (json= cJSON_Parse(buf)) != 0 )
             {
                 copy_cJSON(urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
-fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
+fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf->buf);
                 free_json(json);
             } else fprintf(stderr,"setnxturl parse error.(%s)\n",buf);
         } else fprintf(stderr,"setnxturl error reading.(%s)\n",confname);
         fclose(fp);
     } else fprintf(stderr,"setnxturl cant open.(%s)\n",confname);
-    return((int32_t)strlen(urlbuf));
+    return((int32_t)strlen(urlbuf->buf));
 }
 
 int main(int argc, char **argv)
 {
     void portable_OS_init();
-    CGI_varlist *varlist; const char *name; char urlbuf[512],namebuf[512],postbuf[65536],*remoteaddr,*str=0,*retstr,*delim,*url = 0;
-    int i,j,iter,localaccess=0,doneflag=0,portflag = 0; cJSON *json; long offset; CGI_value  *value;
+    CGI_varlist *varlist; const char *name; char namebuf[512],postbuf[65536],*remoteaddr,*str=0,*retstr,*delim,*url = 0;
+    int i,j,iter,localaccess=0,doneflag=0,portflag = 0; cJSON *json; long offset; CGI_value  *value; struct destbuf urlbuf;
     portable_OS_init();
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
@@ -139,8 +140,8 @@ int main(int argc, char **argv)
     }
     if ( strcmp("nxt",namebuf) == 0 )
     {
-        if ( setnxturl(urlbuf) != 0 )
-            url = urlbuf;
+        if ( setnxturl(&urlbuf) != 0 )
+            url = urlbuf.buf;
         else url = "http://127.0.0.1:7876/nxt";
     }
     else if ( strcmp("nxts",namebuf) == 0 )
@@ -200,7 +201,7 @@ int main(int argc, char **argv)
                         else
                         {
                             if ( portflag != 0 && strncmp(name,"port",strlen("port")) == 0 )
-                                sprintf(urlbuf,"%s:%s",url,value[i]), url = urlbuf, portflag = 0;
+                                sprintf(urlbuf.buf,"%s:%s",url,value[i]), url = urlbuf.buf, portflag = 0;
                             else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
                         }
                     }

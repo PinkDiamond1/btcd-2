@@ -25,18 +25,19 @@
  *                                                                                *
  **********************************************************************************/
 
-#include "nn.h"
-#include "bus.h"
-#include "pubsub.h"
-#include "pipeline.h"
-#include "reqrep.h"
-#include "survey.h"
-#include "pair.h"
-#include "pubsub.h"
-//#include "../common/system777.c"
+#include "../../nanomsg/src/nn.h"
+#include "../../nanomsg/src/bus.h"
+#include "../../nanomsg/src/pubsub.h"
+#include "../../nanomsg/src/pipeline.h"
+#include "../../nanomsg/src/reqrep.h"
+#include "../../nanomsg/src/survey.h"
+#include "../../nanomsg/src/pair.h"
+#include "../../nanomsg/src/pubsub.h"
 
 #define LOCALCAST 1
 #define BROADCAST 2
+#define OFFSET_ENABLED (bundledflag == 0)
+char *get_localtransport(int32_t bundledflag) { return(OFFSET_ENABLED ? "ipc" : "inproc"); }
 
 void set_connect_transport(char *connectaddr,int32_t bundledflag,int32_t permanentflag,char *ipaddr,uint16_t port,uint64_t daemonid)
 {

@@ -331,11 +331,18 @@ unsigned char _decode_hex(char *hex) { return((unhex(hex[0])<<4) | unhex(hex[1])
 int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex)
 {
     int32_t adjust,i = 0;
+    if ( is_hexstr(hex) == 0 )
+    {
+        memset(bytes,0,n);
+        return(n);
+    }
     if ( n == 0 || (hex[n*2+1] == 0 && hex[n*2] != 0) )
     {
         bytes[0] = unhex(hex[0]);
         printf("decode_hex n.%d hex[0] (%c) -> %d (%s)\n",n,hex[0],bytes[0],hex);
-        //while ( 1 ) portable_sleep(1);
+#ifdef __APPLE__
+        getchar();
+#endif
         bytes++;
         hex++;
         adjust = 1;
@@ -1006,14 +1013,14 @@ int32_t conv_date(int32_t *secondsp,char *date)
 {
     char origdate[64],tmpdate[64]; int32_t year,month,day,hour,min,sec,len;
     strcpy(origdate,date), strcpy(tmpdate,date), tmpdate[8 + 2] = 0;
-    year = atoi(tmpdate), month = atoi(tmpdate+5), day = atoi(tmpdate+8);
+    year = myatoi(tmpdate,3000), month = myatoi(tmpdate+5,13), day = myatoi(tmpdate+8,32);
     *secondsp = 0;
     if ( (len= (int32_t)strlen(date)) <= 10 )
         hour = min = sec = 0;
     if ( len >= 18 )
     {
         tmpdate[11 + 2] = 0, tmpdate[14 + 2] = 0, tmpdate[17 + 2] = 0;
-        hour = atoi(tmpdate+11), min = atoi(tmpdate + 14), sec = atoi(tmpdate+17);
+        hour = myatoi(tmpdate+11,25), min = myatoi(tmpdate + 14,61), sec = myatoi(tmpdate+17,61);
         if ( hour >= 0 && hour < 24 && min >= 0 && min < 60 && sec >= 0 && sec < 60 )
             *secondsp = (3600*hour + 60*min + sec);
         else printf("ERROR: seconds.%d %d %d %d, len.%d\n",*secondsp,hour,min,sec,len);
@@ -1077,6 +1084,15 @@ double init_emamult(double *emamult,double den)
 	}
     printf("-> emasum2 %.20f\n",sum2);
 	return(sum2);
+}
+
+int32_t myatoi(char *str,int32_t range)
+{
+    long x; char *ptr;
+    x = strtol(str,&ptr,10);
+    if ( range != 0 && x >= range )
+        x = (range - 1);
+    return((int32_t)x);
 }
 
 #endif

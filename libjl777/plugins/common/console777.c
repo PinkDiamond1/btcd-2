@@ -185,9 +185,9 @@ char *localcommand(char *line)
     return(line);
 }
 
-char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,int32_t broadcastflag)
+char *parse_expandedline(char *plugin,int32_t max,char *method,int32_t *timeoutp,char *line,int32_t broadcastflag)
 {
-    int32_t i,j; char numstr[64],*pubstr,*cmdstr = 0; cJSON *json; uint64_t tag;
+    int32_t i,j; char numstr[64],*pubstr,*cmdstr = 0; cJSON *json; uint64_t tag; struct destbuf tmp;
     for (i=0; i<512&&line[i]!=' '&&line[i]!=0; i++)
         plugin[i] = line[i];
     plugin[i] = 0;
@@ -211,12 +211,12 @@ char *parse_expandedline(char *plugin,char *method,int32_t *timeoutp,char *line,
             randombytes((void *)&tag,sizeof(tag)), sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         //if ( cJSON_GetObjectItem(json,"NXT") == 0 )
         //    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-        *timeoutp = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
+        *timeoutp = juint(json,"timeout");
         if ( plugin[0] == 0 )
             strcpy(plugin,"relay");
         if ( cJSON_GetObjectItem(json,"plugin") == 0 )
             cJSON_AddItemToObject(json,"plugin",cJSON_CreateString(plugin));
-        else copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+        else copy_cJSON(&tmp,cJSON_GetObjectItem(json,"plugin")), safecopy(plugin,tmp.buf,max);
         if ( method[0] == 0 )
             strcpy(method,"help");
         cJSON_AddItemToObject(json,"method",cJSON_CreateString(method));
@@ -254,8 +254,14 @@ char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcast
 
 void process_userinput(char *_line)
 {
-    static char *line,*line2;
-    char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr; cJSON *json; int timeout,broadcastflag = 0;
+    static char *line,*line2,*match = "./BitcoinDarkd SuperNET '";
+    char plugin[512],ipaddr[1024],method[512],*cmdstr,*retstr; cJSON *json; int len,timeout,broadcastflag = 0;
+    len = (int32_t)strlen(match);
+    if ( _line[strlen(_line)-1] == '\'' && strncmp(_line,match,len) == 0 )
+    {
+        _line[strlen(_line)-1] = 0;
+        _line += len;
+    }
     if ( (json= cJSON_Parse(_line)) != 0 )
     {
         char *process_nn_message(int32_t sock,char *jsonstr);
@@ -264,7 +270,7 @@ void process_userinput(char *_line)
         retstr = SuperNET_JSON(_line);
         //retstr = process_nn_message(-1,line);
         //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
-        fprintf(stderr,"console -> (%s)\n",retstr);
+        fprintf(stderr,"console.(%s) -> (%s)\n",_line,retstr);
         return;
     } else printf("cant parse.(%s)\n",line);
     printf("[%s]\n",_line);
@@ -280,7 +286,7 @@ void process_userinput(char *_line)
     if ( is_ipaddr(ipaddr) != 0 )
     {
         line += strlen(ipaddr) + 1;
-        if ( (cmdstr = parse_expandedline(plugin,method,&timeout,line,broadcastflag)) != 0 )
+        if ( (cmdstr = parse_expandedline(plugin,sizeof(plugin),method,&timeout,line,broadcastflag)) != 0 )
         {
             printf("ipaddr.(%s) (%s)\n",ipaddr,line);
             //retstr = nn_direct(ipaddr,(uint8_t *)line,(int32_t)strlen(line)+1);
@@ -289,7 +295,7 @@ void process_userinput(char *_line)
         }
         return;
     }
-    if ( (cmdstr= parse_expandedline(plugin,method,&timeout,line,broadcastflag)) != 0 )
+    if ( (cmdstr= parse_expandedline(plugin,sizeof(plugin),method,&timeout,line,broadcastflag)) != 0 )
     {
         retstr = process_user_json(plugin,method,cmdstr,broadcastflag,timeout != 0 ? timeout : SUPERNET.PLUGINTIMEOUT);
         printf("CONSOLE (%s) -> (%s) -> (%s)\n",line,cmdstr,retstr);

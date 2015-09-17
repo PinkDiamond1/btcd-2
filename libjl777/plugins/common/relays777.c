@@ -243,7 +243,7 @@ int32_t crackfoo_servers(char servers[][MAX_SERVERNAME],int32_t max,int32_t port
      strcpy(servers[n++],"5.9.105.170");
      strcpy(servers[n++],"136.243.5.70");
      strcpy(servers[n++],"5.9.155.145");*/
-    if ( 0 )
+    if ( 1 )
     {
         strcpy(servers[n++],"167.114.96.223");
         strcpy(servers[n++],"167.114.113.25");
@@ -268,7 +268,7 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t 
     strcpy(failsafes[numfailsafes++],"5.9.102.210");
     n = crackfoo_servers(Cservers,sizeof(Cservers)/sizeof(*Cservers),port);
     m = badass_servers(Bservers,sizeof(Bservers)/sizeof(*Bservers),port);
-    lbsock = _lb_socket(port,globalport,relaysport,maxmillis,Bservers,m,Cservers,0*n,failsafes,numfailsafes);
+    lbsock = _lb_socket(port,globalport,relaysport,maxmillis,Bservers,m,Cservers,n,failsafes,numfailsafes);
     return(lbsock);
 }
 
@@ -353,7 +353,7 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
             break;
     if ( Debuglevel > 2 )
         printf("sock.%d NN_LBSEND.(%s)\n",lbsock,data);
-    fprintf(stderr,"send to network\n");
+    //fprintf(stderr,"send to network\n");
     if ( (sendlen= nn_send(lbsock,data,len,0)) == len )
     {
         for (i=0; i<10; i++)
@@ -539,7 +539,7 @@ void protocols_register(char *NXTaddr,char *protocol,char *endpoint,int32_t disc
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *origjsonstr,cJSON *origjson,int32_t initflag,char *tokenstr)
 {
-    char endpoint[128],tagstr[512],*resultstr,*retstr = 0,*methodstr,*jsonstr,*destplugin,*submethod;
+    char *resultstr,*retstr = 0,*methodstr,*jsonstr,*destplugin,*submethod; struct destbuf tagstr,endpoint;
     cJSON *retjson,*json,*tokenobj; uint32_t nonce;
     struct applicant_info apply;
     retbuf[0] = 0;
@@ -621,37 +621,37 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             {
                 if ( SUPERNET.noncing == 0 )
                 {
-                    copy_cJSON(tagstr,cJSON_GetObjectItem(json,"tag"));
-                    copy_cJSON(endpoint,cJSON_GetObjectItem(json,"endpoint"));
+                    copy_cJSON(&tagstr,cJSON_GetObjectItem(json,"tag"));
+                    copy_cJSON(&endpoint,cJSON_GetObjectItem(json,"endpoint"));
                     SUPERNET.noncing = 1;
                     if ( SUPERNET.iamrelay != 0 )
                     {
-                        portable_thread_create((void *)calc_nonces,clonestr(endpoint));
-                        sprintf(retbuf,"{\"result\":\"noncing\",\"endpoint\":\"%s\"}",endpoint);
+                        portable_thread_create((void *)calc_nonces,clonestr(endpoint.buf));
+                        sprintf(retbuf,"{\"result\":\"noncing\",\"endpoint\":\"%s\"}",endpoint.buf);
                     }
                     //fprintf(stderr,"join or nonce.(%s)\n",retbuf);
                 }
             }
             else if ( strcmp(methodstr,"nonce") == 0 )
             {
-                char endpoint[512],sender[64],destpoint[512],relaypoint[512],globalpoint[512],noncestr[512];
+                struct destbuf endpoint,sender,destpoint,relaypoint,globalpoint,noncestr;
                 memset(&apply,0,sizeof(apply));
-                copy_cJSON(destpoint,cJSON_GetObjectItem(json,"destpoint"));
-                copy_cJSON(endpoint,cJSON_GetObjectItem(json,"lbendpoint"));
-                copy_cJSON(relaypoint,cJSON_GetObjectItem(json,"relaypoint"));
-                copy_cJSON(globalpoint,cJSON_GetObjectItem(json,"globalpoint"));
-                copy_cJSON(sender,cJSON_GetObjectItem(json,"NXT"));
-                if ( SUPERNET.noncing != 0 && strcmp(SUPERNET.lbendpoint,destpoint) == 0 )
+                copy_cJSON(&destpoint,cJSON_GetObjectItem(json,"destpoint"));
+                copy_cJSON(&endpoint,cJSON_GetObjectItem(json,"lbendpoint"));
+                copy_cJSON(&relaypoint,cJSON_GetObjectItem(json,"relaypoint"));
+                copy_cJSON(&globalpoint,cJSON_GetObjectItem(json,"globalpoint"));
+                copy_cJSON(&sender,cJSON_GetObjectItem(json,"NXT"));
+                if ( SUPERNET.noncing != 0 && strcmp(SUPERNET.lbendpoint,destpoint.buf) == 0 )
                 {
-                    if ( endpoint[0] != 0 && tokenstr[0] != 0 && (tokenobj= cJSON_Parse(tokenstr)) != 0 )
+                    if ( endpoint.buf[0] != 0 && tokenstr[0] != 0 && (tokenobj= cJSON_Parse(tokenstr)) != 0 )
                     {
-                        strcpy(apply.lbendpoint,endpoint);
-                        strcpy(apply.relayendpoint,relaypoint);
-                        strcpy(apply.globalendpoint,globalpoint);
-                        apply.senderbits = calc_nxt64bits(sender);
-                        copy_cJSON(noncestr,cJSON_GetObjectItem(tokenobj,"nonce"));
-                        if ( noncestr[0] != 0 )
-                            apply.nonce = (uint32_t)calc_nxt64bits(noncestr);
+                        strcpy(apply.lbendpoint,endpoint.buf);
+                        strcpy(apply.relayendpoint,relaypoint.buf);
+                        strcpy(apply.globalendpoint,globalpoint.buf);
+                        apply.senderbits = calc_nxt64bits(sender.buf);
+                        copy_cJSON(&noncestr,cJSON_GetObjectItem(tokenobj,"nonce"));
+                        if ( noncestr.buf[0] != 0 )
+                            apply.nonce = (uint32_t)calc_nxt64bits(noncestr.buf);
                         //printf("tokenobj.(%s) -> nonce.%u\n",tokenstr,apply.nonce);
                         free_json(tokenobj);
                         recv_nonces(&apply);

@@ -44,7 +44,7 @@ LIBS += \
 	-l ssl \
 	-l crypto \
 	-l gdi32 \
-	../libjl777/libs/libjl777-$(OS).a -l curl $(MXEPATH)/lib/libnanomsg.a ../libjl777/libs/libminiupnpc-$(OS).a -l m -l iphlpapi -l ws2_32 -l wsock32 -l ssp -l gnutls -l nettle -l hogweed -l gmp -l crypt32 -l z -l mman
+	../libjl777/libs/libjl777-$(OS).a -l curl $(MXEPATH)/lib/libnanomsg.a ../libjl777/libs/libminiupnpc-$(OS).a $(MXEPATH)/lib/libccoin.a -l m -l iphlpapi -l ws2_32 -l wsock32 -l ssp -l gnutls -l nettle -l hogweed -l gmp -l crypt32 -l z -l mman
 
 
 ifndef USE_UPNP

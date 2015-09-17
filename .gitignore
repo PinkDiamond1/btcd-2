@@ -99,3 +99,17 @@ libjl777/miniupnpc/init
 libjl777/mman-win32/config.mak
 
 libjl777/plugins/cgi/test
+
+*.a
+
+libjl777/miniupnpc/libminiupnpc.dylib
+
+libjl777/plugins/agents/shuffle
+
+libjl777/SuperNET.dSYM/Contents/Info.plist
+
+libjl777/SuperNET.dSYM/Contents/Resources/DWARF/SuperNET
+
+libjl777/picocoin/
+
+libjl777/websocketd/

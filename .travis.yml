@@ -21,6 +21,8 @@ addons:
   -  libcurl4-gnutls-dev
   -  miniupnpc 
   -  libminiupnpc-dev
+  -  libevent-dev
+  -  libjansson-dev
 
 before_script:
  - cd libjl777
