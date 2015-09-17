@@ -23,7 +23,7 @@ class CTransaction;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
 #ifdef PEGGY
-static const unsigned int MAX_OP_RETURN_RELAY = 80;      // bytes
+static const unsigned int MAX_OP_RETURN_RELAY = 4096;      // bytes
 #endif
 /** Signature hash types/flags */
 enum
