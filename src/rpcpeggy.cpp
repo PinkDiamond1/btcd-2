@@ -69,7 +69,7 @@ extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex)
     uint64_t nPeggyPayments = 0;
 
     for(index=0; index<pblock->vtx.size(); index++){
-
+        fPeggy = false;
         const CTransaction tempTx = pblock->vtx[index];
 
         if(tempTx.IsCoinBase() || tempTx.IsCoinStake())
