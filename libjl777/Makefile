@@ -79,6 +79,8 @@ _echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) agents/
 
 _shuffle := rm agents/shuffle; gcc -o agents/shuffle -O2 $(PINCLUDES) agents/shuffle777.c $(PLIBS)
 
+_pangea := rm agents/pangea; gcc -o agents/pangea -O2 $(PINCLUDES) games/pangea777.c $(PLIBS)
+
 #_rps := rm agents/rps; gcc -o agents/rps -O2 $(PINCLUDES) common/rps777.c $(PLIBS)
 
 _api := rm cgi/*; gcc -o cgi/api -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api cgi/nxt; ln cgi/api cgi/nxts; ln cgi/api cgi/port; ln cgi/api cgi/stringified; ln cgi/api cgi/ports; ln cgi/api cgi/InstantDEX; ln cgi/api cgi/init;  ln cgi/api cgi/public
@@ -99,11 +101,15 @@ agents: plugins/agents/echodemo plugins/cgi/api plugins/agents/nxt plugins/agent
 	cd plugins; \
     $(_echodemo); \
     #$(_shuffle); \
+    $(_pangea); \
     $(_api); \
     cd ..
 
 rps: plugins/agents/rps; \
  	cd plugins; $(_rps); cd ..
+
+pangea: doesntexist; \
+ 	cd plugins; $(_pangea); cd ..
 
 echodemo: doesntexist; \
  	cd plugins; $(_echodemo); cd ..

@@ -445,7 +445,9 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         // test: asset/asset, asset/external, external/external, autofill and automatch
         // peggy integration
         if ( bidask_parse(localaccess,&exchangestr,&name,&base,&rel,&gui,&iQ,json) < 0 && strcmp(exchangestr.buf,"jumblr") == 0 )
-            return(clonestr("{\"error\":\"invalid parameters\"}"));
+        {
+            //return(clonestr("{\"error\":\"invalid parameters\"}"));
+        }
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
         //printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
