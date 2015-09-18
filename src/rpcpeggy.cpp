@@ -54,10 +54,16 @@ extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex)
 
     jadd(arrayObj, "header", header);
 
-    if(!pblock->vtx[2].IsPeggyBase())
-        throw runtime_error(
-            "Block Does not contain a peggybase transaction!\n"
-        );
+    if(pindex->nHeight >= nMinPeggyHeight){
+        if(!pblock->vtx[2].IsPeggyBase())
+            throw runtime_error(
+                "Block Does not contain a peggybase transaction!\n"
+            );
+    }
+    else{
+        return "Not a peggy block\n";
+    }
+
 
     int index, vouts;
 
