@@ -101,7 +101,7 @@ agents: plugins/agents/echodemo plugins/cgi/api plugins/agents/nxt plugins/agent
 	cd plugins; \
     $(_echodemo); \
     #$(_shuffle); \
-    $(_pangea); \
+    #$(_pangea); \
     $(_api); \
     cd ..
 
