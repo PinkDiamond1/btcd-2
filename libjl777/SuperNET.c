@@ -773,6 +773,8 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
+    //void poker_test();
+    //poker_test(); getchar();
 #endif
     if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) == 0 )
         jsonstr = clonestr("{}");

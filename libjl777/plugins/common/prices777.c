@@ -744,6 +744,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         //{"exmo", prices777_exmo, exmo_supports, exmo_trade },
         {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade, quadriga_coinbalance },
         {"jumblr", prices777_InstantDEX, InstantDEX_supports },
+        {"pangea", prices777_InstantDEX, InstantDEX_supports },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
     int32_t i,rellen; char basebuf[64],relbuf[64],base[64],rel[64],name[64]; struct exchange_info *exchangeptr;
@@ -1933,6 +1934,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         init_Currencymasks();
         BUNDLE.jsonstr = clonestr(jsonstr);
         PRICES.readyflag = 1;
+        plugin->sleepmillis = 50;
         //BUNDLE.kv = kv777_init("DB","prices",0);
         //printf("BUNDLE.kv.%p\n",BUNDLE.kv);
         strcpy(retbuf,"{\"result\":\"prices init\"}");
