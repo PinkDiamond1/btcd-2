@@ -265,7 +265,7 @@ patch2: doesntexist; \
     #cd ..; \
 
 dependencies: doesntexist; \
-    sudo apt-get install autopoint bison bzip2 cmake flex gcc g++ gperf intltool libtool libtool-bin ruby scons wine zlib1g-dev libffi-dev p7zip-full;
+    sudo apt-get -y install autopoint bison bzip2 cmake flex gcc g++ gperf intltool libtool libtool-bin ruby scons wine zlib1g-dev libffi-dev p7zip-full;
 
 onetime: doesntexist; \
     cd nanomsg; ./autogen.sh; ./configure; $(MAKE) -lanl; cp .libs/libnanomsg.a ../libs/libnanomsg-$(OS).a cd ..; \
