@@ -415,9 +415,9 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
     if ( iQ->s.price > SMALLVAL && iQ->s.vol > SMALLVAL && iQ->s.baseid != 0 && iQ->s.relid != 0 )
     {
         buf[0] = 0, _set_assetname(&basemult,buf,0,iQ->s.baseid);
-        //printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->baseid,buf,(long long)basemult);
+        printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->s.baseid,buf,(long long)basemult);
         buf[0] = 0, _set_assetname(&relmult,buf,0,iQ->s.relid);
-        //printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->relid,buf,(long long)relmult);
+        printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->s.relid,buf,(long long)relmult);
         //basemult = get_assetmult(iQ->baseid), relmult = get_assetmult(iQ->relid);
         baseamount = (iQ->s.baseamount + basemult/2) / basemult, baseamount *= basemult;
         relamount = (iQ->s.relamount + relmult/2) / relmult, relamount *= relmult;
@@ -456,7 +456,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         }
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
-        //printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
+printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
         copy_cJSON(&method,jobj(json,"method"));
         if ( (sequenceid= j64bits(json,"orderid")) == 0 )
             sequenceid = j64bits(json,"sequenceid");

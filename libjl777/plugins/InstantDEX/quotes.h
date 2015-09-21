@@ -692,7 +692,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         secret = SUPERNET.NXTACCTSECRET;
         activenxt = SUPERNET.NXTADDR;
     }
-   // printf("placebidask.(%s)\n",jprint(origjson,0));
+printf("placebidask.(%s)\n",jprint(origjson,0));
     if ( (obj= jobj(origjson,"wallet")) != 0 )
     {
         str = jprint(obj,1);
