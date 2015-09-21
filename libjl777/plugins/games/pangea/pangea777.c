@@ -1104,19 +1104,22 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
     return(array);
 }
 
-int32_t pangea_start(char *retbuf,char *ipaddr,uint16_t port,uint64_t my64bits,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers)
+int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uint64_t my64bits,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers)
 {
     char *addrstr,*ciphers,*cardpubs,*sharenrs; uint8_t p2shtype; cJSON *array; struct InstantDEX_quote *iQ = 0;
     int32_t createdflag,addrtype,i,j,r,num=0,myind = -1; uint64_t addrs[512],quoteid = 0; struct pangea_info *sp;
-    if ( base == 0 || base[0] == 0 || maxplayers < 3 || maxplayers > 9 || ipaddr == 0 || ipaddr[0] == 0 || port == 0 )
+    if ( base == 0 || base[0] == 0 || maxplayers < 2 || maxplayers > 9 || ipaddr == 0 || ipaddr[0] == 0 || port == 0 )
+    {
+        sprintf(retbuf,"{\"error\":\"bad params\"}");
         return(-1);
+    }
     addrtype = coin777_addrtype(&p2shtype,base);
     if ( (num= uniq_specialaddrs(&myind,addrs,sizeof(addrs)/sizeof(*addrs),base,"pangea",addrtype)) < 2 )
     {
         printf("need at least 2 players\n");
         return(-1);
     }
-    printf("pangea_start(%s) myind.%d num.%d\n",base,myind,num);
+    printf("pangea_start(%s) myind.%d num.%d [%s%s:%d\n",base,myind,num,transport,ipaddr,port);
     if ( (i= myind) > 0 )
     {
         addrs[i] = addrs[0];
@@ -1163,16 +1166,18 @@ int32_t pangea_start(char *retbuf,char *ipaddr,uint16_t port,uint64_t my64bits,c
             ciphers = jprint(pangea_ciphersjson(&sp->deck,0,0),1);
             cardpubs = jprint(pangea_cardpubs(&sp->deck,0),1);
             sharenrs = jprint(pangea_sharenrs(sp->deck.sharenrs,num),1);
-            sprintf(retbuf,"{\"myind\":%d,\"ipaddr\":\"%s\",\"port\":%u,\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,ipaddr,port,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
-            sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
-            sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
-            free(addrstr), free(ciphers), free(cardpubs), free(sharenrs);
-            sp->quoteid = iQ->s.quoteid;
-            strcpy(sp->ipaddr,ipaddr), sp->port = port;
+            if ( transport == 0 || transport[0] == 0 )
+                transport = "tcp";
+            strcpy(sp->transport,transport), strcpy(sp->ipaddr,ipaddr), sp->port = port;
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port+1);
             sp->pullsock = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             sp->pubsock = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
+            sprintf(retbuf,"{\"myind\":%d,\"endpoint\":\"%s://%s:%d\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
+            sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
+            sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
+            free(addrstr), free(ciphers), free(cardpubs), free(sharenrs);
+            sp->quoteid = iQ->s.quoteid;
             return(0);
         }
     }
@@ -1369,11 +1374,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             if ( (base= jstr(json,"base")) != 0 )
             {
-                if ( (maxplayers= juint(json,"maxplayers")) < 3 )
-                    maxplayers = 3;
+                if ( (maxplayers= juint(json,"maxplayers")) < 2 )
+                    maxplayers = 2;
                 else if ( maxplayers > 9 )
                     maxplayers = 9;
-                pangea_start(retbuf,plugin->ipaddr,plugin->pangeaport,plugin->nxt64bits,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers);
+                pangea_start(retbuf,plugin->transport,plugin->ipaddr,plugin->pangeaport,plugin->nxt64bits,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers);
             } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
         }
         else if ( strcmp(methodstr,"newtable") == 0 )

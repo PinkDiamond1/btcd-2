@@ -210,12 +210,6 @@ cJSON *pangea_walletitem(cJSON *walletitem,struct coin777 *coin)
     }
     jaddstr(walletitem,"pubkey",coin->pangeapubkey);
     jaddstr(walletitem,"coinaddr",coin->pangeacoinaddr);
-    if ( SUPERNET.pangeaport != 0 )
-    {
-        jaddstr(walletitem,"transport",SUPERNET.transport);
-        jaddstr(walletitem,"ipaddr",SUPERNET.myipaddr);
-        jaddnum(walletitem,"pangeaport",SUPERNET.pangeaport);
-    }
     return(walletitem);
 }
 
