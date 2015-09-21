@@ -917,6 +917,7 @@ printf("call addbundle\n");
         printf("found (%s/%s).%s %llu %llu in slot-> %p\n",base,rel,exchangestr,(long long)baseid,(long long)relid,prices);
         return(prices);
     }
+printf("call find_exchange\n");
     if ( (exchange= find_exchange(&exchangeid,exchangestr)) == 0 )
     {
         printf("cant add exchange.(%s)\n",exchangestr);
@@ -931,7 +932,10 @@ printf("call addbundle\n");
         }
     }
     if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
+    {
+        printf("call addbundle after initpair\n");
         prices777_addbundle(&valid,1,prices,0,0,0);
+    }
     return(prices);
 }
 
