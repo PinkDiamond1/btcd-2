@@ -1111,12 +1111,14 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
     if ( base == 0 || base[0] == 0 || maxplayers < 2 || maxplayers > 9 || ipaddr == 0 || ipaddr[0] == 0 || port == 0 )
     {
         sprintf(retbuf,"{\"error\":\"bad params\"}");
+        printf("%s",retbuf);
         return(-1);
     }
     addrtype = coin777_addrtype(&p2shtype,base);
     if ( (num= uniq_specialaddrs(&myind,addrs,sizeof(addrs)/sizeof(*addrs),base,"pangea",addrtype)) < 2 )
     {
-        printf("need at least 2 players\n");
+        sprintf(retbuf,"need at least 2 players\n");
+        printf("%s",retbuf);
         return(-1);
     }
     printf("pangea_start(%s) myind.%d num.%d [%s%s:%d\n",base,myind,num,transport,ipaddr,port);
