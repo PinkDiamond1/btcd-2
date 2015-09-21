@@ -438,13 +438,16 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
         }
         if ( coinaddr[0] == 0 )
             extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"pubsrvaddr");
-        printf("coinaddr.(%s)\n",coinaddr);
-        if ( coinstr == 0 || serverport == 0 || userpass == 0 || (privkey= dumpprivkey(coinstr,serverport,userpass,coinaddr)) == 0 )
-            gen_randomacct(33,NXTaddr,secret,"randvals");
-        else
+        if ( coinaddr[0] != 0 )
         {
-            strcpy(secret,privkey);
-            free(privkey);
+            printf("coinaddr.(%s)\n",coinaddr);
+            if ( coinstr == 0 || serverport == 0 || userpass == 0 || (privkey= dumpprivkey(coinstr,serverport,userpass,coinaddr)) == 0 )
+                gen_randomacct(33,NXTaddr,secret,"randvals");
+            else
+            {
+                strcpy(secret,privkey);
+                free(privkey);
+            }
         }
     }
     else if ( strcmp(secret,"randvals") == 0 )
