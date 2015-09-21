@@ -202,7 +202,7 @@ cJSON *pangea_walletitem(cJSON *walletitem,struct coin777 *coin)
     if ( walletitem == 0 )
         walletitem = cJSON_CreateObject();
     printf("call get_acct_coinaddr.%s (%s) (%s)\n",coin->name,coin->serverport,coin->userpass);
-    if ( (addr= get_acct_coinaddr(coin->pangeacoinaddr,coin->name,coin->serverport,coin->userpass,"pangea")) != 0 )
+    if ( (coin->pangeapubkey[0] == 0 || coin->pangeacoinaddr[0] == 0) && (addr= get_acct_coinaddr(coin->pangeacoinaddr,coin->name,coin->serverport,coin->userpass,"pangea")) != 0 )
     {
         printf("get_pubkey\n");
         get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coin->pangeacoinaddr);
