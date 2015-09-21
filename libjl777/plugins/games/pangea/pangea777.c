@@ -1106,7 +1106,7 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
 
 int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uint64_t my64bits,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers,cJSON *json)
 {
-    char *addrstr,*ciphers,*cardpubs,*sharenrs; uint8_t p2shtype; cJSON *array,*bids; struct InstantDEX_quote *iQ = 0;
+    char *addrstr,*ciphers,*cardpubs,*sharenrs; uint8_t p2shtype; cJSON *array,*bids; //struct InstantDEX_quote *iQ = 0;
     int32_t createdflag,addrtype,i,j,n,r,num=0,myind = -1; uint64_t addrs[512],quoteid = 0; struct pangea_info *sp;
     if ( base == 0 || base[0] == 0 || maxplayers < 2 || maxplayers > 9 || ipaddr == 0 || ipaddr[0] == 0 || port == 0 )
     {
@@ -1156,21 +1156,21 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
     printf("pangea numplayers.%d\n",num);
     if ( (sp= pangea_create(my64bits,&createdflag,base,timestamp,addrs,num,bigblind,ante)) == 0 )
     {
-        printf("cant create shuffle.(%s) numaddrs.%d\n",base,num);
+        printf("cant create table.(%s) numaddrs.%d\n",base,num);
         return(-1);
     }
     if ( createdflag != 0 && sp->myind == 0 && addrs[sp->myind] == my64bits )
     {
         printf("inside\n");
-        if ( quoteid == 0 )
+        /*if ( quoteid == 0 )
         {
             if ( (array= InstantDEX_specialorders(&quoteid,my64bits,base,"pangea",bigblind,addrtype)) != 0 )
                 free_json(array);
         }
         printf("quoteid.%llu\n",(long long)quoteid);
-        if ( (iQ= find_iQ(quoteid)) != 0 )
+        if ( (iQ= find_iQ(quoteid)) != 0 )*/
         {
-            iQ->s.pending = 1;
+            //iQ->s.pending = 1;
             memset(&sp->deck,0,sizeof(sp->deck));
             sp->pullsock = sp->pubsock = sp->subsock = -1;
             for (j=0; j<num; j++)
@@ -1190,17 +1190,18 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
             if ( transport == 0 || transport[0] == 0 )
                 transport = "tcp";
             strcpy(sp->transport,transport), strcpy(sp->ipaddr,ipaddr), sp->port = port;
-            sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port+1);
+            sprintf(sp->endpoint,"%s://%s:%u",sp->transport,sp->ipaddr,sp->port+1);
             printf("PULL from (%s)\n",sp->endpoint);
             sp->pullsock = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             sp->pubsock = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
             printf("PUB to (%s)\n",sp->endpoint);
-            sprintf(retbuf,"{\"myind\":%d,\"endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
+            sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
             sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
             free(addrstr), free(ciphers), free(cardpubs), free(sharenrs);
-            sp->quoteid = iQ->s.quoteid;
+            //sp->quoteid = iQ->s.quoteid;
+            printf("RETBUF.(%s) SENDBUF.(%s)\n",retbuf,sp->sendbuf);
             return(0);
         }
     }
@@ -1233,22 +1234,20 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
         sp->myind = myind;
         if ( createdflag != 0 && addrs[sp->myind] == plugin->nxt64bits )
         {
-            printf("inside\n");
-            if ( quoteid == 0 )
+            /*if ( quoteid == 0 )
             {
                 addrtype = coin777_addrtype(&p2shtype,base);
                 if ( (array= InstantDEX_specialorders(&quoteid,plugin->nxt64bits,base,"pangea",sp->bigblind,addrtype)) != 0 )
                     free_json(array);
             }
-            printf("quoteid.%llu\n",(long long)quoteid);
-            if ( (iQ= find_iQ(quoteid)) != 0 )
+            if ( (iQ= find_iQ(quoteid)) != 0 )*/
             {
                 memset(&sp->deck,0,sizeof(sp->deck));
                 memset(bp.bytes,0,sizeof(bp)), bp.bytes[0] = 9;
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
                 sp->deck.M = juint(json,"M");
-                iQ->s.pending = 1;
+                //iQ->s.pending = 1;
                 sp->deck.checkprod = pangea_pubkeys(plugin,sp,json,"cardpubs",sp->deck.cards);
                 if ( (array= jarray(&n,json,"sharenrs")) == 0 || n != sp->deck.N )
                 {
@@ -1287,6 +1286,12 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                 }
                 sp->state = PANGEA_STATE_READY;
             }
+        }
+        else if ( createdflag == 0 )
+        {
+            if ( sp->addrs[0] == plugin->nxt64bits )
+                return(clonestr("{\"result\":\"this is my table\"}"));
+            else return(clonestr("{\"result\":\"table already exists\"}"));
         }
     }
     return(clonestr("{\"error\":\"no tableid\"}"));
