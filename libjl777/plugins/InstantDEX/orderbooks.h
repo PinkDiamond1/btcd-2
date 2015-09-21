@@ -481,7 +481,7 @@ void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct pri
     {
         jaddstr(item,"plugin",prices->exchange), jaddstr(item,"method","start");
         jaddnum(item,"dotrade",1), jaddnum(item,"volume",volume);
-        jaddnum(item,"timeout",120000);
+        jaddnum(item,"timeout",20000);
         jaddstr(item,"base",prices->base);
         if ( (iQ= find_iQ(quoteid)) != 0 )
             jadd64bits(item,"offerNXT",iQ->s.offerNXT);

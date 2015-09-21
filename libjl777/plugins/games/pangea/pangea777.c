@@ -1346,7 +1346,7 @@ int pangea_main()
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char *resultstr,*methodstr,*base,*retstr = 0; int32_t maxplayers;
+    char *resultstr,*methodstr,*base,*retstr = 0; int32_t maxplayers; cJSON *argjson;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -1354,7 +1354,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         PANGEA.readyflag = 1;
         plugin->sleepmillis = 25;
         plugin->allowremote = 1;
-        plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),json,0,0,0);
+        argjson = cJSON_Parse(jsonstr);
+        plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
+        free_json(argjson);
         printf("my64bits %llu ipaddr.%s\n",(long long)plugin->nxt64bits,plugin->ipaddr);
         //pangea_main();
     }

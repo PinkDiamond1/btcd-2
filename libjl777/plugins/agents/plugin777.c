@@ -332,7 +332,8 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
             if ( is_ipaddr(myipaddr) != 0 )
                 strcpy(plugin->ipaddr,myipaddr);
             plugin->port = juint(obj,"port");
-            plugin->pangeaport = juint(obj,"pangeaport");
+            if ( (plugin->pangeaport= juint(obj,"pangeaport")) == 0 )
+                plugin->pangeaport = 7899;
         }
     }
     //fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%s) [%s] %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
