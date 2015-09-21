@@ -1394,7 +1394,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     if ( initflag > 0 )
     {
         PANGEA.readyflag = 1;
-        plugin->sleepmillis = 25;
+        plugin->sleepmillis = 5000;
         plugin->allowremote = 1;
         argjson = cJSON_Parse(jsonstr);
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
