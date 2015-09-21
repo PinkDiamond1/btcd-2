@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <stdint.h>
 #include <time.h>
 #include <unistd.h>
@@ -579,6 +579,7 @@ void poker_test()
 		Shuffle(&Deck);
 	}
     starttime = (uint32_t)time(NULL);
+#ifndef _WIN32
     while ( (uint32_t)time(NULL) == starttime )
         usleep(100);
     total = counter = 0;
@@ -592,4 +593,5 @@ void poker_test()
         }
     }
     printf("counter.%llu %s in 10 seconds: ave score %llx\n",(long long)counter,_mbstr(counter),(long long)(total/counter));
+#endif
 }
