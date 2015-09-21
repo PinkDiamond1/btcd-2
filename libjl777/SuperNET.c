@@ -416,7 +416,7 @@ void SuperNET_apiloop(void *ipaddr)
     }
 }
 
-uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
+uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass)
 {
     uint64_t allocsize,nxt64bits;
     char coinaddr[MAX_JSON_FIELD],*str,*privkey;
@@ -486,7 +486,7 @@ void SuperNET_initconf(cJSON *json)
     strcat(SUPERNET.NXTSERVER,"?requestType");
     copy_cJSON(&tmp,cJSON_GetObjectItem(json,"myNXTacct")), safecopy(SUPERNET.myNXTacct,tmp.buf,sizeof(SUPERNET.myNXTacct));
     if ( SUPERNET.disableNXT == 0 )
-        set_account_NXTSECRET(SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
+        set_account_NXTSECRET(SUPERNET.myprivkey,SUPERNET.mypubkey,SUPERNET.NXTACCT,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,sizeof(SUPERNET.NXTACCTSECRET)-1,json,0,0,0);
     else strcpy(SUPERNET.NXTADDR,SUPERNET.myNXTacct);
     SUPERNET.my64bits = conv_acctstr(SUPERNET.NXTADDR);
     copy_cJSON(&myipaddr,cJSON_GetObjectItem(json,"myipaddr"));

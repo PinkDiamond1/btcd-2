@@ -512,8 +512,8 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
     {
         if ( is_bundled_plugin(plugin) != 0 )
         {
-            if ( strcmp("jumblr",plugin) == 0 && SUPERNET.iamrelay > 0 )
-                return(clonestr("{\"error\":\"jumblr not for relays\"}"));
+            if ( (strcmp("jumblr",plugin) == 0 || strcmp("pangea",plugin) == 0) && SUPERNET.iamrelay > 0 )
+                return(clonestr("{\"error\":\"jumblr/pangea not for relays\"}"));
             if ( SUPERNET.iamrelay <= 1 )
                 language_func((char *)plugin,"",0,0,1,(char *)plugin,origargstr,call_system);
             return(clonestr("{\"error\":\"cant find plugin, AUTOLOAD\"}"));
