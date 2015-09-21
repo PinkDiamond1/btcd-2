@@ -201,9 +201,11 @@ cJSON *pangea_walletitem(cJSON *walletitem,struct coin777 *coin)
     char *addr; struct destbuf pubkey;
     if ( walletitem == 0 )
         walletitem = cJSON_CreateObject();
+    printf("call get_acct_coinaddr.%s (%s) (%s)\n",coin->name,coin->serverport,coin->userpass);
     if ( (addr= get_acct_coinaddr(coin->pangeacoinaddr,coin->name,coin->serverport,coin->userpass,"pangea")) != 0 )
     {
-        get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coin->atomicrecv);
+        printf("get_pubkey\n");
+        get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coin->pangeacoinaddr);
         strcpy(coin->pangeapubkey,pubkey.buf);
     }
     jaddstr(walletitem,"pubkey",coin->pangeapubkey);
@@ -296,12 +298,12 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
                 strcpy(walletstr,jprint(walletitem,0));
             }
 printf("exchange.(%s) iswallet.%d (%s) base.(%s) coin.%p (%s)\n",exchange,iQ->s.wallet,walletstr,base,coin,jprint(json,0));
-        }
+        } else printf("InstantDEX_str cant find exchangeid.%d\n",iQ->exchangeid);
         str = jprint(json,1);
         strcpy(buf,str);
         printf("str.(%s) %p\n",buf,buf);
         free(str);
-    }
+    } else printf("InstantDEX_str cant parse.(%s)\n",buf);
     if ( buf == _buf )
         return(clonestr(buf));
     else return(buf);
