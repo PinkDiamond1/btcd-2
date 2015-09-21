@@ -1209,7 +1209,7 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             sp->pubsock = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
             printf("PUB to (%s)\n",sp->endpoint);
-            sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
+            sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
             sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
             free(addrstr), free(ciphers), free(cardpubs), free(sharenrs);
@@ -1224,8 +1224,8 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
 
 char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
 {
-    int32_t createdflag,num,i,n,addrtype,myind = -1; uint64_t tableid,quoteid=0,addrs[9]; uint8_t p2shtype; bits256 bp;
-    char *base,*endpoint,*ciphers,*permipubs,cmd[512]; uint32_t timestamp; struct pangea_info *sp; cJSON *array; struct InstantDEX_quote *iQ;
+    int32_t createdflag,num,i,n,addrtype,myind = -1; uint64_t tableid,quoteid=0,addrs[9]; uint8_t p2shtype;
+    char *base,*endpoint,*ciphers,*permipubs,cmd[512]; uint32_t timestamp; struct pangea_info *sp; cJSON *array; //struct InstantDEX_quote *iQ;
     if ( (tableid= j64bits(json,"tableid")) != 0 && (base= jstr(json,"base")) != 0 && (timestamp= juint(json,"timestamp")) != 0 )
     {
         if ( (array= jarray(&num,json,"addrs")) == 0 || num < 2 || num > 9 )
@@ -1257,31 +1257,35 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
             if ( (iQ= find_iQ(quoteid)) != 0 )*/
             {
                 memset(&sp->deck,0,sizeof(sp->deck));
-                memset(bp.bytes,0,sizeof(bp)), bp.bytes[0] = 9;
+                if ( (endpoint= jstr(json,"pangea_endpoint")) != 0 )
+                {
+                    strcpy(sp->endpoint,endpoint);
+                    sp->port = atoi(&sp->endpoint[strlen(sp->endpoint)-4]);
+                    printf("SUB from (%s) port.%d\n",sp->endpoint,sp->port);
+                    sp->subsock = nn_createsocket(sp->endpoint,1,"NN_SUB",NN_PUB,sp->port,10,10);
+                    nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
+                    sp->endpoint[strlen(sp->endpoint)-1]++;
+                    printf("PUSH to (%s)\n",sp->endpoint);
+                    sp->pushsock = nn_createsocket(sp->endpoint,1,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
+                    sp->endpoint[strlen(sp->endpoint)-1]--;
+                }
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
                 sp->deck.M = juint(json,"M");
                 //iQ->s.pending = 1;
                 sp->deck.checkprod = pangea_pubkeys(plugin,sp,json,"cardpubs",sp->deck.cards);
-                if ( (array= jarray(&n,json,"sharenrs")) == 0 || n != sp->deck.N )
+                if ( (array= jarray(&n,json,"sharenrs")) == 0 || n != sp->deck.N || num != sp->deck.N )
                 {
-                    printf("invalid sharenrs n.%d\n",n);
-                    return(clonestr("{\"error\":\"invalid sharenrs\"}"));
+                    printf("invalid sharenrs n.%d vs N.%d num.%d myind.%d (%s)\n",n,sp->deck.N,num,sp->myind,jprint(json,0));
+                    return(clonestr("{\"error\":\"invalid sharenrs or mismatched numplayers\"}"));
                 }
                 for (i=0; i<n; i++)
-                    sp->deck.sharenrs[i] = juint(jitem(array,i),0);
-                sp->mask = ((1 << sp->myind) | 1);
-                if ( (endpoint= jstr(json,"endpoint")) != 0 )
                 {
-                    strcpy(sp->endpoint,endpoint);
-                    printf("SUB from (%s)\n",sp->endpoint);
-                    sp->subsock = nn_createsocket(sp->endpoint,1,"NN_SUB",NN_PUB,sp->port,10,10);
-                    nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
-                    sp->endpoint[strlen(sp->endpoint)-1]++;
-                    printf("PUSH to (%s)\n",sp->endpoint);
-                    sp->pushsock = nn_createsocket(sp->endpoint,1,"NN_PUSH",NN_PUSH,sp->port,10,10);
-                    sp->endpoint[strlen(sp->endpoint)-1]--;
+                    sp->deck.sharenrs[i] = juint(jitem(array,i),0);
+                    printf("%d ",sp->deck.sharenrs[i]);
                 }
+                printf("sharenrs\n");
+                sp->mask = ((1 << sp->myind) | 1);
                 if ( sp->pushsock >= 0 )
                 {
                     sprintf(cmd,"{\"cmd\":\"ready\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"mask\":%d}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,sp->mask);
