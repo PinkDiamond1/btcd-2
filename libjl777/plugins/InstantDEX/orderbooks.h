@@ -1324,7 +1324,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                     accountid = calc_nxt64bits(account.buf);
                     type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
                     subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
-                    timestamp = get_blockutime(juint(txobj,"timestamp"));
+                    timestamp = juint(txobj,"timestamp");
                     amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                     qty = amount = assetid = 0;
                     if ( (attachment= cJSON_GetObjectItem(txobj,"attachment")) != 0 )

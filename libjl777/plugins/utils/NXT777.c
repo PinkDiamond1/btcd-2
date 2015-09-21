@@ -678,12 +678,16 @@ uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits)
     retstr.buf[0] = 0;
     if ( nxt64bits != 0 )
     {
+        RS_encode(rsacctstr,nxt64bits);
+        return(nxt64bits);
         sprintf(cmd,"requestType=rsConvert&account=%llu",(long long)nxt64bits);
         strcat(field,"RS");
         jsonstr = issue_NXTPOST(cmd);
     }
     else if ( rsacctstr[0] != 0 )
     {
+        return(RS_decode(rsacctstr));
+
         sprintf(cmd,"requestType=rsConvert&account=%s",rsacctstr);
         jsonstr = issue_NXTPOST(cmd);
     }

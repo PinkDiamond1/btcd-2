@@ -440,7 +440,7 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
             extract_cJSON_str(coinaddr,sizeof(coinaddr),argjson,"pubsrvaddr");
         if ( coinaddr[0] != 0 )
         {
-            printf("coinaddr.(%s)\n",coinaddr);
+            //printf("coinaddr.(%s) nonz.%d\n",coinaddr,coinaddr[0]);
             if ( coinstr == 0 || serverport == 0 || userpass == 0 || (privkey= dumpprivkey(coinstr,serverport,userpass,coinaddr)) == 0 )
                 gen_randomacct(33,NXTaddr,secret,"randvals");
             else
@@ -513,7 +513,7 @@ void SuperNET_initconf(cJSON *json)
     sprintf(SUPERNET.globalendpoint,"%s://%s:%u",SUPERNET.transport,SUPERNET.myipaddr,SUPERNET.port + PUBGLOBALS_OFFSET);
     copy_cJSON(&tmp,cJSON_GetObjectItem(json,"SERVICESECRET")), safecopy(SUPERNET.SERVICESECRET,tmp.buf,sizeof(SUPERNET.SERVICESECRET));
     expand_nxt64bits(SUPERNET.SERVICENXT,conv_NXTpassword(mysecret,mypublic,(uint8_t *)SUPERNET.SERVICESECRET,(int32_t)strlen(SUPERNET.SERVICESECRET)));
-    printf("SERVICENXT.%s\n",SUPERNET.SERVICENXT);
+    //printf("SERVICENXT.%s\n",SUPERNET.SERVICENXT);
     SUPERNET.automatch = get_API_int(cJSON_GetObjectItem(json,"automatch"),3);
 #ifndef __linux__
     SUPERNET.UPNP = 1;
