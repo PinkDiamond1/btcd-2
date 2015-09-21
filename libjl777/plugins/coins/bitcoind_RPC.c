@@ -117,7 +117,7 @@ char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *
         specialcase = 1;
     else specialcase = 0;
     if ( url[0] == 0 )
-        strcpy(url,"https://127.0.0.1:7876/nxt");
+        strcpy(url,"http://127.0.0.1:7876/nxt");
     if ( specialcase != 0 && 0 )
         fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
