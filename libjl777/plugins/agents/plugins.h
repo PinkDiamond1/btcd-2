@@ -221,12 +221,40 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         if ( strcmp(request.buf,"SuperNET") == 0 )
         {
             char *call_SuperNET_JSON(char *JSONstr);
+            char *resubmit; cJSON *resubjson,*resubarray,*item; int32_t i,m;
             //fprintf(stderr,"processing pluginrequest.(%s)\n",str);
             if ( (retstr= call_SuperNET_JSON(str)) != 0 )
             {
                 if ( Debuglevel > 2 )
                     fprintf(stderr,"send return from (%s) <<<<<<<<<<<<<<<<<<<<<< (%s) \n",str,retstr);
-                //nn_local_broadcast(dp->pushsock,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
+                if ( (resubarray= jarray(&m,json,"resubmit")) != 0 && (resubjson= cJSON_Parse(retstr)) != 0 )
+                {
+                    for (i=0; i<m; i++)
+                    {
+                        item = jitem(resubarray,i);
+                        //printf("i.%d of %d: %s %s\n",i,m,get_cJSON_fieldname(item),jprint(item,0));
+                        if ( item->child != 0 )
+                            item = item->child;
+                        if ( is_cJSON_String(item) != 0 )
+                        {
+                            //printf("addstr.(%s) %s\n",get_cJSON_fieldname(item),cJSON_str(item));
+                            jaddstr(resubjson,get_cJSON_fieldname(item),cJSON_str(item));
+                        }
+                        else if ( is_cJSON_Number(item) != 0 )
+                        {
+                            //printf("addnum.(%s) %f\n",get_cJSON_fieldname(item),jdouble(item,0));
+                            jaddnum(resubjson,get_cJSON_fieldname(item),jdouble(item,0));
+                        }
+                        else if ( is_cJSON_Array(item) != 0 )
+                            jadd(resubjson,get_cJSON_fieldname(item),cJSON_Duplicate(item,1));
+                    }
+                    jaddstr(resubjson,"plugin",dp->name);
+                    jaddstr(resubjson,"resubmit","yes");
+                    resubmit = jprint(resubjson,1);
+                    //printf("resubmit.(%s)\n",resubmit);
+                    nn_local_broadcast(dp->pushsock,instanceid,0,(uint8_t *)resubmit,(int32_t)strlen(resubmit)+1), dp->numsent++;
+                    free(resubmit);
+                } //else printf("no resubmit in json.(%s)\n",str);
                 free(str), str = retstr, retstr = 0;
             }
         }
@@ -394,8 +422,7 @@ void *daemon_loop2(void *args) // launch permanent plugin process
 
 char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,char *cmd,char *arg,int32_t (*daemonfunc)(struct daemon_info *dp,int32_t permanentflag,char *cmd,char *jsonargs))
 {
-    struct daemon_info *dp;
-    char retbuf[1024]; int32_t i,delim,offset=0;
+    struct daemon_info *dp; cJSON *argjson; char retbuf[1024],*str; int32_t i,delim,offset=0;
     //printf("launch daemon.(%s)\n",plugin);
     if ( Numdaemons >= sizeof(Daemoninfos)/sizeof(*Daemoninfos) )
         return(clonestr("{\"error\":\"too many daemons, cant create anymore\"}"));
@@ -418,6 +445,15 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
             if ( plugin[i] == delim )
                 offset = i+1;
         strcpy(dp->name,plugin+offset);
+    }
+    if ( arg != 0 && (argjson= cJSON_Parse(arg)) != 0 )
+    {
+        if ( (str= jstr(argjson,"name")) != 0 )
+        {
+            printf("OVERRIDE name from (%s) -> (%s)\n",dp->name,str);
+            safecopy(dp->name,str,sizeof(dp->name));
+        }
+        free(argjson);
     }
     dp->daemonid = (uint64_t)(milliseconds() * 1000000) & (~(uint64_t)3) ^ *(int32_t *)plugin;
     //memset(&dp->perm,0xff,sizeof(dp->perm));

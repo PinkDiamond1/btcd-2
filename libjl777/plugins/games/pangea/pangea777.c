@@ -1104,24 +1104,43 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
     return(array);
 }
 
-int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uint64_t my64bits,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers)
+int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uint64_t my64bits,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers,cJSON *json)
 {
-    char *addrstr,*ciphers,*cardpubs,*sharenrs; uint8_t p2shtype; cJSON *array; struct InstantDEX_quote *iQ = 0;
-    int32_t createdflag,addrtype,i,j,r,num=0,myind = -1; uint64_t addrs[512],quoteid = 0; struct pangea_info *sp;
+    char *addrstr,*ciphers,*cardpubs,*sharenrs; uint8_t p2shtype; cJSON *array,*bids; struct InstantDEX_quote *iQ = 0;
+    int32_t createdflag,addrtype,i,j,n,r,num=0,myind = -1; uint64_t addrs[512],quoteid = 0; struct pangea_info *sp;
     if ( base == 0 || base[0] == 0 || maxplayers < 2 || maxplayers > 9 || ipaddr == 0 || ipaddr[0] == 0 || port == 0 )
     {
         sprintf(retbuf,"{\"error\":\"bad params\"}");
-        printf("%s",retbuf);
+        printf("%s\n",retbuf);
         return(-1);
     }
     addrtype = coin777_addrtype(&p2shtype,base);
-    if ( (num= uniq_specialaddrs(&myind,addrs,sizeof(addrs)/sizeof(*addrs),base,"pangea",addrtype)) < 2 )
+    if ( (bids= jarray(&n,json,"bids")) != 0 )
     {
-        sprintf(retbuf,"need at least 2 players\n");
-        printf("%s",retbuf);
-        return(-1);
+        for (i=num=0; i<n; i++)
+        {
+            if ( (addrs[num]= j64bits(jitem(bids,i),"offerNXT")) != 0 )
+            {
+                for (j=0; j<num; j++)
+                    if ( addrs[j] == addrs[num] )
+                        break;
+                if ( j == num )
+                {
+                    if ( addrs[num] == my64bits )
+                        myind = num;
+                    printf("%llu ",(long long)addrs[num]);
+                    num++;
+                }
+            }
+        }
     }
-    printf("pangea_start(%s) myind.%d num.%d [%s%s:%d\n",base,myind,num,transport,ipaddr,port);
+    /*if ( (num= uniq_specialaddrs(&myind,addrs,sizeof(addrs)/sizeof(*addrs),base,"pangea",addrtype)) < 2 )
+    {
+        sprintf(retbuf,"{\"error\":\"need at least 2 players\"}");
+        printf("%s\n",retbuf);
+        return(-1);
+    }*/
+    printf("pangea_start(%s) myind.%d num.%d [%s%s:%d]\n",base,myind,num,transport,ipaddr,port);
     if ( (i= myind) > 0 )
     {
         addrs[i] = addrs[0];
@@ -1386,7 +1405,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     maxplayers = 2;
                 else if ( maxplayers > 9 )
                     maxplayers = 9;
-                pangea_start(retbuf,plugin->transport,plugin->ipaddr,plugin->pangeaport,plugin->nxt64bits,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers);
+                if ( jstr(json,"resubmit") == 0 )
+                    sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"maxplayers\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers);
+                else pangea_start(retbuf,plugin->transport,plugin->ipaddr,plugin->pangeaport,plugin->nxt64bits,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers,json);
             } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
         }
         else if ( strcmp(methodstr,"newtable") == 0 )

@@ -331,9 +331,15 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
             myipaddr = cJSON_str(cJSON_GetObjectItem(obj,"ipaddr"));
             if ( is_ipaddr(myipaddr) != 0 )
                 strcpy(plugin->ipaddr,myipaddr);
+            if ( plugin->ipaddr[0] == 0 )
+                strcpy(plugin->ipaddr,"127.0.0.1");
             plugin->port = juint(obj,"port");
             if ( (plugin->pangeaport= juint(obj,"pangeaport")) == 0 )
                 plugin->pangeaport = 7899;
+            if ( jstr(obj,"transport") != 0 )
+                safecopy(plugin->transport,jstr(obj,"transport"),sizeof(plugin->transport));
+            if ( plugin->transport[0] == 0 )
+                strcpy(plugin->transport,"tcp");
         }
     }
     //fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%s) [%s] %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);

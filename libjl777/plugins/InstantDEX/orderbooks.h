@@ -1016,7 +1016,6 @@ struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct 
             printf("prices777_addbundle.(%s) (%s/%s).%s %llu %llu\n",prices->contract,prices->base,prices->rel,prices->exchange,(long long)prices->baseid,(long long)prices->relid);
             BUNDLE.num++;
         } else printf("no prices\n");
-        printf("return prices.%p\n",prices);
         *validp = BUNDLE.num;
         return(prices);
     }
