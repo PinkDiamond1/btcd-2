@@ -361,7 +361,7 @@ int32_t jumblr_idle(struct plugin_info *plugin)
         {
             if ( (coin= COINS.LIST[i]) != 0 )
             {
-                if ( coin->jpubP[0] == 0 && coin->jvinkey == 0 && coin->junspent == 0 && coin->jvintxid[0] == 0 && coin->jvin < 0 && coin->jscriptPubKey[0] == 0 && coin->jvinaddr[0] >= 0 )
+                if ( plugin->ready > 1 && coin->jpubP[0] == 0 && coin->jvinkey == 0 && coin->junspent == 0 && coin->jvintxid[0] == 0 && coin->jvin < 0 && coin->jscriptPubKey[0] == 0 && coin->jvinaddr[0] >= 0 )
                 {
                     strcpy(coin->jvintxid,"error getting unspent txid");
                     if ( (coin->jvin= jumblr_vintxid(&coin->junspent,coin->jvinaddr,coin->jscriptPubKey,coin->jvintxid,coin,jumblr_amount(coin,SATOSHIDEN*10000),-1)) >= 0 )
@@ -890,6 +890,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         coin777_find("BTCD",1);
         //coin777_find("LTC",1);
         plugin->sleepmillis = 10;
+        plugin->ready = 1;
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
     else if ( SUPERNET.iamrelay == 0 )
@@ -906,6 +907,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         if ( plugin_result(retbuf,json,tag) > 0 )
             return((int32_t)strlen(retbuf));
+        plugin->ready++;
         if ( methodstr == 0 || methodstr[0] == 0 )
         {
             printf("(%s) has not method\n",jsonstr);

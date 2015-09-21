@@ -71,7 +71,7 @@ struct plugin_info
     char bindaddr[64],connectaddr[64],ipaddr[64],name[64],NXTADDR[64],NXTACCT[64],SERVICENXT[64],NXTACCTSECRET[2048];
     struct protocol_info protocol;
     int32_t pushsock,pullsock;
-    uint32_t permanentflag,ppid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote;
+    uint32_t permanentflag,ppid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote,ready;
     uint16_t port,pangeaport;
     portable_mutex_t mutex;
     uint64_t daemonid,myid,nxt64bits; uint8_t mypriv[32],mypub[32],recvbuf[65536*2];
