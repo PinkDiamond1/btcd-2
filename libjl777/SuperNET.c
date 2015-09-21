@@ -85,7 +85,7 @@ void *issue_cgicall(void *_ptr)
         destNXT = cJSON_str(cJSON_GetObjectItem(ptr->json,"destNXT"));
         if ( strcmp(plugin.buf,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"remoteaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("call busdata_sync.(%s)\n",ptr->jsonstr);
             //printf("destNXT.(%s)\n",destNXT!=0?destNXT:"");
             str = busdata_sync(&nonce,ptr->jsonstr,broadcaststr,destNXT);
