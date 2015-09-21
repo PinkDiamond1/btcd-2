@@ -261,7 +261,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         return(0);
     }
     safecopy(coin->name,coinstr,sizeof(coin->name));
-    coin->jvin = -1;
+    //coin->jvin = -1;
     if ( argjson == 0 || strcmp(coinstr,"NXT") == 0 )
     {
         coin->usep2sh = 1;

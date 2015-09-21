@@ -365,10 +365,16 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
             iQ->s.vol = 1.;
         if ( iQ->s.baseamount == 0 )
             iQ->s.baseamount = iQ->s.vol * SATOSHIDEN;
-        if ( localaccess != 0 )
+        if ( localaccess != 0 && strcmp(exchangestr->buf,"jumblr") == 0 )
         {
             if ( (coin= coin777_find(base->buf,0)) != 0 )
             {
+                if ( coin->jvin == 0 && coin->jvinaddr[0] == 0 )
+                {
+                    coin->jvin = -1;
+                    printf("initial state for jumblr.%s detected\n",coin->name);
+                    sleep(5);
+                }
                 if ( coin->jvin < 0 )
                 {
                     printf("no %s unspents available for jumblr/pangea jvin.%d %.8f\n",coin->name,coin->jvin,dstr(coin->junspent));
@@ -385,7 +391,7 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
             }
             else
             {
-                printf("%s not initialized for jumblr/pangea\n",base->buf);
+                printf("%s not initialized for jumblr\n",base->buf);
                 return(-1);
             }
         }
