@@ -340,7 +340,11 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     else if ( strcmp(coin->name,"LTC") == 0 )
         coin->minconfirms = 1, coin->mgw.txfee = 100000, coin->usep2sh = 0;
     else if ( strcmp(coin->name,"BTCD") == 0 )
+    {
+        cJSON *pangea_walletitem(cJSON *walletitem,struct coin777 *coin);
         coin->mgw.txfee = 1000000;//, strcpy(coin->donationaddress,"RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM");
+        free_json(pangea_walletitem(0,coin));
+    }
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu opreturn.%d oldformat.%d\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits,coin->mgw.do_opreturn,coin->mgw.oldtx_format);
     if ( strcmp(coin->name,"NXT") != 0 )
     {
