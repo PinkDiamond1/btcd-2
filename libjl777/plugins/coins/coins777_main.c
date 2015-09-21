@@ -331,9 +331,11 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     coin->addrtype = coin777_addrtype(&coin->p2shtype,coin->name);
     if ( strcmp(coin->name,"NXT") != 0 )
     {
+        cJSON *pangea_walletitem(cJSON *walletitem,struct coin777 *coin);
         extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
         set_atomickeys(coin);
-        printf("COIN.%s serverport.(%s) userpass.(%s) %s/%s %s/%s\n",coin->name,coin->serverport,coin->userpass,coin->atomicrecv,coin->atomicrecvpubkey,coin->atomicsend,coin->atomicsendpubkey);
+        free_json(pangea_walletitem(0,coin));
+        printf("COIN.%s serverport.(%s) userpass.(%s) %s/%s %s/%s pangea.(%s)\n",coin->name,coin->serverport,coin->userpass,coin->atomicrecv,coin->atomicrecvpubkey,coin->atomicsend,coin->atomicsendpubkey,coin->pangeacoinaddr);
     }
     if ( strcmp(coin->name,"BTC") == 0 )
     {
@@ -347,9 +349,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         coin->minconfirms = 1, coin->mgw.txfee = 100000, coin->usep2sh = 0;
     else if ( strcmp(coin->name,"BTCD") == 0 )
     {
-        cJSON *pangea_walletitem(cJSON *walletitem,struct coin777 *coin);
         coin->mgw.txfee = 1000000;//, strcpy(coin->donationaddress,"RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM");
-        free_json(pangea_walletitem(0,coin));
     }
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu opreturn.%d oldformat.%d\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits,coin->mgw.do_opreturn,coin->mgw.oldtx_format);
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
