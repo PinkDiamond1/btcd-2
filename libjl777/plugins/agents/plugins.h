@@ -569,7 +569,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         }
         if ( localaccess == 0 && dp->allowremote == 0 )
         {
-            fprintf(stderr,"%s allowremote.%d isremote.%d\n",dp->plugin,dp->allowremote,!localaccess);
+            fprintf(stderr,"%s allowremote.%d isremote.%d\n",dp->name,dp->allowremote,!localaccess);
             sprintf(retbuf,"{\"error\":\"cant remote call plugin\",\"ipaddr\":\"%s\",\"plugin\":\"%s\",\"daemonid\":\"%llu\",\"myid\":\"%llu\"}",SUPERNET.myipaddr,plugin,(long long)dp->daemonid,(long long)dp->myid);
             return(clonestr(retbuf));
         }
