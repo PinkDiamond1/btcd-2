@@ -201,10 +201,10 @@ cJSON *pangea_walletitem(cJSON *walletitem,struct coin777 *coin)
     char *addr; struct destbuf pubkey;
     if ( walletitem == 0 )
         walletitem = cJSON_CreateObject();
-    printf("call get_acct_coinaddr.%s (%s) (%s)\n",coin->name,coin->serverport,coin->userpass);
+    //printf("call get_acct_coinaddr.%s (%s) (%s)\n",coin->name,coin->serverport,coin->userpass);
     if ( (coin->pangeapubkey[0] == 0 || coin->pangeacoinaddr[0] == 0) && (addr= get_acct_coinaddr(coin->pangeacoinaddr,coin->name,coin->serverport,coin->userpass,"pangea")) != 0 )
     {
-        printf("get_pubkey\n");
+        //printf("get_pubkey\n");
         get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coin->pangeacoinaddr);
         strcpy(coin->pangeapubkey,pubkey.buf);
     }
@@ -276,7 +276,7 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
     {
         sprintf(buf + strlen(buf) - 1,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(iQ->s.isask != 0) ? "ask" : "bid");
     }
-    printf("InstantDEX_str.(%s)\n",buf);
+    //printf("InstantDEX_str.(%s)\n",buf);
     if ( (json= cJSON_Parse(buf)) != 0 )
     {
         if ( walletstr == 0 )
@@ -297,11 +297,11 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
                 jadd(json,"wallet",walletitem);
                 strcpy(walletstr,jprint(walletitem,0));
             }
-printf("exchange.(%s) iswallet.%d (%s) base.(%s) coin.%p (%s)\n",exchange,iQ->s.wallet,walletstr,base,coin,jprint(json,0));
+//printf("exchange.(%s) iswallet.%d (%s) base.(%s) coin.%p (%s)\n",exchange,iQ->s.wallet,walletstr,base,coin,jprint(json,0));
         } else printf("InstantDEX_str cant find exchangeid.%d\n",iQ->exchangeid);
         str = jprint(json,1);
         strcpy(buf,str);
-        printf("str.(%s) %p\n",buf,buf);
+        //printf("str.(%s) %p\n",buf,buf);
         free(str);
     } else printf("InstantDEX_str cant parse.(%s)\n",buf);
     if ( buf == _buf )
@@ -695,7 +695,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         secret = SUPERNET.NXTACCTSECRET;
         activenxt = SUPERNET.NXTADDR;
     }
-printf("placebidask.(%s)\n",jprint(origjson,0));
+//printf("placebidask.(%s)\n",jprint(origjson,0));
     if ( (obj= jobj(origjson,"wallet")) != 0 )
     {
         str = jprint(obj,1);
@@ -710,7 +710,7 @@ printf("placebidask.(%s)\n",jprint(origjson,0));
         printf("exchangestr.%s id.%d\n",exchangestr,iQ->exchangeid);
         return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
     }
-    printf("walletstr.(%s)\n",walletstr);
+    //printf("walletstr.(%s)\n",walletstr);
     if ( (prices= prices777_find(&inverted,iQ->s.baseid,iQ->s.relid,exchangestr)) == 0 )
         prices = prices777_poll(exchangestr,name,base,iQ->s.baseid,rel,iQ->s.relid);
     if ( prices != 0 )
@@ -731,18 +731,18 @@ printf("placebidask.(%s)\n",jprint(origjson,0));
             price = 1. / price;
             printf("price inverted (%f %f) -> (%f %f)\n",iQ->s.price,iQ->s.vol,price,volume);
         }
-printf("dir.%d price %f vol %f isask.%d remoteaddr.%p\n",dir,price,volume,iQ->s.isask,remoteaddr);
+//printf("dir.%d price %f vol %f isask.%d remoteaddr.%p\n",dir,price,volume,iQ->s.isask,remoteaddr);
         if ( remoteaddr == 0 )
         {
             if ( is_specialexchange(exchangestr) == 0 )
                 return(prices777_trade(0,activenxt,secret,prices,dir,price,volume,iQ,0,iQ->s.quoteid,extra));
-            printf("check automatch\n");
+            //printf("check automatch\n");
             if ( strcmp(exchangestr,"wallet") != 0 && strcmp(exchangestr,"jumblr") != 0 && strcmp(exchangestr,"pangea") != 0 && iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,activenxt,secret)) != 0 )
                 return(retstr);
             if ( strcmp(SUPERNET.NXTACCTSECRET,secret) != 0 )
                 return(clonestr("{\"error\":\"cant do queued requests with non-default accounts\"}"));
             retstr = InstantDEX_str(walletstr,0,1,iQ);
-            printf("create_iQ.(%llu) quoteid.%llu walletstr.(%s) %p\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr,walletstr);
+            //printf("create_iQ.(%llu) quoteid.%llu walletstr.(%s) %p\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr,walletstr);
             iQ = create_iQ(iQ,walletstr);
             printf("local got create_iQ.(%llu) quoteid.%llu wallet.(%s) baseamount %llu iswallet.%d\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr,(long long)iQ->s.baseamount,iQ->s.wallet);
             prices777_InstantDEX(prices,MAX_DEPTH);

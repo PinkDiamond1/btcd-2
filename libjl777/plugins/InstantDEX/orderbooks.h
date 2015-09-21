@@ -1009,7 +1009,7 @@ struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct 
             {
                 printf("First pair for (%s), start polling]\n",exchange_str(prices->exchangeid));
                 exchange->polling = 1;
-                if ( strcmp(exchange->name,"wallet") != 0 && strcmp(exchange->name,"jumblr") != 0 && strcmp(exchange->name,"pangea") != 0 )
+                if ( strcmp(exchange->name,"wallet") != 0 )//&& strcmp(exchange->name,"jumblr") != 0 && strcmp(exchange->name,"pangea") != 0 )
                     portable_thread_create((void *)prices777_exchangeloop,&Exchanges[prices->exchangeid]);
             }
             BUNDLE.ptrs[BUNDLE.num] = prices;
@@ -1380,7 +1380,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
 {
     cJSON *json; double hbla = 0.;
-    if ( strcmp(prices->exchange,INSTANTDEX_NAME) == 0 && (json= InstantDEX_orderbook(prices)) != 0 )
+    if ( (json= InstantDEX_orderbook(prices)) != 0 ) // strcmp(prices->exchange,INSTANTDEX_NAME) == 0 && 
     {
         if ( Debuglevel > 2 )
             printf("InstantDEX.(%s)\n",jprint(json,0));
