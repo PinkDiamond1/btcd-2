@@ -707,6 +707,7 @@ printf("placebidask.(%s)\n",jprint(origjson,0));
         printf("exchangestr.%s id.%d\n",exchangestr,iQ->exchangeid);
         return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
     }
+    printf("walletstr.(%s)\n",walletstr);
     if ( (prices= prices777_find(&inverted,iQ->s.baseid,iQ->s.relid,exchangestr)) == 0 )
         prices = prices777_poll(exchangestr,name,base,iQ->s.baseid,rel,iQ->s.relid);
     if ( prices != 0 )
@@ -753,7 +754,7 @@ printf("placebidask.(%s)\n",jprint(origjson,0));
             }
             return(retstr);
         }
-    }
+    } else printf("cant find prices\n");
     if ( retstr == 0 )
         retstr = clonestr("{\"error\":\"cant get prices ptr\"}");
     return(retstr);

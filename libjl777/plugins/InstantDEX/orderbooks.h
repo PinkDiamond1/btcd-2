@@ -1379,7 +1379,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
 {
     cJSON *json; double hbla = 0.;
-    if ( (json= InstantDEX_orderbook(prices)) != 0 )
+    if ( strcmp(prices->exchange,INSTANTDEX_NAME) == 0 && (json= InstantDEX_orderbook(prices)) != 0 )
     {
         if ( Debuglevel > 2 )
             printf("InstantDEX.(%s)\n",jprint(json,0));

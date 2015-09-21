@@ -911,12 +911,12 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         return(0);
     }
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
+printf("call addbundle\n");
     if ( (prices= prices777_addbundle(&valid,0,0,exchangestr,baseid,relid)) != 0 )
     {
         printf("found (%s/%s).%s %llu %llu in slot-> %p\n",base,rel,exchangestr,(long long)baseid,(long long)relid,prices);
         return(prices);
     }
-printf("didnt find (%s/%s)\n",base,rel);
     if ( (exchange= find_exchange(&exchangeid,exchangestr)) == 0 )
     {
         printf("cant add exchange.(%s)\n",exchangestr);
@@ -931,10 +931,7 @@ printf("didnt find (%s/%s)\n",base,rel);
         }
     }
     if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
-    {
-        printf("call addbundle\n");
         prices777_addbundle(&valid,1,prices,0,0,0);
-    }
     return(prices);
 }
 
