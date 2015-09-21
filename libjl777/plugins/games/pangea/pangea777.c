@@ -497,7 +497,7 @@ bits256 pangea_deal(struct pangea_deck *deck,int32_t myind,int32_t cardi,int32_t
                 cipher = fcontract(fmul(fexpand(player->xoverz[playerj][i]),fexpand(cipher)));
                 //printf("matched %d -> %llx/%llx\n",i,(long long)cipher.txid,(long long)cards[cardi].ciphers[j-1][playerj].txid);
                 break;
-            } 
+            }
         }
         else
         {
