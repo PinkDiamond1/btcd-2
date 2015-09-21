@@ -68,7 +68,7 @@ struct protocol_info
 
 struct plugin_info
 {
-    char bindaddr[64],connectaddr[64],ipaddr[64],name[64],NXTADDR[64],NXTACCT[64],SERVICENXT[64],NXTACCTSECRET[2048];
+    char bindaddr[64],connectaddr[64],ipaddr[64],transport[16],name[64],NXTADDR[64],NXTACCT[64],SERVICENXT[64],NXTACCTSECRET[2048];
     struct protocol_info protocol;
     int32_t pushsock,pullsock;
     uint32_t permanentflag,ppid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote,ready;
