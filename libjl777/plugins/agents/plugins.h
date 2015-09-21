@@ -431,7 +431,7 @@ char *launch_daemon(char *plugin,char *ipaddr,uint16_t port,int32_t websocket,ch
         free_daemon_info(dp);
         return(clonestr("{\"error\":\"portable_thread_create couldnt create daemon\"}"));
     }
-    sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\"}\n",(long long)dp->daemonid);
+    sprintf(retbuf,"{\"result\":\"launched\",\"daemonid\":\"%llu\",\"agent\":\"%s\"}\n",(long long)dp->daemonid,plugin);
     return(clonestr(retbuf));
  }
 

@@ -274,6 +274,7 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
     {
         sprintf(buf + strlen(buf) - 1,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(iQ->s.isask != 0) ? "ask" : "bid");
     }
+    printf("InstantDEX_str.(%s)\n",buf);
     if ( (json= cJSON_Parse(buf)) != 0 )
     {
         if ( walletstr == 0 )
@@ -294,7 +295,7 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
                 jadd(json,"wallet",walletitem);
                 strcpy(walletstr,jprint(walletitem,0));
             }
-            //printf("exchange.(%s) iswallet.%d (%s) base.(%s) coin.%p (%s)\n",exchange,iQ->s.wallet,walletstr,base,coin,jprint(json,0));
+printf("exchange.(%s) iswallet.%d (%s) base.(%s) coin.%p (%s)\n",exchange,iQ->s.wallet,walletstr,base,coin,jprint(json,0));
         }
         str = jprint(json,1);
         strcpy(buf,str);
@@ -714,7 +715,10 @@ printf("placebidask.(%s)\n",jprint(origjson,0));
     {
         price = iQ->s.price, volume = iQ->s.vol;
         if ( price < SMALLVAL || volume < SMALLVAL )
+        {
+            printf("price %f volume %f error\n",price,volume);
             return(clonestr("{\"error\":\"prices777_trade invalid price or volume\"}\n"));
+        }
         if ( iQ->s.isask != 0 )
             dir = -1;
         else dir = 1;
@@ -725,11 +729,12 @@ printf("placebidask.(%s)\n",jprint(origjson,0));
             price = 1. / price;
             printf("price inverted (%f %f) -> (%f %f)\n",iQ->s.price,iQ->s.vol,price,volume);
         }
-        //printf("dir.%d price %f vol %f isask.%d\n",dir,price,volume,iQ->s.isask);
+printf("dir.%d price %f vol %f isask.%d remoteaddr.%p\n",dir,price,volume,iQ->s.isask,remoteaddr);
         if ( remoteaddr == 0 )
         {
             if ( is_specialexchange(exchangestr) == 0 )
                 return(prices777_trade(0,activenxt,secret,prices,dir,price,volume,iQ,0,iQ->s.quoteid,extra));
+            printf("check automatch\n");
             if ( strcmp(exchangestr,"wallet") != 0 && strcmp(exchangestr,"jumblr") != 0 && strcmp(exchangestr,"pangea") != 0 && iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,activenxt,secret)) != 0 )
                 return(retstr);
             if ( strcmp(SUPERNET.NXTACCTSECRET,secret) != 0 )
