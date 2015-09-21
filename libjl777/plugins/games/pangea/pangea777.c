@@ -53,7 +53,7 @@ struct pangea_info
     uint32_t timestamp,numaddrs;
     uint64_t basebits,bigblind,ante,addrs[9],tableid,quoteid;
     struct pangea_deck deck;
-    char base[16],ipaddr[64],endpoint[128]; uint8_t sendbuf[65536*2]; uint32_t statetimestamp;
+    char base[16],transport[16],ipaddr[64],endpoint[128]; uint8_t sendbuf[65536*2]; uint32_t statetimestamp;
     int32_t readyflag,button,myind,done,pushsock,pullsock,pubsock,subsock,sendlen,mask,layers,didturn,state,states[9]; uint16_t port;
 } *TABLES[100];
 STRUCTNAME PANGEA;
@@ -1170,10 +1170,12 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
                 transport = "tcp";
             strcpy(sp->transport,transport), strcpy(sp->ipaddr,ipaddr), sp->port = port;
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port+1);
+            printf("PULL from (%s)\n",sp->endpoint);
             sp->pullsock = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             sp->pubsock = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
-            sprintf(retbuf,"{\"myind\":%d,\"endpoint\":\"%s://%s:%d\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
+            printf("PUB to (%s)\n",sp->endpoint);
+            sprintf(retbuf,"{\"myind\":%d,\"endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
             sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
             free(addrstr), free(ciphers), free(cardpubs), free(sharenrs);
@@ -1186,11 +1188,11 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
 
 char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
 {
-    int32_t createdflag,num,i,n,addrtype,port,myind = -1; uint64_t tableid,quoteid=0,addrs[9]; uint8_t p2shtype; bits256 bp;
-    char *base,*ipaddr,*ciphers,*permipubs,cmd[512]; uint32_t timestamp; struct pangea_info *sp; cJSON *array; struct InstantDEX_quote *iQ;
+    int32_t createdflag,num,i,n,addrtype,myind = -1; uint64_t tableid,quoteid=0,addrs[9]; uint8_t p2shtype; bits256 bp;
+    char *base,*endpoint,*ciphers,*permipubs,cmd[512]; uint32_t timestamp; struct pangea_info *sp; cJSON *array; struct InstantDEX_quote *iQ;
     if ( (tableid= j64bits(json,"tableid")) != 0 && (base= jstr(json,"base")) != 0 && (timestamp= juint(json,"timestamp")) != 0 )
     {
-        if ( (array= jarray(&num,json,"addrs")) == 0 || num < 3 || num > 9 )
+        if ( (array= jarray(&num,json,"addrs")) == 0 || num < 2 || num > 9 )
         {
             printf("no address or illegal num.%d\n",num);
             return(clonestr("{\"error\":\"no addrs or illegal numplayers\"}"));
@@ -1246,14 +1248,16 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     pangea_send(sp->pushsock,cmd,(int32_t)strlen(cmd)+1);
                     free(permipubs);
                 }
-                if ( (ipaddr= jstr(json,"ipaddr")) != 0 && (port= juint(json,"port")) != 0 )
+                if ( (endpoint= jstr(json,"endpoint")) != 0 )
                 {
-                    strcpy(sp->ipaddr,ipaddr), sp->port = port;
-                    sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port+1);
-                    sp->pushsock = nn_createsocket(sp->endpoint,1,"NN_PUSH",NN_PUSH,sp->port,10,10);
-                    sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
+                    strcpy(sp->endpoint,endpoint);
+                    printf("SUB from (%s)\n",sp->endpoint);
                     sp->subsock = nn_createsocket(sp->endpoint,1,"NN_SUB",NN_PUB,sp->port,10,10);
                     nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
+                    sp->endpoint[strlen(sp->endpoint)-1]++;
+                    printf("PUSH to (%s)\n",sp->endpoint);
+                    sp->pushsock = nn_createsocket(sp->endpoint,1,"NN_PUSH",NN_PUSH,sp->port,10,10);
+                    sp->endpoint[strlen(sp->endpoint)-1]--;
                 }
                 if ( sp->pushsock >= 0 )
                 {
