@@ -1131,7 +1131,7 @@ int32_t prices777_init(char *jsonstr)
     for (i=0; i<MAX_EXCHANGES; i++)
     {
         exchangeptr = &Exchanges[i];
-        if ( (exchangeptr->refcount > 0 || strcmp(exchangeptr->name,"unconf") == 0) && strcmp(exchangeptr->name,"pangea") != 0 && strcmp(exchangeptr->name,"jumblr") != 0 )
+        if ( (exchangeptr->refcount > 0 || strcmp(exchangeptr->name,"unconf") == 0) )//&& strcmp(exchangeptr->name,"pangea") != 0 && strcmp(exchangeptr->name,"jumblr") != 0 )
             portable_thread_create((void *)prices777_exchangeloop,exchangeptr);
     }
     return(0);
