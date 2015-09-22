@@ -1228,8 +1228,8 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *transport,cha
                 transport = "tcp";
             strcpy(sp->transport,transport), strcpy(sp->ipaddr,ipaddr), sp->port = port;
             sprintf(sp->endpoint,"%s://%s:%u",sp->transport,sp->ipaddr,sp->port+1);
-            plugin->pullsock = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
-            printf("PULL.%d from (%s)\n",plugin->pullsock,sp->endpoint);
+            plugin->pangeapull = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
+            printf("PULL.%d from (%s)\n",plugin->pangeapull,sp->endpoint);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             plugin->pangeapub = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
             sleep(3);
