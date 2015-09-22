@@ -294,7 +294,7 @@ int32_t poll_daemons()
                 process_plugin_message(dp,clonestr(msg),(int32_t)strlen(msg)+1);
             else printf("poll_daemons cant find daemonid.%llu instanceid.%llu (%s)\n",(long long)daemonid,(long long)instanceid,msg);
             free_json(json);
-        } else printf("poll_daemons couldnt parse.(%s)\n",msg);
+        } else printf("poll_daemons supernet pullsock.%d couldnt parse.(%s)\n",SUPERNET.pullsock,msg);
         nn_freemsg(msg);
         processed++;
     }
