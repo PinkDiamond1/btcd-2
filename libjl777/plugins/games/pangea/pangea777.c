@@ -615,12 +615,12 @@ bits256 pangea_pubkeys(struct plugin_info *plugin,struct pangea_info *sp,cJSON *
 
 int32_t pangea_encode(struct plugin_info *plugin,struct pangea_info *sp,cJSON *json,int32_t permiflag)
 {
-    bits256 ciphers[52*10]; int32_t otherind,n=0,i,k,nonz; cJSON *array; struct pangea_card *cards;
+    bits256 ciphers[52*10]; int32_t otherind,n=0,i,k,val,nonz; cJSON *array; struct pangea_card *cards;
     cards = (permiflag == 0) ? sp->deck.cards : sp->deck.permi;
     sp->layers |= (1 << permiflag);
     if ( (otherind= juint(json,"myind")) >= 0 && otherind < sp->deck.numplayers && (array= jarray(&n,json,"ciphers")) != 0 )
     {
-        if ( pangea_loadciphers(ciphers,array,n) == n && n == ((permiflag == 0) ? sp->deck.numplayers : 1) * 52 )
+        if ( (val= pangea_loadciphers(ciphers,array,n)) == n && n == ((permiflag == 0) ? sp->deck.numplayers : 1) * 52 )
         {
             for (i=nonz=0; i<52; i++)
             {
@@ -631,7 +631,7 @@ int32_t pangea_encode(struct plugin_info *plugin,struct pangea_info *sp,cJSON *j
         }
         else
         {
-            printf("mismatched loadciphers for n.%d\n",n);
+            printf("mismatched loadciphers for n.%d val.%d permiflag.%d %d\n",n,val,permiflag,((permiflag == 0) ? sp->deck.numplayers : 1) * 52);
             return(0);
         }
     }
