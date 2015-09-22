@@ -940,7 +940,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     if ( flag == 0 )
                         queue_enqueue("pangeaQ",&pangeaQ,queueitem(ptr));
                 }
-                else
+                else if ( 0 )
                 {
                     if ( sp->pushsock >= 0 )
                     {
