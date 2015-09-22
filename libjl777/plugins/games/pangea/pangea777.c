@@ -858,7 +858,7 @@ int32_t pangea_cmd(struct plugin_info *plugin,struct pangea_info *sp,char *cmdst
         return(pangea_checkstate(sp,sp->states[otherind]));
     }
     else if ( strcmp(cmdstr,"encode") == 0 )
-        return(pangea_encode(plugin,sp,json,0));
+        return(pangea_encode(plugin,sp,json,juint(json,"permiflag")));
     else if ( strcmp(cmdstr,"permipubs") == 0 )
     {
         sp->deck.permiprod = pangea_pubkeys(plugin,sp,json,"permipubs",sp->deck.permi);
