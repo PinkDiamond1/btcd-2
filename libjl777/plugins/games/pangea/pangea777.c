@@ -248,12 +248,12 @@ int32_t pangea_PM(struct pangea_info *sp,uint8_t *mypriv,uint8_t *mypub,char *de
         destpub = issue_getpubkey(&haspubkey,destNXT);
         seed = pangea_shared(*(bits256 *)mypriv,destpub);
     }
-    memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
+    memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
     data = calloc(1,len*2);
     _init_HUFF(hp,len*2,data);
     ramcoder_encoder(0,1,data,len*2,hp,&seed);
     datalen = hconv_bitlen(hp->bitoffset);
-    printf("len.%d -> datalen.%d\n",len,datalen);
+    printf("pangea_PM len.%d -> datalen.%d\n",len,datalen);
     if ( destNXT != 0 )
     {
         if ( (cipher= encode_str(&cipherlen,data,datalen,destpub,*(bits256 *)mypriv,*(bits256 *)mypub)) != 0 )
@@ -287,7 +287,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
     {
         memcpy(senderpub.bytes,src,sizeof(senderpub));
         seed = pangea_shared(*(bits256 *)mypriv,senderpub);
-        memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
+        memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
         _init_HUFF(hp,len - sizeof(senderpub),&src[sizeof(senderpub)]), hp->endpos = (len - sizeof(senderpub)) << 3;
         newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
     }
