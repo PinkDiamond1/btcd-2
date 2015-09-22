@@ -297,7 +297,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
     {
         seed = pangea_shared(*(bits256 *)mypriv,senderpub);
         memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
-        _init_HUFF(hp,len - sizeof(senderpub),&src[sizeof(senderpub)]), hp->endpos = (len - (int32_t)sizeof(senderpub)) << 3;
+        _init_HUFF(hp,len,buf), hp->endpos = (len << 3);
         newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
     }
     free(buf);
