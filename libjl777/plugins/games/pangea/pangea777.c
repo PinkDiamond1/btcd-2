@@ -441,7 +441,10 @@ int32_t pangea_ready(struct plugin_info *plugin,struct pangea_info *sp,cJSON *js
     otherind = juint(json,"myind");
     other64bits = j64bits(json,"my64bits");
     if ( otherind >= 0 && otherind < sp->deck.numplayers )
+    {
+        sp->states[otherind] = PANGEA_STATE_READY;
         sp->mask |= (1 << otherind);
+    }
     printf("pangea_ready tableid.%llu from %llu otherind.%d mask.%d\n",(long long)sp->tableid,(long long)other64bits,otherind,sp->mask);
     if ( sp->mask == (1 << sp->deck.numplayers)-1 )
     {
@@ -835,6 +838,7 @@ int32_t pangea_showcard(struct plugin_info *plugin,struct pangea_info *sp,cJSON 
 int32_t pangea_cmd(struct plugin_info *plugin,struct pangea_info *sp,char *cmdstr,cJSON *json)
 {
     int32_t otherind;
+    printf("pangea_cmd(%s) len.%ld\n",cmdstr,strlen(jprint(json,0)));
     if ( strcmp(cmdstr,"ready") == 0 )
         return(pangea_ready(plugin,sp,json));
     else if ( strcmp(cmdstr,"state") == 0 )
@@ -941,12 +945,12 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     if ( sp->pushsock >= 0 )
                     {
                         sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUSH.%d tableid.%llu myind.%d\"}",sp->pushsock,(long long)sp->tableid,sp->myind);
-                        pangea_send(sp->pushsock,buf,strlen(buf));
+                        pangea_send(sp->pushsock,buf,(int32_t)strlen(buf)+1);
                     }
                     if ( sp->pubsock >= 0 )
                     {
                         sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUB.%d tableid.%llu myind.%d\"}",sp->pubsock,(long long)sp->tableid,sp->myind);
-                        pangea_send(sp->pubsock,buf,strlen(buf));
+                        pangea_send(sp->pubsock,buf,(int32_t)strlen(buf)+1);
                     }
                 }
             }
@@ -1065,6 +1069,7 @@ struct pangea_info *pangea_create(uint64_t my64bits,int32_t *createdflagp,char *
     }
     if ( numaddrs > 0 && (sp= calloc(1,sizeof(*sp))) != 0 )
     {
+        sp->pushsock = sp->pullsock = sp->pubsock = sp->subsock = -1;
         sp->myind = i;
         for (i=0; i<numaddrs; i++)
             sp->states[i] = PANGEA_STATE_INIT;
@@ -1201,7 +1206,6 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
         {
             //iQ->s.pending = 1;
             memset(&sp->deck,0,sizeof(sp->deck));
-            sp->pushsock = sp->pullsock = sp->pubsock = sp->subsock = -1;
             for (j=0; j<num; j++)
             {
                 sp->deck.players[j].comm.priv = keypair(&sp->deck.players[j].comm.pub);
@@ -1232,6 +1236,7 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
             //sp->quoteid = iQ->s.quoteid;
             //printf("RETBUF.(%s) SENDBUF.(%s)\n",retbuf,sp->sendbuf);
             sp->states[sp->myind] = PANGEA_STATE_READY;
+            sp->mask |= (1 << sp->myind);
             return(0);
         }
     }
@@ -1278,8 +1283,8 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                 {
                     strcpy(sp->endpoint,endpoint);
                     sp->port = atoi(&sp->endpoint[strlen(sp->endpoint)-4]);
-                    printf("SUB %d from (%s) port.%d\n",sp->subsock,sp->endpoint,sp->port);
                     sp->subsock = nn_createsocket(sp->endpoint,0,"NN_SUB",NN_PUB,sp->port,10,10);
+                    printf("SUB %d from (%s) port.%d\n",sp->subsock,sp->endpoint,sp->port);
                     nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
                     strcpy(endbuf,sp->endpoint);
                     endbuf[strlen(endbuf)-4] = 0;
@@ -1326,7 +1331,9 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     free(permipubs);
                 }
                 sp->states[sp->myind] = PANGEA_STATE_READY;
+                sp->mask |= (1 << sp->myind) | 1;
                 sp->states[0] = PANGEA_STATE_READY;
+                return(clonestr("{\"result\":\"newtable created\"}"));
             }
         }
         else if ( createdflag == 0 )
