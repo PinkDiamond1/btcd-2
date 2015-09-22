@@ -247,6 +247,7 @@ int32_t pangea_send(int32_t sock,void *ptr,int32_t len)
 int32_t pangea_PM(struct plugin_info *plugin,struct pangea_info *sp,uint8_t *mypriv,uint8_t *mypub,char *destNXT,uint8_t *msg,int32_t len)
 {
     int32_t haspubkey,cipherlen,datalen; bits256 destpub,seed; uint8_t *data,*cipher; HUFF H,*hp = &H;
+    memset(destpub.bytes,0,sizeof(destpub));
     if ( destNXT != 0 )
     {
         destpub = issue_getpubkey(&haspubkey,destNXT);
@@ -257,7 +258,7 @@ int32_t pangea_PM(struct plugin_info *plugin,struct pangea_info *sp,uint8_t *myp
     _init_HUFF(hp,len*2,data);
     ramcoder_encoder(0,1,msg,len,hp,&seed);
     datalen = hconv_bitlen(hp->bitoffset);
-    printf("pangea_PM len.%d -> datalen.%d\n",len,datalen);
+    printf("pangea_PM len.%d -> datalen.%d destpub %llx my.(priv %llx pub.%llx)\n",len,datalen,(long long)destpub.txid,*(long long *)mypriv,*(long long *)mypub);
     if ( destNXT != 0 )
     {
         if ( (cipher= encode_str(&cipherlen,data,datalen,destpub,*(bits256 *)mypriv,*(bits256 *)mypub)) != 0 )
@@ -287,11 +288,13 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
     bits256 seed,senderpub; uint8_t *buf; int32_t newlen = -1; HUFF H,*hp = &H;
     printf("decrypt(%d)\n",len);
     buf = calloc(1,maxlen);
+    memcpy(senderpub.bytes,src,sizeof(senderpub));
     if ( decode_cipher((void *)buf,src,&len,mypriv) != 0 )
-        printf("pangea_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
+    {
+        printf("pangea_decrypt skip: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
+    }
     else
     {
-        memcpy(senderpub.bytes,src,sizeof(senderpub));
         seed = pangea_shared(*(bits256 *)mypriv,senderpub);
         memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
         _init_HUFF(hp,len - sizeof(senderpub),&src[sizeof(senderpub)]), hp->endpos = (len - (int32_t)sizeof(senderpub)) << 3;
@@ -960,7 +963,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     }
                 }
             }
-            if ( (counter++ % 1000) == 0 )
+            if ( (counter++ % 10000) == 0 )
                 printf("pangea states [%d %d %d] pullsock.%d subsock.%d\n",sp->states[0],sp->states[1],sp->states[2],plugin->pangeapull,sp->subsock);
             if ( sp->deck.numplayers == 2 )
             {
@@ -1235,7 +1238,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *transport,cha
             printf("PULL.%d from (%s)\n",plugin->pangeapull,sp->endpoint);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             plugin->pangeapub = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
-            sleep(3);
+            sleep(1);
             printf("PUB.%d to (%s)\n",plugin->pangeapub,sp->endpoint);
             sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"addrs\":%s,\"sharenrs\":%s,\"cardpubs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,addrstr,sharenrs,cardpubs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
@@ -1299,7 +1302,7 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     sprintf(endbuf2,"%s%u",endbuf,sp->port+1);
                     sp->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
                     printf("PUSH %d to (%s)\n",sp->pushsock,endbuf2);
-                    sleep(3);
+                    sleep(1);
                 }
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
