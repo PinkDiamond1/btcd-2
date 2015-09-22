@@ -1209,12 +1209,12 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             sp->pubsock = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
             printf("PUB to (%s)\n",sp->endpoint);
-            sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"cardpubs\":%s,\"addrs\":%s,\"sharenrs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,cardpubs,addrstr,sharenrs);
+            sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"addrs\":%s,\"sharenrs\":%s,\"cardpubs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,addrstr,sharenrs,cardpubs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
             sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
             free(addrstr), free(ciphers), free(cardpubs), free(sharenrs);
             //sp->quoteid = iQ->s.quoteid;
-            printf("RETBUF.(%s) SENDBUF.(%s)\n",retbuf,sp->sendbuf);
+            //printf("RETBUF.(%s) SENDBUF.(%s)\n",retbuf,sp->sendbuf);
             sp->states[sp->myind] = PANGEA_STATE_READY;
             return(0);
         }
@@ -1225,7 +1225,7 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
 char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
 {
     int32_t createdflag,num,i,n,addrtype,myind = -1; uint64_t tableid,quoteid=0,addrs[9]; uint8_t p2shtype;
-    char *base,*endpoint,*ciphers,*permipubs,cmd[512]; uint32_t timestamp; struct pangea_info *sp; cJSON *array; //struct InstantDEX_quote *iQ;
+    char *base,*endpoint,*ciphers,*permipubs,cmd[512],endbuf[128],endbuf2[128]; uint32_t timestamp; struct pangea_info *sp; cJSON *array; //struct InstantDEX_quote *iQ;
     if ( (tableid= j64bits(json,"tableid")) != 0 && (base= jstr(json,"base")) != 0 && (timestamp= juint(json,"timestamp")) != 0 )
     {
         if ( (array= jarray(&num,json,"addrs")) == 0 || num < 2 || num > 9 )
@@ -1239,14 +1239,15 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
             if ( addrs[i] == plugin->nxt64bits )
                 myind = i;
         }
-        free_json(array);
+        if ( myind < 0 )
+            return(clonestr("{\"error\":\"this table is not for me\"}"));
         if ( (sp= pangea_create(plugin->nxt64bits,&createdflag,base,timestamp,addrs,num,j64bits(json,"bigblind"),j64bits(json,"ante"))) == 0 )
         {
             printf("cant create table.(%s) numaddrs.%d\n",base,num);
             return(clonestr("{\"error\":\"cant create table\"}"));
         }
         sp->myind = myind;
-        if ( createdflag != 0 && addrs[sp->myind] == plugin->nxt64bits )
+        if ( myind >= 0 && createdflag != 0 && addrs[sp->myind] == plugin->nxt64bits )
         {
             /*if ( quoteid == 0 )
             {
@@ -1262,29 +1263,33 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     strcpy(sp->endpoint,endpoint);
                     sp->port = atoi(&sp->endpoint[strlen(sp->endpoint)-4]);
                     printf("SUB from (%s) port.%d\n",sp->endpoint,sp->port);
-                    sp->subsock = nn_createsocket(sp->endpoint,1,"NN_SUB",NN_PUB,sp->port,10,10);
+                    sp->subsock = nn_createsocket(sp->endpoint,0,"NN_SUB",NN_PUB,sp->port,10,10);
                     nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
-                    sp->endpoint[strlen(sp->endpoint)-1]++;
-                    printf("PUSH to (%s)\n",sp->endpoint);
-                    sp->pushsock = nn_createsocket(sp->endpoint,1,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
-                    sp->endpoint[strlen(sp->endpoint)-1]--;
+                    strcpy(endbuf,sp->endpoint);
+                    endbuf[strlen(endbuf)-4] = 0;
+                    sprintf(endbuf2,"%s%u",endbuf,sp->port+1);
+                    printf("PUSH to (%s)\n",endbuf2);
+                    sp->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
                 }
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
                 sp->deck.M = juint(json,"M");
                 //iQ->s.pending = 1;
-                sp->deck.checkprod = pangea_pubkeys(plugin,sp,json,"cardpubs",sp->deck.cards);
-                if ( (array= jarray(&n,json,"sharenrs")) == 0 || n != sp->deck.N || num != sp->deck.N )
+                array = jobj(json,"sharnrs");
+                printf("sharnrs.%p %d %d\n",array,array==0?0:is_cJSON_Array(array),array==0?0:cJSON_GetArraySize(array));
+                if ( array == 0 || is_cJSON_Array(array) == 0 || (n= cJSON_GetArraySize(array)) != sp->deck.N || num != sp->deck.N )
                 {
                     printf("invalid sharenrs n.%d vs N.%d num.%d myind.%d (%s)\n",n,sp->deck.N,num,sp->myind,jprint(json,0));
                     return(clonestr("{\"error\":\"invalid sharenrs or mismatched numplayers\"}"));
                 }
+                printf("sharenrs n.%d vs N.%d num.%d myind.%d (%s)\n",n,sp->deck.N,num,sp->myind,jprint(json,0));
                 for (i=0; i<n; i++)
                 {
                     sp->deck.sharenrs[i] = juint(jitem(array,i),0);
                     printf("%d ",sp->deck.sharenrs[i]);
                 }
                 printf("sharenrs\n");
+                sp->deck.checkprod = pangea_pubkeys(plugin,sp,json,"cardpubs",sp->deck.cards);
                 sp->mask = ((1 << sp->myind) | 1);
                 if ( sp->pushsock >= 0 )
                 {
