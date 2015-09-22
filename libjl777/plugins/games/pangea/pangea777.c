@@ -1443,7 +1443,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         argjson = cJSON_Parse(jsonstr);
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
         free_json(argjson);
-        printf("my64bits %llu ipaddr.%s\n",(long long)plugin->nxt64bits,plugin->ipaddr);
+        printf("my64bits %llu ipaddr.%s mypriv.%02x mypub.%02x\n",(long long)plugin->nxt64bits,plugin->ipaddr,plugin->mypriv[0],plugin->mypub[0]);
         //pangea_main();
     }
     else
