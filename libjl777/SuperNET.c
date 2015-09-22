@@ -481,7 +481,7 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
         conv_rsacctstr(NXTacct,nxt64bits);
     char pubkeystr[128];
     init_hexbytes_noT(pubkeystr,mypubkey,32);
-    printf("(%s) (%s) (%s) pubkey.(%s) NXTAPIURL.[%s]\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>",pubkeystr,SUPERNET.NXTAPIURL);
+    printf("(%s) (%s) (%s) pubkey.(%s) [%02x %02x] NXTAPIURL.[%s]\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>",pubkeystr,*(uint8_t *)myprivkey,*(uint8_t *)mypubkey,SUPERNET.NXTAPIURL);
     return(nxt64bits);
 }
 
