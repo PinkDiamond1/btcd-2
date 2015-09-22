@@ -1232,6 +1232,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *transport,cha
             printf("PULL.%d from (%s)\n",plugin->pullsock,sp->endpoint);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             plugin->pangeapub = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
+            sleep(3);
             printf("PUB.%d to (%s)\n",plugin->pangeapub,sp->endpoint);
             sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"addrs\":%s,\"sharenrs\":%s,\"cardpubs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,addrstr,sharenrs,cardpubs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
@@ -1295,6 +1296,7 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     sprintf(endbuf2,"%s%u",endbuf,sp->port+1);
                     sp->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
                     printf("PUSH %d to (%s)\n",sp->pushsock,endbuf2);
+                    sleep(3);
                 }
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
