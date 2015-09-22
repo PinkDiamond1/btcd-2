@@ -235,6 +235,7 @@ int32_t pangea_send(int32_t sock,void *ptr,int32_t len)
         if ( (sendlen= nn_send(sock,ptr,len,0)) == len )
         {
         }
+        printf("pangea_send.%d ready j.%d len.%d sendlen.%d\n",sock,j,len,sendlen);
     }
     return(sendlen);
 }
@@ -892,10 +893,11 @@ int32_t pangea_recv(struct plugin_info *plugin,struct pangea_info *sp,void *data
 int32_t pangea_idle(struct plugin_info *plugin)
 {
     static uint32_t lastpurge;
-    struct pangea_info *sp; int32_t i,len,playerj,cardi,sendlen,flag,n=0; uint64_t tableid; cJSON *json,*array; bits256 ciphers[9*2];
-    char *ptr,*msg,*jsonstr,*str,hexstr[65],destNXT[64]; uint32_t now = (uint32_t)time(NULL);
+    struct pangea_info *sp; int32_t i,len,playerj,cardi,sendlen,flag,n; uint64_t tableid; cJSON *json,*array; bits256 ciphers[9*2];
+    char *ptr,*msg,*jsonstr,*str,hexstr[65],destNXT[64],buf[512]; uint32_t now = (uint32_t)time(NULL);
     for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
     {
+        n = 0;
         if ( (sp= TABLES[i]) != 0 )
         {
             if ( sp->pullsock >= 0 && (len= nn_recv(sp->pullsock,&msg,NN_MSG,0)) > 0 )
@@ -933,8 +935,21 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     if ( flag == 0 )
                         queue_enqueue("pangeaQ",&pangeaQ,queueitem(ptr));
                 }
+                else
+                {
+                    if ( sp->pushsock >= 0 )
+                    {
+                        sprintf(buf,"PUSH tableid.%llu myind.%d\n",(long long)sp->tableid,sp->myind);
+                        pangea_send(sp->pushsock,buf,strlen(buf));
+                    }
+                    if ( sp->pubsock >= 0 )
+                    {
+                        sprintf(buf,"PUB tableid.%llu myind.%d\n",(long long)sp->tableid,sp->myind);
+                        pangea_send(sp->pubsock,buf,strlen(buf));
+                    }
+                }
             }
-            printf("pangea states [%d %d %d]\n",sp->states[0],sp->states[1],sp->states[2]);
+            printf("pangea states [%d %d %d] pullsock.%d subsock.%d\n",sp->states[0],sp->states[1],sp->states[2],sp->pullsock,sp->subsock);
             if ( sp->deck.numplayers == 2 )
             {
                 if ( sp->states[0] == sp->states[1] && sp->states[0] == PANGEA_STATE_READY )
@@ -1087,7 +1102,7 @@ cJSON *pangea_ciphersjson(struct pangea_deck *deck,int32_t permiflag,int32_t myp
     int32_t i,j; struct pangea_card *cards; char hexstr[65]; cJSON *array = cJSON_CreateArray();
     cards = (permiflag != 0) ? deck->permi : deck->cards;
     for (i=0; i<52; i++)
-        for (j=0; j<deck->numplayers; j++)
+        for (j=permiflag*(deck->numplayers-1); j<deck->numplayers; j++)
         {
             init_hexbytes_noT(hexstr,cards[i].ciphers[myplayerj][j].bytes,sizeof(bits256));
             jaddistr(array,hexstr);
@@ -1262,22 +1277,20 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                 {
                     strcpy(sp->endpoint,endpoint);
                     sp->port = atoi(&sp->endpoint[strlen(sp->endpoint)-4]);
-                    printf("SUB from (%s) port.%d\n",sp->endpoint,sp->port);
+                    printf("SUB %d from (%s) port.%d\n",sp->subsock,sp->endpoint,sp->port);
                     sp->subsock = nn_createsocket(sp->endpoint,0,"NN_SUB",NN_PUB,sp->port,10,10);
                     nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
                     strcpy(endbuf,sp->endpoint);
                     endbuf[strlen(endbuf)-4] = 0;
                     sprintf(endbuf2,"%s%u",endbuf,sp->port+1);
-                    printf("PUSH to (%s)\n",endbuf2);
                     sp->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
+                    printf("PUSH %d to (%s)\n",sp->pushsock,endbuf2);
                 }
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
                 sp->deck.M = juint(json,"M");
                 //iQ->s.pending = 1;
-                array = jobj(json,"sharnrs");
-                printf("sharnrs.%p %d %d\n",array,array==0?0:is_cJSON_Array(array),array==0?0:cJSON_GetArraySize(array));
-                if ( array == 0 || is_cJSON_Array(array) == 0 || (n= cJSON_GetArraySize(array)) != sp->deck.N || num != sp->deck.N )
+                if ( (array= jarray(&n,json,"sharenrs")) == 0 || n != sp->deck.N || num != sp->deck.N )
                 {
                     printf("invalid sharenrs n.%d vs N.%d num.%d myind.%d (%s)\n",n,sp->deck.N,num,sp->myind,jprint(json,0));
                     return(clonestr("{\"error\":\"invalid sharenrs or mismatched numplayers\"}"));
@@ -1291,22 +1304,24 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                 printf("sharenrs\n");
                 sp->deck.checkprod = pangea_pubkeys(plugin,sp,json,"cardpubs",sp->deck.cards);
                 sp->mask = ((1 << sp->myind) | 1);
+                sp->deck.permiprod = pangea_initdeck(&sp->deck,0);
+                if ( sp->myind == sp->deck.numplayers-1 )
+                {
+                    ciphers = jprint(pangea_ciphersjson(&sp->deck,1,sp->myind),1);
+                    printf("got ciphers.(%s)\n",ciphers);
+                    sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s,\"permiflag\":1}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
+                    free(ciphers);
+                }
                 if ( sp->pushsock >= 0 )
                 {
                     sprintf(cmd,"{\"cmd\":\"ready\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"mask\":%d}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,sp->mask);
                     pangea_send(sp->pushsock,cmd,(int32_t)strlen(cmd)+1);
-                }
-                if ( sp->myind == sp->deck.numplayers-1 )
-                {
-                    sp->deck.permiprod = pangea_initdeck(&sp->deck,0);
-                    ciphers = jprint(pangea_ciphersjson(&sp->deck,1,sp->myind),1);
-                    sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s,\"permiflag\":1}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
-                    free(ciphers);
+                    printf("push.(%s)\n",cmd);
                     permipubs = jprint(pangea_cardpubs(&sp->deck,1),1);
-                    sprintf((char *)cmd,"{\"cmd\":\"permipubs\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"permipubs\":%s}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,permipubs);
-                    pangea_send(sp->pushsock,cmd,(int32_t)strlen(cmd)+1);
+                    printf("got permipubs.(%s)\n",permipubs);
+                    sprintf((char *)sp->sendbuf,"{\"cmd\":\"permipubs\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"permipubs\":%s}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,permipubs);
+                    pangea_send(sp->pushsock,sp->sendbuf,(int32_t)strlen((char *)sp->sendbuf)+1);
                     free(permipubs);
-                    printf("SEND.(%s) CMD.(%s)\n",sp->sendbuf,cmd);
                 }
                 sp->states[sp->myind] = PANGEA_STATE_READY;
                 sp->states[0] = PANGEA_STATE_READY;
