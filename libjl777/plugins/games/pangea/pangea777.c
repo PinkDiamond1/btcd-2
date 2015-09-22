@@ -258,7 +258,7 @@ int32_t pangea_PM(struct plugin_info *plugin,struct pangea_info *sp,uint8_t *myp
     _init_HUFF(hp,len*2,data);
     ramcoder_encoder(0,1,msg,len,hp,&seed);
     datalen = hconv_bitlen(hp->bitoffset);
-    printf("pangea_PM len.%d -> datalen.%d destpub %llx my.(priv %llx pub.%llx)\n",len,datalen,(long long)destpub.txid,*(long long *)mypriv,*(long long *)mypub);
+    printf("pangea_PM len.%d -> datalen.%d destpub %llx\n",len,datalen,(long long)destpub.txid);
     if ( destNXT != 0 )
     {
         if ( (cipher= encode_str(&cipherlen,data,datalen,destpub,*(bits256 *)mypriv,*(bits256 *)mypub)) != 0 )
@@ -620,7 +620,7 @@ int32_t pangea_encode(struct plugin_info *plugin,struct pangea_info *sp,cJSON *j
     sp->layers |= (1 << permiflag);
     if ( (otherind= juint(json,"myind")) >= 0 && otherind < sp->deck.numplayers && (array= jarray(&n,json,"ciphers")) != 0 )
     {
-        if ( pangea_loadciphers(ciphers,array,n) == n && n == sp->deck.numplayers*((permiflag == 0) ? 52 : 1) )
+        if ( pangea_loadciphers(ciphers,array,n) == n && n == ((permiflag == 0) ? sp->deck.numplayers : 1) * 52 )
         {
             for (i=nonz=0; i<52; i++)
             {
