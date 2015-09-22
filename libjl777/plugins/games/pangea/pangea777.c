@@ -1200,7 +1200,7 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
         {
             //iQ->s.pending = 1;
             memset(&sp->deck,0,sizeof(sp->deck));
-            sp->pullsock = sp->pubsock = sp->subsock = -1;
+            sp->pushsock = sp->pullsock = sp->pubsock = sp->subsock = -1;
             for (j=0; j<num; j++)
             {
                 sp->deck.players[j].comm.priv = keypair(&sp->deck.players[j].comm.pub);
