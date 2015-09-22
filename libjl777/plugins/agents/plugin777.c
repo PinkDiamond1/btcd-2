@@ -70,7 +70,7 @@ struct plugin_info
 {
     char bindaddr[64],connectaddr[64],ipaddr[64],transport[16],name[64],NXTADDR[64],NXTACCT[64],SERVICENXT[64],NXTACCTSECRET[2048];
     struct protocol_info protocol;
-    int32_t pushsock,pullsock;
+    int32_t pushsock,pullsock,pangeapull,pangeapub;
     uint32_t permanentflag,ppid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote,ready;
     uint16_t port,pangeaport;
     portable_mutex_t mutex;
@@ -537,6 +537,7 @@ int32_t main
     randombytes((uint8_t *)&plugin->myid,sizeof(plugin->myid));
     plugin->permanentflag = myatoi((char *)argv[1],2);
     plugin->daemonid = calc_nxt64bits(argv[2]);
+    plugin->pangeapull = plugin->pangeapub = -1;
 #ifdef BUNDLED
     plugin->bundledflag = 1;
 #endif

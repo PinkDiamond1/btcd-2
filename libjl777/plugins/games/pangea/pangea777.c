@@ -54,7 +54,7 @@ struct pangea_info
     uint64_t basebits,bigblind,ante,addrs[9],tableid,quoteid;
     struct pangea_deck deck;
     char base[16],transport[16],ipaddr[64],endpoint[128]; uint8_t sendbuf[65536*2]; uint32_t statetimestamp;
-    int32_t readyflag,button,myind,done,pushsock,pullsock,pubsock,subsock,sendlen,mask,layers,didturn,states[9]; uint16_t port;
+    int32_t readyflag,button,myind,done,pushsock,subsock,sendlen,mask,layers,didturn,states[9]; uint16_t port;
 } *TABLES[100];
 STRUCTNAME PANGEA;
 
@@ -244,7 +244,7 @@ int32_t pangea_send(int32_t sock,void *ptr,int32_t len)
     return(sendlen);
 }
 
-int32_t pangea_PM(struct pangea_info *sp,uint8_t *mypriv,uint8_t *mypub,char *destNXT,uint8_t *msg,int32_t len)
+int32_t pangea_PM(struct plugin_info *plugin,struct pangea_info *sp,uint8_t *mypriv,uint8_t *mypub,char *destNXT,uint8_t *msg,int32_t len)
 {
     int32_t haspubkey,cipherlen,datalen; bits256 destpub,seed; uint8_t *data,*cipher; HUFF H,*hp = &H;
     if ( destNXT != 0 )
@@ -262,21 +262,21 @@ int32_t pangea_PM(struct pangea_info *sp,uint8_t *mypriv,uint8_t *mypub,char *de
     {
         if ( (cipher= encode_str(&cipherlen,data,datalen,destpub,*(bits256 *)mypriv,*(bits256 *)mypub)) != 0 )
         {
-            pangea_send(sp->pubsock >= 0 ? sp->pubsock : sp->pushsock,cipher,cipherlen);
+            pangea_send(plugin->pangeapub >= 0 ? plugin->pangeapub : sp->pushsock,cipher,cipherlen);
             free(cipher);
         }
     }
-    else pangea_send(sp->pubsock >= 0 ? sp->pubsock : sp->pushsock,data,datalen), cipherlen = datalen;
+    else pangea_send(plugin->pangeapub >= 0 ? plugin->pangeapub : sp->pushsock,data,datalen), cipherlen = datalen;
     free(data);
     return(cipherlen);
 }
 
-int32_t pangea_sendnext(uint8_t *mypriv,uint8_t *mypub,struct pangea_info *sp,int32_t incr)
+int32_t pangea_sendnext(struct plugin_info *plugin,uint8_t *mypriv,uint8_t *mypub,struct pangea_info *sp,int32_t incr)
 {
     char destNXT[64];
     expand_nxt64bits(destNXT,sp->addrs[sp->myind + incr]);
     printf("pangea_sendnext: destNXT.(%s) [%d] -> addrs[%d] %llu\n",destNXT,sp->myind,sp->myind+incr,(long long)sp->addrs[sp->myind+incr]);
-    pangea_PM(sp,mypriv,mypub,destNXT,sp->sendbuf,sp->sendlen);
+    pangea_PM(plugin,sp,mypriv,mypub,destNXT,sp->sendbuf,sp->sendlen);
     return(0);
 }
 
@@ -292,7 +292,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
         memcpy(senderpub.bytes,src,sizeof(senderpub));
         seed = pangea_shared(*(bits256 *)mypriv,senderpub);
         memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
-        _init_HUFF(hp,len - sizeof(senderpub),&src[sizeof(senderpub)]), hp->endpos = (len - sizeof(senderpub)) << 3;
+        _init_HUFF(hp,len - sizeof(senderpub),&src[sizeof(senderpub)]), hp->endpos = (len - (int32_t)sizeof(senderpub)) << 3;
         newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
     }
     free(buf);
@@ -313,7 +313,7 @@ void pangea_jsoncmd(char *destNXT,cJSON *json,char *cmd,struct plugin_info *plug
     jadd64bits(json,"bigblind",sp->bigblind);
     jadd64bits(json,"ante",sp->ante);
     jsonstr = jprint(json,1);
-    pangea_PM(sp,plugin->mypriv,plugin->mypub,destNXT,(void *)jsonstr,(int32_t)strlen(jsonstr)+1);
+    pangea_PM(plugin,sp,plugin->mypriv,plugin->mypub,destNXT,(void *)jsonstr,(int32_t)strlen(jsonstr)+1);
     printf("add sig! pangea_jsoncmd myind.%d %s %d -> %s\n",sp->myind,cmd,(int32_t)strlen(jsonstr)+1,destNXT!=0?destNXT:"broadcast");
     free(jsonstr);
 }
@@ -454,9 +454,9 @@ int32_t pangea_ready(struct plugin_info *plugin,struct pangea_info *sp,cJSON *js
     {
         printf("myind.%d got ready from ind.%d\n",sp->myind,juint(json,"myind"));
         if ( sp->myind == 0 )
-            pangea_sendnext(plugin->mypriv,plugin->mypub,sp,1);
+            pangea_sendnext(plugin,plugin->mypriv,plugin->mypub,sp,1);
         else if ( sp->myind == sp->deck.numplayers-1 )
-            pangea_sendnext(plugin->mypriv,plugin->mypub,sp,-1);
+            pangea_sendnext(plugin,plugin->mypriv,plugin->mypub,sp,-1);
         return(1);
     } else return(0);
 }
@@ -909,13 +909,13 @@ int32_t pangea_idle(struct plugin_info *plugin)
         n = 0;
         if ( (sp= TABLES[i]) != 0 )
         {
-            if ( sp->pullsock >= 0 && (len= nn_recv(sp->pullsock,&msg,NN_MSG,0)) > 0 )
+            if ( plugin->pangeapull >= 0 && (len= nn_recv(plugin->pangeapull,&msg,NN_MSG,0)) > 0 )
             {
-                printf("tableid.%llu pullsock.%d recv.%d\n",(long long)sp->tableid,sp->pullsock,len);
+                printf("tableid.%llu pullsock.%d recv.%d\n",(long long)sp->tableid,plugin->pangeapull,len);
                 ptr = malloc(len);
                 memcpy(ptr,msg,len);
                 nn_freemsg(msg);
-                sendlen = pangea_send(sp->pubsock,ptr,len);
+                sendlen = pangea_send(plugin->pangeapub,ptr,len);
                 pangea_recv(plugin,sp,ptr,len);
                 free(ptr);
                 n++;
@@ -951,14 +951,14 @@ int32_t pangea_idle(struct plugin_info *plugin)
                         sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUSH.%d tableid.%llu myind.%d\"}",sp->pushsock,(long long)sp->tableid,sp->myind);
                         pangea_send(sp->pushsock,buf,(int32_t)strlen(buf)+1);
                     }
-                    if ( sp->pubsock >= 0 )
+                    if ( plugin->pangeapub >= 0 )
                     {
-                        sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUB.%d tableid.%llu myind.%d\"}",sp->pubsock,(long long)sp->tableid,sp->myind);
-                        pangea_send(sp->pubsock,buf,(int32_t)strlen(buf)+1);
+                        sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUB.%d tableid.%llu myind.%d\"}",plugin->pangeapub,(long long)sp->tableid,sp->myind);
+                        pangea_send(plugin->pangeapub,buf,(int32_t)strlen(buf)+1);
                     }
                 }
             }
-            printf("pangea states [%d %d %d] pullsock.%d subsock.%d\n",sp->states[0],sp->states[1],sp->states[2],sp->pullsock,sp->subsock);
+            printf("pangea states [%d %d %d] pullsock.%d subsock.%d\n",sp->states[0],sp->states[1],sp->states[2],plugin->pangeapull,sp->subsock);
             if ( sp->deck.numplayers == 2 )
             {
                 if ( sp->states[0] == sp->states[1] && sp->states[0] == PANGEA_STATE_READY )
@@ -1073,7 +1073,7 @@ struct pangea_info *pangea_create(uint64_t my64bits,int32_t *createdflagp,char *
     }
     if ( numaddrs > 0 && (sp= calloc(1,sizeof(*sp))) != 0 )
     {
-        sp->pushsock = sp->pullsock = sp->pubsock = sp->subsock = -1;
+        sp->pushsock = sp->subsock = -1;
         sp->myind = i;
         for (i=0; i<numaddrs; i++)
             sp->states[i] = PANGEA_STATE_INIT;
@@ -1142,7 +1142,7 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
     return(array);
 }
 
-int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uint64_t my64bits,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers,cJSON *json)
+int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *transport,char *ipaddr,uint16_t port,uint64_t my64bits,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers,cJSON *json)
 {
     char *addrstr,*ciphers,*cardpubs,*sharenrs; uint8_t p2shtype; cJSON *array,*bids; //struct InstantDEX_quote *iQ = 0;
     int32_t createdflag,addrtype,i,j,n,r,num=0,myind = -1; uint64_t addrs[512],quoteid = 0; struct pangea_info *sp;
@@ -1228,11 +1228,11 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
                 transport = "tcp";
             strcpy(sp->transport,transport), strcpy(sp->ipaddr,ipaddr), sp->port = port;
             sprintf(sp->endpoint,"%s://%s:%u",sp->transport,sp->ipaddr,sp->port+1);
-            sp->pullsock = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
-            printf("PULL.%d from (%s)\n",sp->pullsock,sp->endpoint);
+            plugin->pullsock = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
+            printf("PULL.%d from (%s)\n",plugin->pullsock,sp->endpoint);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
-            sp->pubsock = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
-            printf("PUB.%d to (%s)\n",sp->pubsock,sp->endpoint);
+            plugin->pangeapub = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
+            printf("PUB.%d to (%s)\n",plugin->pangeapub,sp->endpoint);
             sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"addrs\":%s,\"sharenrs\":%s,\"cardpubs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,addrstr,sharenrs,cardpubs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
             sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
@@ -1464,7 +1464,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     maxplayers = 9;
                 if ( jstr(json,"resubmit") == 0 )
                     sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"maxplayers\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),maxplayers);
-                else pangea_start(retbuf,plugin->transport,plugin->ipaddr,plugin->pangeaport,plugin->nxt64bits,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers,json);
+                else pangea_start(plugin,retbuf,plugin->transport,plugin->ipaddr,plugin->pangeaport,plugin->nxt64bits,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers,json);
             } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
         }
         else if ( strcmp(methodstr,"newtable") == 0 )
