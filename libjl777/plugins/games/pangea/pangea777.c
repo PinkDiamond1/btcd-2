@@ -275,8 +275,10 @@ int32_t pangea_sendnext(struct plugin_info *plugin,uint8_t *mypriv,uint8_t *mypu
 {
     char destNXT[64];
     expand_nxt64bits(destNXT,sp->addrs[sp->myind + incr]);
-    printf("pangea_sendnext: destNXT.(%s) [%d] -> addrs[%d] %llu\n",destNXT,sp->myind,sp->myind+incr,(long long)sp->addrs[sp->myind+incr]);
-    pangea_PM(plugin,sp,mypriv,mypub,destNXT,sp->sendbuf,sp->sendlen);
+    printf("pangea_sendnext: destNXT.(%s) [%d] -> addrs[%d] %llu sendlen.%d %ld\n",destNXT,sp->myind,sp->myind+incr,(long long)sp->addrs[sp->myind+incr],sp->sendlen,strlen((char *)sp->sendbuf));
+    sp->sendlen = (int32_t)strlen((char *)sp->sendbuf);
+    if ( strlen((char *)sp->sendbuf) > 0 )
+        pangea_PM(plugin,sp,mypriv,mypub,destNXT,sp->sendbuf,sp->sendlen);
     return(0);
 }
 
@@ -1318,13 +1320,6 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                 sp->deck.checkprod = pangea_pubkeys(plugin,sp,json,"cardpubs",sp->deck.cards);
                 sp->mask = ((1 << sp->myind) | 1);
                 sp->deck.permiprod = pangea_initdeck(&sp->deck,0);
-                if ( sp->myind == sp->deck.numplayers-1 )
-                {
-                    ciphers = jprint(pangea_ciphersjson(&sp->deck,1,sp->myind),1);
-                    printf("got ciphers.(%s)\n",ciphers);
-                    sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s,\"permiflag\":1}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
-                    free(ciphers);
-                }
                 if ( sp->pushsock >= 0 )
                 {
                     sprintf(cmd,"{\"cmd\":\"ready\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"mask\":%d}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,sp->mask);
@@ -1335,6 +1330,13 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     sprintf((char *)sp->sendbuf,"{\"cmd\":\"permipubs\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"permipubs\":%s}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,permipubs);
                     pangea_send(sp->pushsock,sp->sendbuf,(int32_t)strlen((char *)sp->sendbuf)+1);
                     free(permipubs);
+                }
+                if ( sp->myind == sp->deck.numplayers-1 )
+                {
+                    ciphers = jprint(pangea_ciphersjson(&sp->deck,1,sp->myind),1);
+                    printf("got ciphers.(%s)\n",ciphers);
+                    sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s,\"permiflag\":1}",sp->myind,(long long)plugin->nxt64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
+                    free(ciphers);
                 }
                 sp->states[sp->myind] = PANGEA_STATE_READY;
                 sp->mask |= (1 << sp->myind) | 1;
