@@ -279,6 +279,7 @@ int32_t pangea_sendnext(uint8_t *mypriv,uint8_t *mypub,struct pangea_info *sp,in
 int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
 {
     bits256 seed,senderpub; uint8_t *buf; int32_t newlen = -1; HUFF H,*hp = &H;
+    printf("decrypt(%d)\n",len);
     buf = calloc(1,maxlen);
     if ( decode_cipher((void *)buf,src,&len,mypriv) != 0 )
         printf("pangea_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
@@ -287,7 +288,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
         memcpy(senderpub.bytes,src,sizeof(senderpub));
         seed = pangea_shared(*(bits256 *)mypriv,senderpub);
         memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
-        _init_HUFF(hp,len,buf), hp->endpos = len << 3;
+        _init_HUFF(hp,len - sizeof(senderbup),&src[sizeof(senderpub)]), hp->endpos = (len - sizeof(senderpub)) << 3;
         newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
     }
     free(buf);
@@ -902,7 +903,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
         {
             if ( sp->pullsock >= 0 && (len= nn_recv(sp->pullsock,&msg,NN_MSG,0)) > 0 )
             {
-                printf("tableid.%llu pullsock recv.%d\n",(long long)sp->tableid,len);
+                printf("tableid.%llu pullsock.%d recv.%d\n",(long long)sp->tableid,sp->pullsock,len);
                 ptr = malloc(len);
                 memcpy(ptr,msg,len);
                 nn_freemsg(msg);
@@ -913,7 +914,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
             }
             if ( sp->subsock >= 0 && (len= nn_recv(sp->subsock,&msg,NN_MSG,0)) > 0 )
             {
-                printf("tableid.%llu subsock recv.%d\n",(long long)sp->tableid,len);
+                printf("tableid.%llu subsock.%d recv.%d\n",(long long)sp->tableid,sp->subsock,len);
                 ptr = malloc(len);
                 memcpy(ptr,msg,len);
                 nn_freemsg(msg);
@@ -939,12 +940,12 @@ int32_t pangea_idle(struct plugin_info *plugin)
                 {
                     if ( sp->pushsock >= 0 )
                     {
-                        sprintf(buf,"PUSH tableid.%llu myind.%d\n",(long long)sp->tableid,sp->myind);
+                        sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUSH.%d tableid.%llu myind.%d\"}",sp->pushsock,(long long)sp->tableid,sp->myind);
                         pangea_send(sp->pushsock,buf,strlen(buf));
                     }
                     if ( sp->pubsock >= 0 )
                     {
-                        sprintf(buf,"PUB tableid.%llu myind.%d\n",(long long)sp->tableid,sp->myind);
+                        sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUB.%d tableid.%llu myind.%d\"}",sp->pubsock,(long long)sp->tableid,sp->myind);
                         pangea_send(sp->pubsock,buf,strlen(buf));
                     }
                 }
@@ -1285,6 +1286,7 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     sprintf(endbuf2,"%s%u",endbuf,sp->port+1);
                     sp->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
                     printf("PUSH %d to (%s)\n",sp->pushsock,endbuf2);
+                    sleep(3);
                 }
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
