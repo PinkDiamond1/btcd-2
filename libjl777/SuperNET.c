@@ -475,12 +475,12 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
     }
     else if ( strcmp(secret,"randvals") == 0 )
         gen_randomacct(33,NXTaddr,secret,"randvals");
-    nxt64bits = conv_NXTpassword(SUPERNET.myprivkey,SUPERNET.mypubkey,(uint8_t *)secret,(int32_t)strlen(secret));
+    nxt64bits = conv_NXTpassword(myprivkey,mypubkey,(uint8_t *)secret,(int32_t)strlen(secret));
     expand_nxt64bits(NXTaddr,nxt64bits);
     if ( 1 )
         conv_rsacctstr(NXTacct,nxt64bits);
     char pubkeystr[128];
-    init_hexbytes_noT(pubkeystr,SUPERNET.mypubkey,32);
+    init_hexbytes_noT(pubkeystr,mypubkey,32);
     printf("(%s) (%s) (%s) pubkey.(%s) NXTAPIURL.[%s]\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>",pubkeystr,SUPERNET.NXTAPIURL);
     return(nxt64bits);
 }
