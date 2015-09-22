@@ -286,12 +286,12 @@ int32_t pangea_sendnext(struct plugin_info *plugin,uint8_t *mypriv,uint8_t *mypu
 int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
 {
     bits256 seed,senderpub; uint8_t *buf; int32_t newlen = -1; HUFF H,*hp = &H;
-    printf("decrypt(%d)\n",len);
+    //printf("decrypt(%d)\n",len);
     buf = calloc(1,maxlen);
     memcpy(senderpub.bytes,src,sizeof(senderpub));
     if ( decode_cipher((void *)buf,src,&len,mypriv) != 0 )
     {
-        printf("pangea_decrypt skip: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
+        //printf("pangea_decrypt skip: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
     }
     else
     {
@@ -924,7 +924,8 @@ int32_t pangea_idle(struct plugin_info *plugin)
                 ptr = malloc(len);
                 memcpy(ptr,msg,len);
                 nn_freemsg(msg);
-                sendlen = pangea_send(plugin->pangeapub,ptr,len);
+                if ( sp->deck.numplayers > 2 )
+                    sendlen = pangea_send(plugin->pangeapub,ptr,len);
                 pangea_recv(plugin,sp,ptr,len);
                 free(ptr);
                 n++;
