@@ -901,7 +901,7 @@ int32_t pangea_recv(struct plugin_info *plugin,struct pangea_info *sp,void *data
 
 int32_t pangea_idle(struct plugin_info *plugin)
 {
-    static uint32_t lastpurge;
+    static uint32_t lastpurge,counter;
     struct pangea_info *sp; int32_t i,len,playerj,cardi,sendlen,flag,n; uint64_t tableid; cJSON *json,*array; bits256 ciphers[9*2];
     char *ptr,*msg,*jsonstr,*str,hexstr[65],destNXT[64],buf[512]; uint32_t now = (uint32_t)time(NULL);
     for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
@@ -951,14 +951,15 @@ int32_t pangea_idle(struct plugin_info *plugin)
                         sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUSH.%d tableid.%llu myind.%d\"}",sp->pushsock,(long long)sp->tableid,sp->myind);
                         pangea_send(sp->pushsock,buf,(int32_t)strlen(buf)+1);
                     }
-                    if ( plugin->pangeapub >= 0 )
+                    if ( 0 && plugin->pangeapub >= 0 )
                     {
                         sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUB.%d tableid.%llu myind.%d\"}",plugin->pangeapub,(long long)sp->tableid,sp->myind);
                         pangea_send(plugin->pangeapub,buf,(int32_t)strlen(buf)+1);
                     }
                 }
             }
-            printf("pangea states [%d %d %d] pullsock.%d subsock.%d\n",sp->states[0],sp->states[1],sp->states[2],plugin->pangeapull,sp->subsock);
+            if ( (counter++ % 1000) == 0 )
+                printf("pangea states [%d %d %d] pullsock.%d subsock.%d\n",sp->states[0],sp->states[1],sp->states[2],plugin->pangeapull,sp->subsock);
             if ( sp->deck.numplayers == 2 )
             {
                 if ( sp->states[0] == sp->states[1] && sp->states[0] == PANGEA_STATE_READY )
@@ -1432,7 +1433,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     if ( initflag > 0 )
     {
         PANGEA.readyflag = 1;
-        plugin->sleepmillis = 25000;
+        plugin->sleepmillis = 25;//000;
         plugin->allowremote = 1;
         argjson = cJSON_Parse(jsonstr);
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);

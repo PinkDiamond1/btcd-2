@@ -481,7 +481,7 @@ uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char
         conv_rsacctstr(NXTacct,nxt64bits);
     char pubkeystr[128];
     init_hexbytes_noT(pubkeystr,SUPERNET.mypubkey,32);
-    printf("(%s) (%s) (%s) pubkey.(%s)\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>",pubkeystr);
+    printf("(%s) (%s) (%s) pubkey.(%s) NXTAPIURL.[%s]\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>",pubkeystr,SUPERNET.NXTAPIURL);
     return(nxt64bits);
 }
 
@@ -613,8 +613,8 @@ int SuperNET_start(char *fname,char *myip)
     void crypto_update();
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
     char ipaddr[256],*jsonstr = 0; cJSON *json; uint64_t i,allocsize;
-    portable_OS_init();
     printf("%p myip.(%s)\n",myip,myip);
+    portable_OS_init();
     parse_ipaddr(ipaddr,myip);
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
