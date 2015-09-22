@@ -940,9 +940,9 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     if ( flag == 0 )
                         queue_enqueue("pangeaQ",&pangeaQ,queueitem(ptr));
                 }
-                else if ( 0 )
+                else
                 {
-                    if ( sp->pushsock >= 0 )
+                    if ( 0 && sp->pushsock >= 0 )
                     {
                         sprintf(buf,"{\"cmd\":\"ping\",\"msg\":\"PUSH.%d tableid.%llu myind.%d\"}",sp->pushsock,(long long)sp->tableid,sp->myind);
                         pangea_send(sp->pushsock,buf,(int32_t)strlen(buf)+1);
