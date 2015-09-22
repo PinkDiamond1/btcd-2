@@ -286,12 +286,12 @@ int32_t pangea_sendnext(struct plugin_info *plugin,uint8_t *mypriv,uint8_t *mypu
 int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
 {
     bits256 seed,senderpub; uint8_t *buf; int32_t newlen = -1; HUFF H,*hp = &H;
-    printf("decrypt(%d)\n",len);
+    //printf("decrypt(%d)\n",len);
     buf = calloc(1,maxlen);
     memcpy(senderpub.bytes,src,sizeof(senderpub));
     if ( decode_cipher((void *)buf,src,&len,mypriv) != 0 )
     {
-        printf("pangea_decrypt skip: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
+        //printf("pangea_decrypt skip: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
     }
     else
     {
@@ -299,7 +299,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
         memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
         _init_HUFF(hp,len,buf), hp->endpos = (len << 3);
         newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
-        printf("newlen.%d\n",newlen);
+        printf("(%s) newlen.%d\n",dest,newlen);
     }
     free(buf);
     return(newlen);
@@ -902,6 +902,7 @@ int32_t pangea_recv(struct plugin_info *plugin,struct pangea_info *sp,void *data
     {
         if ( (tableid= j64bits(json,"tableid")) == sp->tableid && (cmdstr= jstr(json,"cmd")) != 0 )
             newlen = pangea_cmd(plugin,sp,cmdstr,json);
+        else printf("mismatched tableid %llu vs %llu or no cmd.(%s)\n",(long long)tableid,(long long)sp->tableid,cmdstr!=0?cmdstr:"");
         free_json(json);
     } else printf("recv parse error.(%s)\n",data);
     if ( newlen < 0 )
