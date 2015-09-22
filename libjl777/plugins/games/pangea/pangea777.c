@@ -258,7 +258,7 @@ int32_t pangea_PM(struct plugin_info *plugin,struct pangea_info *sp,uint8_t *myp
     _init_HUFF(hp,len*2,data);
     ramcoder_encoder(0,1,msg,len,hp,&seed);
     datalen = hconv_bitlen(hp->bitoffset);
-    printf("pangea_PM len.%d -> datalen.%d destpub %llx\n",len,datalen,(long long)destpub.txid);
+    printf("pangea_PM len.%d -> datalen.%d (%s) destpub %llx\n",len,datalen,destNXT!=0?destNXT:"all",(long long)destpub.txid);
     if ( destNXT != 0 )
     {
         if ( (cipher= encode_str(&cipherlen,data,datalen,destpub,*(bits256 *)mypriv,*(bits256 *)mypub)) != 0 )
@@ -618,6 +618,10 @@ int32_t pangea_encode(struct plugin_info *plugin,struct pangea_info *sp,cJSON *j
     bits256 ciphers[52*10]; int32_t otherind,n=0,i,k,val,nonz; cJSON *array; struct pangea_card *cards;
     cards = (permiflag == 0) ? sp->deck.cards : sp->deck.permi;
     sp->layers |= (1 << permiflag);
+    if ( sp->myind == 0 )
+        sp->layers |= 1;
+    else if ( sp->myind == sp->deck.numplayers-1 )
+        sp->layers |= 2;
     if ( (otherind= juint(json,"myind")) >= 0 && otherind < sp->deck.numplayers && (array= jarray(&n,json,"ciphers")) != 0 )
     {
         if ( (val= pangea_loadciphers(ciphers,array,n)) == n && n == ((permiflag == 0) ? sp->deck.numplayers : 1) * 52 )
@@ -631,11 +635,11 @@ int32_t pangea_encode(struct plugin_info *plugin,struct pangea_info *sp,cJSON *j
         }
         else
         {
-            printf("mismatched loadciphers for n.%d val.%d permiflag.%d %d\n",n,val,permiflag,((permiflag == 0) ? sp->deck.numplayers : 1) * 52);
+            printf("mismatched loadciphers for n.%d val.%d permiflag.%d %d (%s)\n",n,val,permiflag,((permiflag == 0) ? sp->deck.numplayers : 1) * 52,jprint(json,0));
             return(0);
         }
     }
-    printf("shuffle myind.%d got %d ciphers from otherind.%d\n",sp->myind,n,otherind);
+    printf("shuffle myind.%d got %d ciphers from otherind.%d layers.%d\n",sp->myind,n,otherind,sp->layers);
     pangea_shuffle(&sp->deck,sp->myind,permiflag);
     pangea_layer(plugin,sp,&sp->deck,sp->myind,permiflag);
     if ( sp->layers == 3 )
@@ -973,8 +977,24 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     {
                         
                     }
-                    else if ( sp->myind == sp->deck.numplayers-1 )
+                    else if ( sp->didturn == 0 && sp->myind == sp->deck.numplayers-1 )
                     {
+                        array = cJSON_CreateArray();
+                        for (cardi=0,playerj=1; cardi<sp->deck.numplayers*2; cardi++,playerj++)
+                        {
+                            playerj %= sp->deck.numplayers;
+                            ciphers[cardi] = pangea_deal(&sp->deck,sp->myind,cardi,playerj,0,sp->deck.cards[cardi].ciphers[sp->myind][playerj]);
+                            sp->deck.players[sp->myind].ciphers[cardi] = ciphers[cardi];
+                            sp->deck.players[sp->myind].cipherdests[cardi] = playerj;
+                            init_hexbytes_noT(hexstr,ciphers[cardi].bytes,sizeof(bits256));
+                            jaddistr(array,hexstr);
+                        }
+                        json = cJSON_CreateObject();
+                        jadd(json,"ciphers",array);
+                        expand_nxt64bits(destNXT,sp->addrs[sp->myind - 1]);
+                        pangea_jsoncmd(destNXT,json,"preflop",plugin,sp);
+                        printf("start preflop\n");
+                        sp->didturn = 1;
                     }
                 }
             }
