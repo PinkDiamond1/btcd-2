@@ -251,18 +251,18 @@ int32_t pangea_PM(struct pangea_info *sp,uint8_t *mypriv,uint8_t *mypub,char *de
     memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
     data = calloc(1,len*2);
     _init_HUFF(hp,len*2,data);
-    ramcoder_encoder(0,1,data,len*2,hp,&seed);
+    ramcoder_encoder(0,1,msg,len,hp,&seed);
     datalen = hconv_bitlen(hp->bitoffset);
     printf("pangea_PM len.%d -> datalen.%d\n",len,datalen);
     if ( destNXT != 0 )
     {
         if ( (cipher= encode_str(&cipherlen,data,datalen,destpub,*(bits256 *)mypriv,*(bits256 *)mypub)) != 0 )
         {
-            pangea_send(sp->myind == 0 ? sp->pubsock : sp->pushsock,cipher,cipherlen);
+            pangea_send(sp->pubsock >= 0 ? sp->pubsock : sp->pushsock,cipher,cipherlen);
             free(cipher);
         }
     }
-    else pangea_send(sp->myind == 0 ? sp->pubsock : sp->pushsock,data,datalen), cipherlen = datalen;
+    else pangea_send(sp->pubsock >= 0 ? sp->pubsock : sp->pushsock,data,datalen), cipherlen = datalen;
     free(data);
     return(cipherlen);
 }
@@ -1427,7 +1427,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     if ( initflag > 0 )
     {
         PANGEA.readyflag = 1;
-        plugin->sleepmillis = 5000;
+        plugin->sleepmillis = 25000;
         plugin->allowremote = 1;
         argjson = cJSON_Parse(jsonstr);
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
