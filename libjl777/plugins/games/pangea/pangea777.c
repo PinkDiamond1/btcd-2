@@ -232,8 +232,12 @@ int32_t pangea_send(int32_t sock,void *ptr,int32_t len)
         for (j=0; j<10; j++)
             if ( (nn_socket_status(sock,10) & NN_POLLOUT) != 0 )
                 break;
-        if ( (sendlen= nn_send(sock,ptr,len,0)) == len )
+        for (j=0; j<10; j++)
         {
+            if ( (sendlen= nn_send(sock,ptr,len,0)) == len )
+                break;
+            printf("retry.%d for sock.%d len.%d vs sendlen.%d\n",j,sock,len,sendlen);
+            sleep(1);
         }
         printf("pangea_send.%d ready j.%d len.%d sendlen.%d\n",sock,j,len,sendlen);
     }
@@ -1283,7 +1287,7 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                 {
                     strcpy(sp->endpoint,endpoint);
                     sp->port = atoi(&sp->endpoint[strlen(sp->endpoint)-4]);
-                    sp->subsock = nn_createsocket(sp->endpoint,0,"NN_SUB",NN_PUB,0,10,10);
+                    sp->subsock = nn_createsocket(sp->endpoint,0,"NN_SUB",NN_SUB,0,10,10);
                     printf("SUB %d from (%s) port.%d\n",sp->subsock,sp->endpoint,sp->port);
                     nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
                     strcpy(endbuf,sp->endpoint);
@@ -1291,7 +1295,6 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                     sprintf(endbuf2,"%s%u",endbuf,sp->port+1);
                     sp->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,sp->port+1,10,10);
                     printf("PUSH %d to (%s)\n",sp->pushsock,endbuf2);
-                    sleep(3);
                 }
                 sp->deck.numplayers = num;
                 sp->deck.N = juint(json,"N");
