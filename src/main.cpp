@@ -3765,7 +3765,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
     if ( didinit == 0 )
     {
         char *ipaddr = (char *)addrSeenByPeer.ToString().c_str();
-        if ( strcmp("[::]:0",ipaddr) != 0 && strcmp("0.0.0.0:0",ipaddr) != 0 )
+        //if ( strcmp("[::]:0",ipaddr) != 0 && strcmp("0.0.0.0:0",ipaddr) != 0 )
         {
             init_jl777(ipaddr);
             didinit = 1;
