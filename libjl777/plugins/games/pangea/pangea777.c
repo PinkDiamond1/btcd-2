@@ -291,7 +291,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
     memcpy(senderpub.bytes,src,sizeof(senderpub));
     if ( decode_cipher((void *)buf,src,&len,mypriv) != 0 )
     {
-        //printf("pangea_decrypt skip: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
+        printf("pangea_decrypt skip: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
     }
     else
     {
@@ -299,6 +299,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
         memset(seed.bytes,0,sizeof(seed));//, seed.bytes[0] = 1;
         _init_HUFF(hp,len,buf), hp->endpos = (len << 3);
         newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
+        printf("newlen.%d\n",newlen);
     }
     free(buf);
     return(newlen);
