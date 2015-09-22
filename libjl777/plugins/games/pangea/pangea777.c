@@ -288,7 +288,7 @@ int32_t pangea_decrypt(uint8_t *mypriv,uint64_t my64bits,uint8_t *dest,int32_t m
         memcpy(senderpub.bytes,src,sizeof(senderpub));
         seed = pangea_shared(*(bits256 *)mypriv,senderpub);
         memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
-        _init_HUFF(hp,len - sizeof(senderbup),&src[sizeof(senderpub)]), hp->endpos = (len - sizeof(senderpub)) << 3;
+        _init_HUFF(hp,len - sizeof(senderpub),&src[sizeof(senderpub)]), hp->endpos = (len - sizeof(senderpub)) << 3;
         newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
     }
     free(buf);
@@ -1220,11 +1220,11 @@ int32_t pangea_start(char *retbuf,char *transport,char *ipaddr,uint16_t port,uin
                 transport = "tcp";
             strcpy(sp->transport,transport), strcpy(sp->ipaddr,ipaddr), sp->port = port;
             sprintf(sp->endpoint,"%s://%s:%u",sp->transport,sp->ipaddr,sp->port+1);
-            printf("PULL from (%s)\n",sp->endpoint);
             sp->pullsock = nn_createsocket(sp->endpoint,1,"NN_PULL",NN_PULL,sp->port,10,10);
+            printf("PULL.%d from (%s)\n",sp->pullsock,sp->endpoint);
             sprintf(sp->endpoint,"tcp://%s:%u",sp->ipaddr,sp->port);
             sp->pubsock = nn_createsocket(sp->endpoint,1,"NN_PUB",NN_PUB,sp->port,10,10);
-            printf("PUB to (%s)\n",sp->endpoint);
+            printf("PUB.%d to (%s)\n",sp->pubsock,sp->endpoint);
             sprintf(retbuf,"{\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"addrs\":%s,\"sharenrs\":%s,\"cardpubs\":%s}",sp->myind,sp->endpoint,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)bigblind,(long long)ante,addrstr,sharenrs,cardpubs);
             sprintf((char *)sp->sendbuf,"{\"cmd\":\"encode\",\"myind\":%d,\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"ante\":\"%llu\",\"ciphers\":%s}",sp->myind,(long long)my64bits,(long long)sp->tableid,sp->timestamp,sp->deck.M,sp->deck.N,sp->base,(long long)sp->bigblind,(long long)sp->ante,ciphers);
             sp->sendlen = (int32_t)strlen((char *)sp->sendbuf) + 1;
