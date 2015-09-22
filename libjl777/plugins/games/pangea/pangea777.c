@@ -1283,7 +1283,7 @@ char *pangea_newtable(struct plugin_info *plugin,cJSON *json)
                 {
                     strcpy(sp->endpoint,endpoint);
                     sp->port = atoi(&sp->endpoint[strlen(sp->endpoint)-4]);
-                    sp->subsock = nn_createsocket(sp->endpoint,0,"NN_SUB",NN_PUB,sp->port,10,10);
+                    sp->subsock = nn_createsocket(sp->endpoint,0,"NN_SUB",NN_PUB,0,10,10);
                     printf("SUB %d from (%s) port.%d\n",sp->subsock,sp->endpoint,sp->port);
                     nn_setsockopt(sp->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
                     strcpy(endbuf,sp->endpoint);
