@@ -11,6 +11,9 @@
 #include "base58.h"
 #include "kernel.h"
 #include "coincontrol.h"
+#ifdef PEGGY
+#include "../libjl777/plugins/includes/cJSON.h"
+#endif
 #include <boost/algorithm/string/replace.hpp>
 
 using namespace std;
@@ -359,7 +362,7 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
                     printf("WalletUpdateSpent: bad wtx %s\n", wtx.GetHash().ToString().c_str());
                 else if (!wtx.IsSpent(txin.prevout.n) && IsMine(wtx.vout[txin.prevout.n]))
                 {
-                    printf("WalletUpdateSpent found spent coin %s TC %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
+                    printf("WalletUpdateSpent found spent coin %s BTCD %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkSpent(txin.prevout.n);
                     wtx.WriteToDisk();
                     NotifyTransactionChanged(this, txin.prevout.hash, CT_UPDATED);
@@ -896,7 +899,7 @@ void CWallet::ReacceptWalletTransactions()
                 }
                 if (fUpdated)
                 {
-                    printf("ReacceptWalletTransactions found spent coin %s TC %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
+                    printf("ReacceptWalletTransactions found spent coin %s BTCD %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkDirty();
                     wtx.WriteToDisk();
                 }
@@ -1467,6 +1470,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
             }
         }
     }
+
     return true;
 }
 
@@ -2269,7 +2273,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
         {
             if (IsMine(pcoin->vout[n]) && pcoin->IsSpent(n) && (txindex.vSpent.size() <= n || txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found lost coin %s TC %s[%d], %s\n",
+                printf("FixSpentCoins found lost coin %s BTCD %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -2281,7 +2285,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
             }
             else if (IsMine(pcoin->vout[n]) && !pcoin->IsSpent(n) && (txindex.vSpent.size() > n && !txindex.vSpent[n].IsNull()))
             {
-                printf("FixSpentCoins found spent coin %s TC %s[%d], %s\n",
+                printf("FixSpentCoins found spent coin %s BTCD %s[%d], %s\n",
                     FormatMoney(pcoin->vout[n].nValue).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->vout[n].nValue;
@@ -2435,3 +2439,59 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
     for (std::map<CKeyID, CBlockIndex*>::const_iterator it = mapKeyFirstBlock.begin(); it != mapKeyFirstBlock.end(); it++)
         mapKeyBirth[it->first] = it->second->nTime - 7200; // block times can be 2h off
 }
+
+#ifdef PEGGY
+extern "C" int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+//bitcoindark: create a peggy base transaction
+//paymentScript looks like "{\"addr1\":amount1, \"addr2\":amount2,...}"
+bool CWallet::CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, char *priceFeed)
+{
+    peggyTx.vin.resize(2);
+    
+    peggyTx.vin[0].prevout.SetNull();
+    peggyTx.vin[0].scriptSig.clear();
+
+    peggyTx.vin[1].prevout.SetNull();
+    peggyTx.vin[1].scriptSig.clear();
+
+    cJSON *json = cJSON_Parse(paymentScript);
+
+    uint32_t numOutputs = cJSON_GetArraySize(json);
+
+    CBitcoinAddress address;
+    CScript outScript;
+
+    //create peggy price feed op_return and place as first element in vout
+    peggyTx.vout.resize(1);
+    peggyTx.vout[0].nValue = (int64_t)0;
+    peggyTx.vout[0].scriptPubKey = CScript();
+    size_t len;
+    int i;
+    if(priceFeed != 0){
+        len = strlen(priceFeed)/2;
+    }
+    else{
+        len = 0;
+    }
+    unsigned char buf[4096];
+
+    if(len > 0)
+        //decode_hex(buf,(int)len,priceFeed);
+        peggyTx.vout[0].scriptPubKey << ParseHex((const char*)priceFeed);
+    //for (i=0; i<(int)len; i++)
+        //peggyTx.vout[0].scriptPubKey << buf[i];
+
+    cJSON *item;
+    for(i=0; i<numOutputs; i++)
+    {
+        item = cJSON_GetArrayItem(json,i);
+        address = CBitcoinAddress(item->string);
+        outScript.SetDestination(address.Get());
+        CTxOut out((uint64_t)(jdouble(item, 0) * SATOSHIDEN), outScript);
+        peggyTx.vout.push_back(out);
+    }
+
+    return true;
+
+}
+#endif

@@ -97,6 +97,7 @@ OBJS= \
     obj/rpcdump.o \
     obj/rpcnet.o \
     obj/rpcmining.o \
+    obj/rpcpeggy.o \
     obj/rpcwallet.o \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
@@ -119,7 +120,7 @@ all: BitcoinDarkd
 #LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o system777.o cJSON.o bitcoind_RPC.o utils777.o ../libjl777/libs/libnanomsg.a  -lcurl -lm -lanl
 LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a  ../libjl777/libs/libjl777.a  ../libjl777/libs/libccoin.a   ../libjl777/nanomsg/.libs/libnanomsg.a -lcurl -lz -lssl -lcrypto -lm -lanl
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
-DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers) -I../libjl777/nanomsg/src/utils
 OBJS += obj/txdb-leveldb.o
 leveldb/libleveldb.a:
 	@echo "Building LevelDB ..."; cd leveldb; $(MAKE) libleveldb.a libmemenv.a; cd ..;

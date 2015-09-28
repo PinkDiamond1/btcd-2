@@ -206,6 +206,11 @@ public:
     int64_t GetOldestKeyPoolTime();
     void GetAllReserveKeys(std::set<CKeyID>& setAddress) const;
 
+    #ifdef PEGGY
+    //bitcoindark
+    bool CreatePeggyBase(CTransaction &peggyTx, char *paymentScript, char *priceFeed);
+    #endif
+
     std::set< std::set<CTxDestination> > GetAddressGroupings();
     std::map<CTxDestination, int64_t> GetAddressBalances();
 

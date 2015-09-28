@@ -22,7 +22,9 @@ typedef std::vector<unsigned char> valtype;
 class CTransaction;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
-
+#ifdef PEGGY
+static const unsigned int MAX_OP_RETURN_RELAY = 4096;      // bytes
+#endif
 /** Signature hash types/flags */
 enum
 {
@@ -199,6 +201,7 @@ enum opcodetype
 
     // template matching params
     OP_SMALLINTEGER = 0xfa,
+    OP_SMALLDATA = 0xf9,
     OP_PUBKEYS = 0xfb,
     OP_PUBKEYHASH = 0xfd,
     OP_PUBKEY = 0xfe,
@@ -527,6 +530,10 @@ public:
     unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
     bool IsPayToScriptHash() const;
+
+    #ifdef PEGGY
+    bool IsOpReturn() const;
+    #endif
 
     // Called by CTransaction::IsStandard and P2SH VerifyScript (which makes it consensus-critical).
     bool IsPushOnly() const

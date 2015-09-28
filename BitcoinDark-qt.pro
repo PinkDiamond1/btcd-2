@@ -1,8 +1,8 @@
 TEMPLATE = app
 TARGET = BitcoinDark-qt
 VERSION = 1.0.7
-INCLUDEPATH += src src/json src/qt
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE CURL_STATICLIB _WIN32 NN_EXPORTS
+INCLUDEPATH += src src/json src/qt libjl777/nanomsg/src/utils
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE CURL_STATICLIB
 CONFIG += no_include_pwd
 CONFIG += thread
 
@@ -14,16 +14,16 @@ greaterThan(QT_MAJOR_VERSION, 4) {
 
 win32 {
     BOOST_LIB_SUFFIX=-mt
-    BOOST_INCLUDE_PATH=/home/matthew/Desktop/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/include
-    BOOST_LIB_PATH=/home/matthew/Desktop/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/lib
-    BDB_INCLUDE_PATH=/home/matthew/Downloads/db-4.8.30.NC/build_unix
-    BDB_LIB_PATH=/home/matthew/Downloads/db-4.8.30.NC/build_unix
-    OPENSSL_INCLUDE_PATH=/home/matthew/Desktop/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/include
-    OPENSSL_LIB_PATH=/home/matthew/Desktop/btcd/libjl777/mxe/usr/x86_64-w64-mingw32.static/lib
-    MINIUPNPC_INCLUDE_PATH=/home/matthew/Desktop/btcd/libjl777
-    MINIUPNPC_LIB_PATH=/home/matthew/Desktop/btcd/libjl777/miniupnp
-    QRENCODE_INCLUDE_PATH=/home/matthew/Desktop/btcd/libjl777/include
-    QRENCODE_LIB_PATH=/home/matthew/Desktop/btcd/libjl777/libs
+    BOOST_INCLUDE_PATH=$$PWD/libjl777/mxe/usr/x86_64-w64-mingw32.static/include
+    BOOST_LIB_PATH=$$PWD/libjl777/mxe/usr/x86_64-w64-mingw32.static/lib
+    BDB_INCLUDE_PATH=$$PWD/../db-4.8.30.NC/build_unix
+    BDB_LIB_PATH=$$PWD/../db-4.8.30.NC/build_unix
+    OPENSSL_INCLUDE_PATH=$$PWD/libjl777/mxe/usr/x86_64-w64-mingw32.static/include
+    OPENSSL_LIB_PATH=$$PWD/libjl777/mxe/usr/x86_64-w64-mingw32.static/lib
+    MINIUPNPC_INCLUDE_PATH=$$PWD/libjl777
+    MINIUPNPC_LIB_PATH=$$PWD/libjl777/miniupnp
+    QRENCODE_INCLUDE_PATH=$$PWD/libjl777/include
+    QRENCODE_LIB_PATH=$$PWD/libjl777/libs
 }
 
 
@@ -319,6 +319,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpcwallet.cpp \
     src/rpcblockchain.cpp \
     src/rpcrawtransaction.cpp \
+    src/rpcpeggy.cpp \
     src/qt/overviewpage.cpp \
     src/qt/csvmodelwriter.cpp \
     src/crypter.cpp \
@@ -446,7 +447,7 @@ macx:QMAKE_CXXFLAGS_THREAD += -pthread
 INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(LEVELDB_LIB_PATH,,-L,)  $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
-LIBS += $$PWD/libjl777/libs/libjl777.a $$PWD/libjl777/libs/libminiupnpc-x64-win.a $$PWD/libjl777/libs/libmman.a $$PWD/libjl777/nanomsg/.libs/libnanomsg.a -lpthread -liphlpapi -lssp -lcurl
+LIBS += $$PWD/libjl777/libs/libjl777.a $$PWD/libjl777/libs/libminiupnpc.a $$PWD/libjl777/nanomsg/.libs/libnanomsg.a -lpthread -lanl -lcurl
 # -lgdi32 has to happen after -lcrypto (see  #681)
 windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
 win32{

@@ -241,6 +241,12 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP9                   : return "OP_NOP9";
     case OP_NOP10                  : return "OP_NOP10";
 
+    // template matching params
+    case OP_PUBKEYHASH             : return "OP_PUBKEYHASH";
+    case OP_PUBKEY                 : return "OP_PUBKEY";
+    #ifdef PEGGY
+    case OP_SMALLDATA              : return "OP_SMALLDATA";
+    #endif
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
     // Note:
@@ -1309,6 +1315,9 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
         mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));
 
         // Empty, provably prunable, data-carrying output
+        #ifdef PEGGY
+        mTemplates.insert(make_pair(TX_NULL_DATA, CScript() << OP_RETURN << OP_SMALLDATA));
+        #endif
         mTemplates.insert(make_pair(TX_NULL_DATA, CScript() << OP_RETURN));
     }
 
@@ -1394,6 +1403,16 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
                 else
                     break;
             }
+            #ifdef PEGGY
+            else if (opcode2 == OP_SMALLDATA)
+            {
+                if(vch1.size() > MAX_OP_RETURN_RELAY)
+                {
+                    fprintf(stderr, "vch1 size too large!\n");
+                    break;
+                }
+            }
+            #endif
             else if (opcode1 != opcode2 || vch1 != vch2)
             {
                 // Others must match exactly
@@ -1487,6 +1506,7 @@ int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned c
     switch (t)
     {
     case TX_NONSTANDARD:
+        return -1;
     case TX_NULL_DATA:
         return -1;
     case TX_PUBKEY:
@@ -1608,7 +1628,6 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
     txnouttype whichType;
     if (!Solver(scriptPubKey, whichType, vSolutions))
         return false;
-
     if (whichType == TX_PUBKEY)
     {
         addressRet = CPubKey(vSolutions[0]).GetID();

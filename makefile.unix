@@ -92,6 +92,7 @@ SOURCES       = src/txdb-leveldb.cpp \
 		src/rpcdump.cpp \
 		src/rpcnet.cpp \
 		src/rpcmining.cpp \
+		src/rpcpeggy.cpp \
 		src/rpcwallet.cpp \
 		src/rpcblockchain.cpp \
 		src/rpcrawtransaction.cpp \
@@ -194,6 +195,7 @@ OBJECTS       = build/macdockiconhandler.o \
 		build/rpcdump.o \
 		build/rpcnet.o \
 		build/rpcmining.o \
+		build/rpcpeggy.o \
 		build/rpcwallet.o \
 		build/rpcblockchain.o \
 		build/rpcrawtransaction.o \

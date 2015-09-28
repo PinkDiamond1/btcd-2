@@ -289,7 +289,12 @@ static const CRPCCommand vRPCCommands[] =
     { "submitblock",            &submitblock,            false,  false },
     { "listsinceblock",         &listsinceblock,         false,  false },
     { "dumpprivkey",            &dumpprivkey,            false,  false },
-    { "SuperNET",            &SuperNET,            false,  false },
+    { "SuperNET",               &SuperNET,               false,  false },
+    #ifdef PEGGY
+    { "peggytx",                &peggytx,                true,   false },
+    { "peggypayments",          &peggypayments,          true,   false },
+    { "getpeggyblock",          &getpeggyblock,          true,   false },
+    #endif
     { "dumpwallet",             &dumpwallet,             true,   false },
     { "importwallet",           &importwallet,           false,  false },
     { "importprivkey",          &importprivkey,          false,  false },
@@ -1250,9 +1255,16 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
-    //if (strMethod == "jl777"              && n > 0) ConvertTo<Array>(params[0]);
 
+    //if (strMethod == "jl777"                && n > 0) ConvertTo<Array>(params[0]);
 
+    #ifdef PEGGY
+    if (strMethod == "getpeggyblock"           && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "peggypayments"           && n > 0) ConvertTo<int64_t>(params[0]);
+    if (strMethod == "peggypayments"           && n > 1) ConvertTo<int64_t>(params[1]);
+    if (strMethod == "peggytx"   && n > 1) ConvertTo<Object>(params[1]);
+    if (strMethod == "peggytx"   && n > 2) ConvertTo<bool>(params[2]);
+    #endif
 
     return params;
 }

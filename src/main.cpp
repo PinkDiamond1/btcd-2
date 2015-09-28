@@ -47,14 +47,15 @@ CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 CBigNum bnProofOfStakeLimitV2(~uint256(0) >> 48);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
 
-static const int64_t nTargetTimespan = 60 * 60;  // BitcoinDark - every 1 hour
 unsigned int nTargetSpacing = 1 * 60; // BitcoinDark - 1 minute
+static const int64_t nTargetTimespan = 60 * 60;  // BitcoinDark - every 1 hour
 //static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 
 //static const int64_t nDiffChangeTarget = 1;
-
 unsigned int nStakeMinAge = 8 * 60 * 60; // BitcoinDark - 8 hours
+
 unsigned int nStakeMaxAge = -1;
+
 unsigned int nModifierInterval = 10 * 60; // BitcoinDark - time to elapse before new modifier is computed
 
 int nCoinbaseMaturity = 100;
@@ -325,7 +326,6 @@ bool CTransaction::ReadFromDisk(COutPoint prevout)
     CTxIndex txindex;
     return ReadFromDisk(txdb, prevout, txindex);
 }
-
 bool CTransaction::IsStandard() const
 {
     if (nVersion > CTransaction::CURRENT_VERSION)
@@ -383,7 +383,6 @@ bool CTransaction::IsStandard() const
         fprintf(stderr,"nDataOut.%d is too many\n",nDataOut);
         return false;
     }
-    
     return true;
 }
 
@@ -400,9 +399,13 @@ bool CTransaction::IsStandard() const
 //
 bool CTransaction::AreInputsStandard(const MapPrevTx& mapInputs) const
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+        return true;
+    #else
     if (IsCoinBase())
         return true; // Coinbases don't use vin normally
-    
+    #endif
     for (unsigned int i = 0; i < vin.size(); i++)
     {
         const CTxOut& prev = GetOutputFor(vin[i], mapInputs);
@@ -541,7 +544,11 @@ bool CTransaction::CheckTransaction() const
     for (unsigned int i = 0; i < vout.size(); i++)
     {
         const CTxOut& txout = vout[i];
+        #ifdef PEGGY
+        if (txout.IsEmpty() && !IsCoinBase() && !IsCoinStake() && !IsPeggyBase())
+        #else
         if (txout.IsEmpty() && !IsCoinBase() && !IsCoinStake())
+        #endif
             return DoS(100, error("CTransaction::CheckTransaction() : txout empty for user transaction"));
         if (txout.nValue < 0)
             return DoS(100, error("CTransaction::CheckTransaction() : txout.nValue negative"));
@@ -556,14 +563,29 @@ bool CTransaction::CheckTransaction() const
     set<COutPoint> vInOutPoints;
     BOOST_FOREACH(const CTxIn& txin, vin)
     {
+        #ifdef PEGGY
+        if (!IsPeggyBase())
+        {
+            if (vInOutPoints.count(txin.prevout))
+                return false;
+            vInOutPoints.insert(txin.prevout);
+        }
+        #else
         if (vInOutPoints.count(txin.prevout))
             return false;
         vInOutPoints.insert(txin.prevout);
+        #endif
     }
-    
+    uint8_t minScriptSize = 2;
+    #ifdef PEGGY
+    if(IsPeggyBase())
+        minScriptSize = 0;
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
     {
-        if (vin[0].scriptSig.size() < 2 || vin[0].scriptSig.size() > 100)
+        if (vin[0].scriptSig.size() < minScriptSize || vin[0].scriptSig.size() > 100)
             return DoS(100, error("CTransaction::CheckTransaction() : coinbase script size is invalid"));
     }
     else
@@ -610,8 +632,9 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
         nMinFee = MAX_MONEY;
     return nMinFee;
 }
-
-
+#ifdef PEGGY
+extern "C" int8_t isOpReturn(char *hexbits);
+#endif
 bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
                         bool* pfMissingInputs)
 {
@@ -624,11 +647,17 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
     // Coinbase is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase())
         return tx.DoS(100, error("CTxMemPool::accept() : coinbase as individual tx"));
-    
+
     // ppcoin: coinstake is also only valid in a block, not as a loose transaction
     if (tx.IsCoinStake())
         return tx.DoS(100, error("CTxMemPool::accept() : coinstake as individual tx"));
-    
+
+    #ifdef PEGGY
+    // bitcoindark: peggybase is only valid in a block, not as a loose transaction
+    if (tx.IsPeggyBase())
+            return tx.DoS(100, error("CTxMemPool::accept() : peggybase as individual tx"));
+    #endif
+
     // To help v0.1.5 clients who would see it as a negative number
     if ((int64_t)tx.nLockTime > std::numeric_limits<int>::max())
         return error("CTxMemPool::accept() : not accepting nLockTime beyond 2038 yet");
@@ -704,22 +733,8 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
         
         // Don't accept it if it can't get into a block
-        
-        
-		//bitcoindark: value checks for teleport/multisig fees
         int64_t txMinFee;
-        /*bool isTeleport;
 
-        isTeleport = is_teleport_denomination(tx.vout[0].nValue);
-        if ( 0 && isTeleport != 0 )
-        {
-            std::cout << "tx.vout[0] = " << tx.vout[0].nValue << std::endl;
-            std::cout << "amount: " << (double)COIN/tx.vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
-        }
-		if (isTeleport)
-			txMinFee = tx.GetMinFee(1000, GMF_TELEPORT, nSize);
-        //TODO: add another if stmt here to set min fee if multisig
-		else*/
 			txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize); //standard tx
         if (nFees < txMinFee)
             return error("CTxMemPool::accept() : not enough fees %s, %"PRId64" < %"PRId64,
@@ -932,7 +947,11 @@ bool CWalletTx::AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs)
         // Add previous supporting transactions first
         BOOST_FOREACH(CMerkleTx& tx, vtxPrev)
         {
+            #ifdef PEGGY
+            if (!(tx.IsCoinBase() || tx.IsCoinStake() || tx.IsPeggyBase()))
+            #else
             if (!(tx.IsCoinBase() || tx.IsCoinStake()))
+            #endif
             {
                 uint256 hash = tx.GetHash();
                 if (!mempool.exists(hash) && !txdb.ContainsTx(hash))
@@ -1244,7 +1263,11 @@ void CBlock::UpdateTime(const CBlockIndex* pindexPrev)
 bool CTransaction::DisconnectInputs(CTxDB& txdb)
 {
     // Relinquish previous transactions' spent pointers
+    #ifdef PEGGY
+    if (!IsCoinBase() && !IsPeggyBase())
+    #else
     if (!IsCoinBase())
+    #endif
     {
         BOOST_FOREACH(const CTxIn& txin, vin)
         {
@@ -1272,7 +1295,7 @@ bool CTransaction::DisconnectInputs(CTxDB& txdb)
     // reorganized away. This is only possible if this transaction was completely
     // spent, so erasing it would be a no-op anyway.
     txdb.EraseTxIndex(*this);
-    
+
     return true;
 }
 
@@ -1285,8 +1308,11 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes
     // or because the transaction is malformed (in which case the transaction should
     // be dropped).  If tx is definitely invalid, fInvalid will be set to true.
     fInvalid = false;
-    
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return true; // Coinbase transactions have no inputs to fetch.
     
     for (unsigned int i = 0; i < vin.size(); i++)
@@ -1367,7 +1393,11 @@ const CTxOut& CTransaction::GetOutputFor(const CTxIn& input, const MapPrevTx& in
 
 int64_t CTransaction::GetValueIn(const MapPrevTx& inputs) const
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return 0;
     
     int64_t nResult = 0;
@@ -1381,7 +1411,11 @@ int64_t CTransaction::GetValueIn(const MapPrevTx& inputs) const
 
 unsigned int CTransaction::GetP2SHSigOpCount(const MapPrevTx& inputs) const
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return 0;
     
     unsigned int nSigOps = 0;
@@ -1401,7 +1435,11 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
     // fBlock is true when this is called from AcceptBlock when a new best-block is added to the blockchain
     // fMiner is true when called from the internal bitcoin miner
     // ... both are false when called from CTransaction::AcceptToMemoryPool
+    #ifdef PEGGY
+    if (!IsCoinBase() && !IsPeggyBase())
+    #else
     if (!IsCoinBase())
+    #endif
     {
         int64_t nValueIn = 0;
         int64_t nFees = 0;
@@ -1415,12 +1453,20 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             if (prevout.n >= txPrev.vout.size() || prevout.n >= txindex.vSpent.size())
                 return DoS(100, error("ConnectInputs() : %s prevout.n out of range %d %"PRIszu" %"PRIszu" prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.n, txPrev.vout.size(), txindex.vSpent.size(), prevout.hash.ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
             
-            // If prev is coinbase or coinstake, check that it's matured
+            // If prev is coinbase or coinstake or peggybase, check that it's matured
+            #ifdef PEGGY
+            if (txPrev.IsCoinBase() || txPrev.IsCoinStake() || txPrev.IsPeggyBase())
+            #else
             if (txPrev.IsCoinBase() || txPrev.IsCoinStake())
+            #endif
                 for (const CBlockIndex* pindex = pindexBlock; pindex && pindexBlock->nHeight - pindex->nHeight < nCoinbaseMaturity; pindex = pindex->pprev)
                     if (pindex->nBlockPos == txindex.pos.nBlockPos && pindex->nFile == txindex.pos.nFile)
+                        #ifdef PEGGY
+                        return error("ConnectInputs() : tried to spend %s at depth %d", txPrev.IsCoinBase() ? "coinbase" : (txPrev.IsPeggyBase() ? "peggybase" : "coinstake"), pindexBlock->nHeight - pindex->nHeight);
+                        #else
                         return error("ConnectInputs() : tried to spend %s at depth %d", txPrev.IsCoinBase() ? "coinbase" : "coinstake", pindexBlock->nHeight - pindex->nHeight);
-            
+                        #endif
+
             // ppcoin: check transaction timestamp
             if (txPrev.nTime > nTime)
                 return DoS(100, error("ConnectInputs() : transaction timestamp earlier than input transaction"));
@@ -1513,7 +1559,11 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
 
 bool CTransaction::ClientConnectInputs()
 {
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return false;
     
     // Take over previous transactions' spent pointers
@@ -1583,7 +1633,14 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
     
     return true;
 }
-
+#ifdef PEGGY
+extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex);
+extern "C" int peggyverify(char *peggyblockjson)
+{
+    fprintf(stderr, "PeggyVerify\n%s\n", peggyblockjson);
+    return 0;
+}
+#endif
 bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 {
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
@@ -1637,7 +1694,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
             nTxPos += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
         
         MapPrevTx mapInputs;
+        #ifdef PEGGY
+        if (tx.IsCoinBase() || tx.IsPeggyBase())
+        #else
         if (tx.IsCoinBase())
+        #endif
             nValueOut += tx.GetValueOut();
         else
         {
@@ -1689,10 +1750,34 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
         if (nStakeReward > nCalculatedStakeReward)
             return DoS(100, error("ConnectBlock() : coinstake pays too much(actual=%"PRId64" vs calculated=%"PRId64")", nStakeReward, nCalculatedStakeReward));
     }
+
+    #ifdef PEGGY
+    //TODO: Check that all peggybase vouts pay the correct amount
+    char *peggyblockJson = GetPeggyByBlock(this, pindex);
+    int PeggyVerified = peggyverify(peggyblockJson);
+    free(peggyblockJson);
+    if(PeggyVerified != 0)
+    {
+        return error("ConnectBlock(): Incorrect Peggy Data.");
+    }
+    #endif
     
     // ppcoin: track money supply and mint amount info
+    #ifdef PEGGY
+    if(vtx[2].IsPeggyBase())
+    {
+        pindex->nMint = nValueOut - nValueIn + nFees - vtx[2].GetValueOut();
+        pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn - vtx[2].GetValueOut();
+    }
+    else
+    {
+        pindex->nMint = nValueOut - nValueIn + nFees;
+        pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+    }
+    #else
     pindex->nMint = nValueOut - nValueIn + nFees;
     pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+    #endif
     if (!txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
         return error("Connect() : WriteBlockIndex for pindex failed");
     
@@ -1767,7 +1852,11 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)
         
         // Queue memory transactions to resurrect
         BOOST_FOREACH(const CTransaction& tx, block.vtx)
+        #ifdef PEGGY
+        if (!(tx.IsCoinBase() || tx.IsCoinStake() || tx.IsPeggyBase()))
+        #else
         if (!(tx.IsCoinBase() || tx.IsCoinStake()))
+        #endif
             vResurrect.push_back(tx);
     }
     
@@ -1977,8 +2066,11 @@ bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
 {
     CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
     nCoinAge = 0;
-    
+    #ifdef PEGGY
+    if (IsCoinBase() || IsPeggyBase())
+    #else
     if (IsCoinBase())
+    #endif
         return true;
     
     BOOST_FOREACH(const CTxIn& txin, vin)
@@ -2033,7 +2125,10 @@ bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
         printf("block coin age total nCoinDays=%"PRId64"\n", nCoinAge);
     return true;
 }
-
+#ifdef PEGGY
+extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex);
+extern "C" int32_t peggyblock(char *jsonstr);
+#endif
 bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProof)
 {
     // Check for duplicate
@@ -2078,7 +2173,22 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     if (pindexNew->IsProofOfStake())
         setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
     pindexNew->phashBlock = &((*mi).first);
-    
+
+    #ifdef PEGGY
+    char* peggy = GetPeggyByBlock(this, pindexNew);
+
+    if (pindexBest->nHeight >= nMinPeggyHeight) {
+        if(peggyblock(peggy) < 0){
+            free(peggy);
+            return error("AddToBlockIndex() : peggyblock() failed! peggy rejected");
+        }
+        else
+            free(peggy);
+    }
+    else
+        free(peggy);
+    #endif
+
     // Write to disk block index
     CTxDB txdb;
     if (!txdb.TxnBegin())
@@ -2156,7 +2266,19 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         if (fCheckSig && !CheckBlockSignature())
             return DoS(100, error("CheckBlock() : bad proof-of-stake block signature"));
     }
-    
+
+    #ifdef PEGGY
+    if (IsPeggyTime())
+    {
+        //bitcoindark: third transaction must be peggy, the rest must not be
+        if (vtx.empty() || !vtx[2].IsPeggyBase())
+            return DoS(100, error("CheckBlock() : third tx is not peggybase"));
+        for (unsigned int i = 3; i < vtx.size(); i++)
+            if (vtx[i].IsPeggyBase())
+                return DoS(100, error("CheckBlock : more than one peggybase"));
+    }
+    #endif
+
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, vtx)
     {
@@ -2419,7 +2541,10 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     
     return true;
 }
-
+#ifdef PEGGY
+extern "C" char *peggybase(uint32_t blocknum,uint32_t blocktimestamp);
+extern "C" char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp);
+#endif
 // novacoin: attempt to generate suitable proof-of-stake
 bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
 {
@@ -2443,20 +2568,53 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
     {
         if (wallet.CreateCoinStake(wallet, nBits, nSearchTime-nLastCoinStakeSearchTime, nFees, txCoinStake, key))
         {
+            #ifdef PEGGY
+            if (txCoinStake.nTime >= max(pindexBest->GetPastTimeLimit()+1, PastDrift(pindexBest->IsPeggyTime(), pindexBest->GetBlockTime())))
+            #else
             if (txCoinStake.nTime >= max(pindexBest->GetPastTimeLimit()+1, PastDrift(pindexBest->GetBlockTime())))
+            #endif
             {
                 // make sure coinstake would meet timestamp protocol
                 //    as it would be the same as the block timestamp
                 vtx[0].nTime = nTime = txCoinStake.nTime;
                 nTime = max(pindexBest->GetPastTimeLimit()+1, GetMaxTransactionTime());
+                #ifdef PEGGY
+                nTime = max(GetBlockTime(), PastDrift(pindexBest->IsPeggyTime(), pindexBest->GetBlockTime()));
+                #else
                 nTime = max(GetBlockTime(), PastDrift(pindexBest->GetBlockTime()));
-                
+                #endif
                 // we have to make sure that we have no future timestamps in
                 //    our transactions set
                 for (vector<CTransaction>::iterator it = vtx.begin(); it != vtx.end();)
                     if (it->nTime > nTime) { it = vtx.erase(it); } else { ++it; }
                 
                 vtx.insert(vtx.begin() + 1, txCoinStake);
+
+                #ifdef PEGGY
+
+                if(pindexBest->nHeight + 1 >= nMinPeggyHeight) //peggy has been reached!
+                {
+                    //bitcoindark: create peggybase transaction for this block
+                    CTransaction peggy;
+                    char *paymentScript;
+                    if(pindexBest->nHeight == nMinPeggyHeight){ //to ensure faster staking on private mainnet -- TEST only TODO: remove in production
+                        paymentScript = (char*)malloc(256);
+                        strcpy(paymentScript, "{\"RWoDDki8gfqYMHDEzsyFdsCtdSkB79DbVc\":10000000}"); // temp.
+                    }
+                    else
+                    {
+                        paymentScript = peggypayments(pindexBest->nHeight+1, nTime);
+                    }
+                    char *priceFeedHash = peggybase(pindexBest->nHeight+1, nTime);
+                    if(wallet.CreatePeggyBase(peggy, paymentScript, priceFeedHash))
+                    {
+                        peggy.nTime = nTime;
+                        vtx.insert(vtx.begin() + 2, peggy);
+                    }
+                    free(priceFeedHash);
+                    free(paymentScript);
+                }
+                #endif
                 hashMerkleRoot = BuildMerkleTree();
                 
                 // append a signature to our block
@@ -2632,8 +2790,6 @@ bool LoadBlockIndex(bool fAllowNew)
         block.nTime    = 1403138561;
         block.nBits    = bnProofOfWorkLimit.GetCompact();
         block.nNonce   = !fTestNet ? 8359109 : 294567;
-        
-        
         
         assert(block.hashMerkleRoot == uint256("0xfd1751cc6963d88feca94c0d01da8883852647a37a0a67ce254d62dd8c9d5b2b"));
         
@@ -2920,8 +3076,11 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
 // a large 4-byte int at any alignment.
+#ifdef PEGGY
+unsigned char pchMessageStart[4] = { 0xa4, 0xa2, 0xd8, 0xe7 };
+#else
 unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
-
+#endif
 //bitcoindark:
 extern "C" char *process_jl777_msg(char *from,char *msg, int32_t duration);
 
