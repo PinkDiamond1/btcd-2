@@ -900,7 +900,7 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
     }
     free(params);
     if ( *nump == 0 )
-        printf("no %s unspents for (%s)\n",coin->name,account != 0 ? account : "");
+        printf("no (%s) unspents for (%s)\n",coin->name,account != 0 ? account : "");
     return(ups);
 }
 

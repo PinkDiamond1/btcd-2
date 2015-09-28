@@ -275,7 +275,9 @@ int32_t nn_lbsocket(int32_t maxmillis,int32_t port,uint16_t globalport,uint16_t 
 int32_t nn_settimeouts(int32_t sock,int32_t sendtimeout,int32_t recvtimeout)
 {
     int32_t retrymillis,maxmillis;
-    maxmillis = SUPERNET.PLUGINTIMEOUT, retrymillis = maxmillis/40;
+    if ( (maxmillis= SUPERNET.PLUGINTIMEOUT) == 0 )
+        maxmillis = 3000;
+    retrymillis = maxmillis/40;
     if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL,&retrymillis,sizeof(retrymillis)) < 0 )
         fprintf(stderr,"error setting NN_REQ NN_RECONNECT_IVL_MAX socket %s\n",nn_errstr());
     else if ( nn_setsockopt(sock,NN_SOL_SOCKET,NN_RECONNECT_IVL_MAX,&maxmillis,sizeof(maxmillis)) < 0 )
@@ -555,6 +557,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         // configure settings
         RELAYS.readyflag = 1;
         plugin->allowremote = 1;
+        plugin->sleepmillis = 25;
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
     }
     else

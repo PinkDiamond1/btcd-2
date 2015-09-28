@@ -1698,7 +1698,7 @@ void ThreadMessageHandler(void* parg)
 
 void ThreadMessageHandler2(void* parg)
 {
-    printf("ThreadMessageHandler started\n");
+    fprintf(stderr,"ThreadMessageHandler started\n");
     SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
     while (!fShutdown)
     {
@@ -1718,7 +1718,7 @@ void ThreadMessageHandler2(void* parg)
         {
             if (pnode->fDisconnect)
                 continue;
-
+            //fprintf(stderr,"receive messages\n");
             // Receive messages
             {
                 TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);
@@ -1728,6 +1728,7 @@ void ThreadMessageHandler2(void* parg)
             }
             if (fShutdown)
                 return;
+            //fprintf(stderr,"send messages\n");
 
             // Send messages
             {

@@ -361,7 +361,7 @@ int32_t jumblr_idle(struct plugin_info *plugin)
         {
             if ( (coin= COINS.LIST[i]) != 0 )
             {
-                if ( coin->jpubP[0] == 0 && coin->jvinkey == 0 && coin->junspent == 0 && coin->jvintxid[0] == 0 && coin->jvin < 0 && coin->jscriptPubKey[0] == 0 && coin->jvinaddr[0] >= 0 )
+                if ( plugin->ready > 1 && coin->jpubP[0] == 0 && coin->jvinkey == 0 && coin->junspent == 0 && coin->jvintxid[0] == 0 && coin->jvin < 0 && coin->jscriptPubKey[0] == 0 && coin->jvinaddr[0] >= 0 )
                 {
                     strcpy(coin->jvintxid,"error getting unspent txid");
                     if ( (coin->jvin= jumblr_vintxid(&coin->junspent,coin->jvinaddr,coin->jscriptPubKey,coin->jvintxid,coin,jumblr_amount(coin,SATOSHIDEN*10000),-1)) >= 0 )
@@ -650,20 +650,53 @@ struct jumblr_info *jumblr_create(int32_t *createdflagp,char *base,uint32_t time
     return(sp);
 }
 
-cJSON *jumblr_addrjson(uint64_t *addrs,int32_t num)
+int32_t uniq_specialaddrs(int32_t *myindp,uint64_t addrs[],int32_t max,char *base,char *special,int32_t addrtype)
 {
-    int32_t j; cJSON *array;
-    array = cJSON_CreateArray();
-    for (j=0; j<num; j++)
-        jaddi64bits(array,addrs[j]);
-    return(array);
+    char destNXT[64],rsaddr[64]; cJSON *array; int32_t k,i,j,n,r,num=0,haspubkey,myind = -1; uint64_t tmp,x,quoteid = 0;
+    if ( (array= InstantDEX_specialorders(&quoteid,SUPERNET.my64bits,base,special,0,addrtype)) != 0 )
+    {
+        if ( (n= cJSON_GetArraySize(array)) > 0 )
+        {
+            r = (rand() % n);
+            for (j=0; j<n; j++)
+            {
+                i = (j + r) % n;
+                x = j64bits(jitem(array,i),0);
+                if ( num > 0 )
+                {
+                    for (k=0; k<num; k++)
+                        if ( x == addrs[k] )
+                            break;
+                } else k = 0;
+                if ( k == num )
+                {
+                    if ( x == SUPERNET.my64bits )
+                        myind = num;
+                    expand_nxt64bits(destNXT,x);
+                    issue_getpubkey(&haspubkey,destNXT);
+                    if ( haspubkey == 0 )
+                    {
+                        RS_encode(rsaddr,addrs[num]);
+                        tmp = RS_decode(rsaddr);
+                        printf("skipping %s without pubkey RS.%s %llu\n",destNXT,rsaddr,(long long)tmp);
+                    } else addrs[num++] = x;
+                    if ( num == max )
+                        break;
+                }
+                printf("n.%d r.%d i.%d j.%d k.%d num.%d %llu\n",n,r,i,j,k,num,(long long)addrs[num-1]);
+            }
+        }
+        free_json(array);
+    }
+    *myindp = 0;
+    return(num);
 }
 
-char *jumblr_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int32_t srcacct)
+char *jumblr_start(char *base,int32_t srcacct)
 {
-    char destNXT[64],rsaddr[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
-    int32_t k,createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
-    uint64_t _addrs[64],tmp,x,quoteid = 0; struct jumblr_info *sp; struct coin777 *coin;
+    char destNXT[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
+    int32_t createdflag,i,num=0,myind = -1; uint32_t now,timestamp = 0;
+    uint64_t addrs[64],quoteid = 0; struct jumblr_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     srcacct = -1;
@@ -671,51 +704,12 @@ char *jumblr_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int
     now = (uint32_t)time(NULL);
     if ( timestamp != 0 && now > timestamp+777 )
         return(clonestr("{\"error\":\"shuffle expired\"}"));
-    if ( addrs == 0 )
-    {
-        addrs = _addrs, num = 0;
-        if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
-        {
-            if ( (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                r = (rand() % n);
-                for (j=0; j<n; j++)
-                {
-                    i = (j + r) % n;
-                    x = j64bits(jitem(array,i),0);
-                    if ( num > 0 )
-                    {
-                        for (k=0; k<num; k++)
-                            if ( x == addrs[k] )
-                                break;
-                    } else k = 0;
-                    if ( k == num )
-                    {
-                        if ( x == SUPERNET.my64bits )
-                            myind = num;
-                        expand_nxt64bits(destNXT,x);
-                        issue_getpubkey(&haspubkey,destNXT);
-                        if ( haspubkey == 0 )
-                        {
-                            RS_encode(rsaddr,addrs[num]);
-                            tmp = RS_decode(rsaddr);
-                            printf("skipping %s without pubkey RS.%s %llu\n",destNXT,rsaddr,(long long)tmp);
-                        } else addrs[num++] = x;
-                        if ( num == sizeof(_addrs)/sizeof(*_addrs) )
-                            break;
-                    }
-                    printf("n.%d r.%d i.%d j.%d k.%d num.%d %llu\n",n,r,i,j,k,num,(long long)addrs[num-1]);
-                }
-            }
-            free_json(array);
-        }
-    }
-printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
-    if ( num < 3 )
+    if ( (num= uniq_specialaddrs(&myind,addrs,sizeof(addrs)/sizeof(*addrs),base,"jumblr",coin->addrtype)) < 3 )
     {
         printf("need at least 3 to shuffle\n");
         return(clonestr("{\"error\":\"not enough shufflers\"}"));
     }
+    printf("jumblr_start(%s) myind.%d num.%d\n",base,myind,num);
     if ( (i= myind) > 0 )
     {
         addrs[i] = addrs[0];
@@ -733,7 +727,7 @@ printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
         printf("inside\n");
         if ( quoteid == 0 )
         {
-            if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
+            if ( (array= InstantDEX_specialorders(&quoteid,SUPERNET.my64bits,base,"jumblr",0,coin->addrtype)) != 0 )
                 free_json(array);
         }
         printf("quoteid.%llu\n",(long long)quoteid);
@@ -742,7 +736,7 @@ printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
             iQ->s.pending = 1;
             if ( jumblr_next(sp,coin,addrs,num,i,jumblr_amount(coin,iQ->s.baseamount),srcacct) < 0 )
                 return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
-            array = jumblr_addrjson(addrs,num);
+            array = addrs_jsonarray(addrs,num);
             addrstr = jprint(array,1);
             changestr[0] = 0;
             if ( sp->changestr != 0 )
@@ -813,7 +807,7 @@ int32_t jumblr_incoming(char *jsonstr)
             if ( myind >= 0 && numvins < sizeof(newvins)/sizeof(*newvins)-2 && numvouts < sizeof(newvouts)/sizeof(*newvouts)-2 )
             {
                 //printf("incoming numvins.%d numvouts.%d\n",numvins,numvouts);
-                if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
+                if ( (array= InstantDEX_specialorders(&quoteid,SUPERNET.my64bits,base,"jumblr",0,coin->addrtype)) != 0 )
                     free_json(array);
                 if ( (iQ= find_iQ(quoteid)) != 0 )
                 {
@@ -852,7 +846,7 @@ int32_t jumblr_incoming(char *jsonstr)
                         jadd64bits(newjson,"shuffleid",sp->shuffleid);
                         jaddnum(newjson,"timestamp",sp->timestamp);
                         jaddstr(newjson,"base",sp->base);
-                        jadd(newjson,"addrs",jumblr_addrjson(addrs,num));
+                        jadd(newjson,"addrs",addrs_jsonarray(addrs,num));
                         msg = jprint(newjson,1);
                         expand_nxt64bits(destNXT,sp->addrs[myind+1]);
                         if ( Debuglevel > 2 )
@@ -892,15 +886,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     plugin->allowremote = 1;
     if ( initflag > 0 )
     {
-        /*if ( 0 && (jsonstr= loadfile(&allocsize,"SuperNET.conf")) != 0 )
-        {
-            if ( (json= cJSON_Parse(jsonstr)) != 0 )
-                SuperNET_initconf(json), free_json(json);
-            free(jsonstr);
-        }*/
         coin777_find("BTC",1);
         coin777_find("BTCD",1);
         //coin777_find("LTC",1);
+        plugin->sleepmillis = 10;
+        plugin->ready = 1;
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
     else if ( SUPERNET.iamrelay == 0 )
@@ -917,6 +907,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         if ( plugin_result(retbuf,json,tag) > 0 )
             return((int32_t)strlen(retbuf));
+        plugin->ready++;
         if ( methodstr == 0 || methodstr[0] == 0 )
         {
             printf("(%s) has not method\n",jsonstr);
@@ -924,7 +915,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"start") == 0 )
         {
-            retstr = jumblr_start(jstr(json,"base"),0,0,0,juint(json,"source"));
+            retstr = jumblr_start(jstr(json,"base"),juint(json,"source"));
         }
         else if ( strcmp(methodstr,"validate") == 0 )
         {

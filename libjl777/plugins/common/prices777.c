@@ -744,6 +744,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         //{"exmo", prices777_exmo, exmo_supports, exmo_trade },
         {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade, quadriga_coinbalance },
         {"jumblr", prices777_InstantDEX, InstantDEX_supports },
+        {"pangea", prices777_InstantDEX, InstantDEX_supports },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
     int32_t i,rellen; char basebuf[64],relbuf[64],base[64],rel[64],name[64]; struct exchange_info *exchangeptr;
@@ -910,11 +911,13 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         return(0);
     }
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
+//printf("call addbundle\n");
     if ( (prices= prices777_addbundle(&valid,0,0,exchangestr,baseid,relid)) != 0 )
     {
         printf("found (%s/%s).%s %llu %llu in slot-> %p\n",base,rel,exchangestr,(long long)baseid,(long long)relid,prices);
         return(prices);
     }
+//printf("call find_exchange\n");
     if ( (exchange= find_exchange(&exchangeid,exchangestr)) == 0 )
     {
         printf("cant add exchange.(%s)\n",exchangestr);
@@ -929,7 +932,10 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         }
     }
     if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
+    {
+        //printf("call addbundle after initpair\n");
         prices777_addbundle(&valid,1,prices,0,0,0);
+    }
     return(prices);
 }
 
@@ -1001,7 +1007,7 @@ void prices777_exchangeloop(void *ptr)
                     pollflag = 1;
                 else if ( isnxtae == 0 )
                     pollflag = milliseconds() > (exchange->lastupdate + exchange->pollgap*1000) && milliseconds() > (prices->lastupdate + 1000*SUPERNET.idlegap);
-                else if ( strcmp(exchange->name,"unconf") == 0 || prices->pollnxtblock < prices777_NXTBLOCK || milliseconds() > prices->lastupdate + 1000*SUPERNET.idlegap )
+                else if ( (strcmp(exchange->name,"unconf") == 0 && milliseconds() > prices->lastupdate + 5000) || prices->pollnxtblock < prices777_NXTBLOCK || milliseconds() > prices->lastupdate + 1000*SUPERNET.idlegap )
                     pollflag = 1;
                 else continue;
                 if ( pollflag != 0 && exchange->updatefunc != 0 )
@@ -1125,7 +1131,7 @@ int32_t prices777_init(char *jsonstr)
     for (i=0; i<MAX_EXCHANGES; i++)
     {
         exchangeptr = &Exchanges[i];
-        if ( exchangeptr->refcount > 0 || strcmp(exchangeptr->name,"unconf") == 0 )
+        if ( (exchangeptr->refcount > 0 || strcmp(exchangeptr->name,"unconf") == 0) )//&& strcmp(exchangeptr->name,"pangea") != 0 && strcmp(exchangeptr->name,"jumblr") != 0 )
             portable_thread_create((void *)prices777_exchangeloop,exchangeptr);
     }
     return(0);
@@ -1933,6 +1939,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         init_Currencymasks();
         BUNDLE.jsonstr = clonestr(jsonstr);
         PRICES.readyflag = 1;
+        plugin->sleepmillis = 50;
         //BUNDLE.kv = kv777_init("DB","prices",0);
         //printf("BUNDLE.kv.%p\n",BUNDLE.kv);
         strcpy(retbuf,"{\"result\":\"prices init\"}");

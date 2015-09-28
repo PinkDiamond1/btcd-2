@@ -39,7 +39,7 @@
 #include "../common/txind777.c"
 #undef DEFINES_ONLY
 
-char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANTDEX_NXTAENAME, INSTANTDEX_BASKETNAME, "basketNXT", "basketUSD", "basketBTC", "basketCNY", INSTANTDEX_ACTIVENAME, "wallet", "jumblr", "peggy", // peggy MUST be last of special exchanges
+char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANTDEX_NXTAENAME, INSTANTDEX_BASKETNAME, "basketNXT", "basketUSD", "basketBTC", "basketCNY", INSTANTDEX_ACTIVENAME, "wallet", "jumblr", "pangea", "peggy", // peggy MUST be last of special exchanges
     "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "quadriga",
     "kraken", "gatecoin", "quoine", "jubi", "hitbtc"  // no trading for these exchanges yet
 }; // "bter" <- orderbook is backwards and all entries are needed, later to support, "exmo" flakey apiservers
@@ -357,7 +357,7 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
     iQ->s.relbits = stringbits(rel->buf);
     iQ->s.offerNXT = j64bits(json,"offerNXT");
     iQ->s.quoteid = j64bits(json,"quoteid");
-    if ( strcmp(exchangestr->buf,"jumblr") == 0 )
+    if ( strcmp(exchangestr->buf,"jumblr") == 0 || strcmp(exchangestr->buf,"pangea") == 0 )
     {
         if ( iQ->s.price == 0. )
             iQ->s.price = 1.;
@@ -365,13 +365,19 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
             iQ->s.vol = 1.;
         if ( iQ->s.baseamount == 0 )
             iQ->s.baseamount = iQ->s.vol * SATOSHIDEN;
-        if ( localaccess != 0 )
+        if ( localaccess != 0 && strcmp(exchangestr->buf,"jumblr") == 0 )
         {
             if ( (coin= coin777_find(base->buf,0)) != 0 )
             {
+                if ( coin->jvin == 0 && coin->jvinaddr[0] == 0 )
+                {
+                    coin->jvin = -1;
+                    printf("initial state for jumblr.%s detected\n",coin->name);
+                    sleep(5);
+                }
                 if ( coin->jvin < 0 )
                 {
-                    printf("no %s unspents available for jumblr jvin.%d %.8f\n",coin->name,coin->jvin,dstr(coin->junspent));
+                    printf("no %s unspents available for jumblr/pangea jvin.%d %.8f\n",coin->name,coin->jvin,dstr(coin->junspent));
                     return(-1);
                 }
                 maxamount = coin->junspent - coin->mgw.txfee*2 - (coin->junspent>>10);
@@ -379,7 +385,7 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
                     iQ->s.baseamount = maxamount;
                 else if ( iQ->s.baseamount < coin->mgw.txfee )
                 {
-                    printf("jumblr amount %.8f less than txfee %.8f\n",dstr(iQ->s.baseamount),dstr(coin->mgw.txfee));
+                    printf("jumblr/pangea amount %.8f less than txfee %.8f\n",dstr(iQ->s.baseamount),dstr(coin->mgw.txfee));
                     return(-1);
                 }
             }
@@ -409,9 +415,9 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
     if ( iQ->s.price > SMALLVAL && iQ->s.vol > SMALLVAL && iQ->s.baseid != 0 && iQ->s.relid != 0 )
     {
         buf[0] = 0, _set_assetname(&basemult,buf,0,iQ->s.baseid);
-        //printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->baseid,buf,(long long)basemult);
+        printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->s.baseid,buf,(long long)basemult);
         buf[0] = 0, _set_assetname(&relmult,buf,0,iQ->s.relid);
-        //printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->relid,buf,(long long)relmult);
+        printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->s.relid,buf,(long long)relmult);
         //basemult = get_assetmult(iQ->baseid), relmult = get_assetmult(iQ->relid);
         baseamount = (iQ->s.baseamount + basemult/2) / basemult, baseamount *= basemult;
         relamount = (iQ->s.relamount + relmult/2) / relmult, relamount *= relmult;
@@ -444,11 +450,13 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     {
         // test: asset/asset, asset/external, external/external, autofill and automatch
         // peggy integration
-        if ( bidask_parse(localaccess,&exchangestr,&name,&base,&rel,&gui,&iQ,json) < 0 )
-            return(clonestr("{\"error\":\"invalid parameters\"}"));
+        if ( bidask_parse(localaccess,&exchangestr,&name,&base,&rel,&gui,&iQ,json) < 0 && (strcmp(exchangestr.buf,"jumblr") == 0 || strcmp(exchangestr.buf,"pangea") == 0) )
+        {
+            //return(clonestr("{\"error\":\"invalid parameters\"}"));
+        }
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
-        //printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
+printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
         copy_cJSON(&method,jobj(json,"method"));
         if ( (sequenceid= j64bits(json,"orderid")) == 0 )
             sequenceid = j64bits(json,"sequenceid");
@@ -472,12 +480,6 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         }
         if ( strcmp(method.buf,"allorderbooks") == 0 )
             retstr = prices777_allorderbooks();
-        /*else if ( strcmp(method.buf,"coinshuffle") == 0 )
-        {
-            if ( strcmp(exchangestr.buf,"jumblr") == 0 )
-                retstr = InstantDEX_coinshuffle(base.buf,&iQ,json);
-            else retstr = clonestr("{\"error\":\"coinshuffle must use shuffle exchange\"}");
-        }*/
         else if ( strcmp(method.buf,"openorders") == 0 )
             retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
         else if ( strcmp(method.buf,"allexchanges") == 0 )
@@ -670,11 +672,15 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->allowremote = 1;
         portable_mutex_init(&plugin->mutex);
         init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0,json);
-        INSTANTDEX.history = txinds777_init(SUPERNET.DBPATH,"InstantDEX");
-        INSTANTDEX.numhist = (int32_t)INSTANTDEX.history->curitem;
-        InstantDEX_inithistory(0,INSTANTDEX.numhist);
+        if ( 0 )
+        {
+            INSTANTDEX.history = txinds777_init(SUPERNET.DBPATH,"InstantDEX");
+            INSTANTDEX.numhist = (int32_t)INSTANTDEX.history->curitem;
+            InstantDEX_inithistory(0,INSTANTDEX.numhist);
+        }
         //update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
+        plugin->sleepmillis = 25;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");
     }
     else
@@ -719,8 +725,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 retstr = bidask_func(0,1,sender,json,jsonstr);
             else if ( strcmp(methodstr,"swap") == 0 )
                 retstr = swap_func(0,1,sender,json,jsonstr);
-            //else if ( strcmp(methodstr,"jumblr") == 0 )
-            //    retstr = shuffle_func(0,1,sender,json,jsonstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));

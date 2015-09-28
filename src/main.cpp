@@ -3149,6 +3149,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         {
             pfrom->addrLocal = addrMe;
             SeenLocal(addrMe);
+            //fprintf(stderr,"seen my ipaddr (%s)\n",(char *)addrMe.ToString().c_str());
         }
         
         
@@ -3162,7 +3163,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         
         // record my external IP reported by peer
         if (addrFrom.IsRoutable() && addrMe.IsRoutable())
+        {
+            //fprintf(stderr,"got my ipaddr (%s)\n",(char *)addrMe.ToString().c_str());
             addrSeenByPeer = addrMe;
+        }
         
         // Be shy and don't send version until we hear
         if (pfrom->fInbound)

@@ -173,6 +173,7 @@ struct coin777
     uint8_t p2shtype,addrtype,usep2sh;
     struct subatomic_rawtransaction funding; struct NXTtx trigger; char *refundtx,*signedrefund;
     int32_t minconfirms,verified,lag,estblocktime; uint64_t minoutput;
+    char pangeapubkey[128],pangeacoinaddr[128];
     char atomicsendpubkey[128],atomicrecvpubkey[128],atomicrecv[128],atomicsend[128],donationaddress[128],donationscript[128],changeaddr[128];
     char jchangeaddr[128],jchangehex[128],jdestaddr[128],jdesthex[128],jvintxid[128],jscriptPubKey[4096],jvinaddr[128],jpubP[128]; void *jvinkey; int32_t jvin; uint64_t junspent;
 };
