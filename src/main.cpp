@@ -1654,6 +1654,12 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
     return true;
 }
 
+extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex);
+extern "C" int peggyverify(char *peggyblockjson)
+{
+    fprintf(stderr, "PeggyVerify\n%s\n", peggyblockjson);
+    return 0;
+}
 bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 {
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
@@ -1766,6 +1772,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
     #ifdef PEGGY
     //TODO: Check that all peggybase vouts pay the correct amount
+    char *peggyblockJson = GetPeggyByBlock(this, pindex);
+    int PeggyVerified = peggyverify(peggyblockJson);
+    free(peggyblockJson);
+    if(PeggyVerified != 0)
+    {
+        return error("ConnectBlock(): Incorrect Peggy Data.");
+    }
     #endif
     
     // ppcoin: track money supply and mint amount info
