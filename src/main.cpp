@@ -632,8 +632,9 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
         nMinFee = MAX_MONEY;
     return nMinFee;
 }
-
+#ifdef PEGGY
 extern "C" int8_t isOpReturn(char *hexbits);
+#endif
 bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
                         bool* pfMissingInputs)
 {
@@ -2540,8 +2541,10 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     
     return true;
 }
+#ifdef PEGGY
 extern "C" char *peggybase(uint32_t blocknum,uint32_t blocktimestamp);
 extern "C" char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp);
+#endif
 // novacoin: attempt to generate suitable proof-of-stake
 bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
 {
