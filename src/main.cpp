@@ -1632,13 +1632,14 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
     
     return true;
 }
-
+#ifdef PEGGY
 extern "C" char* GetPeggyByBlock(CBlock *pblock, CBlockIndex *pindex);
 extern "C" int peggyverify(char *peggyblockjson)
 {
     fprintf(stderr, "PeggyVerify\n%s\n", peggyblockjson);
     return 0;
 }
+#endif
 bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 {
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
