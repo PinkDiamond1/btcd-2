@@ -910,11 +910,7 @@ int CMerkleTx::GetDepthInMainChain(CBlockIndex* &pindexRet) const
 
 int CMerkleTx::GetBlocksToMaturity() const
 {
-    #ifdef PEGGY
-    if (!(IsCoinBase() || IsCoinStake() || IsPeggyBase()))
-    #else
     if (!(IsCoinBase() || IsCoinStake()))
-    #endif
         return 0;
     return max(0, (nCoinbaseMaturity+10) - GetDepthInMainChain());
 }
