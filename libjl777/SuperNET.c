@@ -6,7 +6,7 @@
  * holder information and the developer policies on copyright and licensing.  *
  *                                                                            *
  * Unless otherwise agreed in a custom licensing agreement, no part of the    *
- * Nxt software, including this file, may be copied, modified, propagated,    *
+ * SuperNET software, including this file may be copied, modified, propagated *
  * or distributed except according to the terms contained in the LICENSE file *
  *                                                                            *
  * Removal or modification of this copyright notice is prohibited.            *
@@ -305,6 +305,9 @@ void SuperNET_loop(void *ipaddr)
     {
         strs[n++] = language_func((char *)"jumblr","",0,0,1,(char *)"jumblr",jsonargs,call_system);
         while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"jumblr",0,0) == 0 )
+            poll_daemons();
+        strs[n++] = language_func((char *)"pangea","",0,0,1,(char *)"pangea",jsonargs,call_system);
+        while ( find_daemoninfo(&ind,"pangea",0,0) == 0 )
             poll_daemons();
         //strs[n++] = language_func((char *)"dcnet","",0,0,1,(char *)"dcnet",jsonargs,call_system);
         //while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"dcnet",0,0) == 0 )
@@ -776,8 +779,17 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
-    //void poker_test();
-    //poker_test(); getchar();
+     if ( 0 )
+    {
+        //void poker_test();
+        //poker_test(); getchar();
+        //void raft777_test();
+        void hostnet777_test(int32_t numclients,int32_t numiters,int32_t mode);
+        void portable_OS_init();
+        //raft777_test();
+        int numplayers = 9;
+        portable_OS_init(), hostnet777_test(numplayers,1000 * (numplayers + numplayers * (numplayers*2 + 5 + 1)),1), getchar();
+    }
 #endif
     if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) == 0 )
         jsonstr = clonestr("{}");

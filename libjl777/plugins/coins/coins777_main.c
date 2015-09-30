@@ -6,7 +6,7 @@
  * holder information and the developer policies on copyright and licensing.  *
  *                                                                            *
  * Unless otherwise agreed in a custom licensing agreement, no part of the    *
- * Nxt software, including this file, may be copied, modified, propagated,    *
+ * SuperNET software, including this file may be copied, modified, propagated *
  * or distributed except according to the terms contained in the LICENSE file *
  *                                                                            *
  * Removal or modification of this copyright notice is prohibited.            *
@@ -173,7 +173,8 @@ uint16_t extract_userpass(char *serverport,char *userpass,char *coinstr,char *us
     if ( strcmp(coinstr,"NXT") == 0 )
         return(0);
     serverport[0] = userpass[0] = 0;
-    set_coinconfname(fname,coinstr,userhome,coindir,confname);
+    if ( confname == 0 || confname[0] == 0 )
+        set_coinconfname(fname,coinstr,userhome,coindir,confname);
     printf("set_coinconfname.(%s)\n",fname);
     if ( (fp= fopen(os_compatible_path(fname),"r")) != 0 )
     {

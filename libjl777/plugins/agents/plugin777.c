@@ -74,7 +74,7 @@ struct plugin_info
     uint32_t permanentflag,ppid,extrasize,timeout,numrecv,numsent,bundledflag,registered,sleepmillis,allowremote,ready;
     uint16_t port,pangeaport;
     portable_mutex_t mutex;
-    uint64_t daemonid,myid,nxt64bits; uint8_t mypriv[32],mypub[32],recvbuf[65536*2];
+    uint64_t daemonid,myid,nxt64bits; uint8_t mypriv[32],mypub[32];
     uint8_t pluginspace[];
 };
 
