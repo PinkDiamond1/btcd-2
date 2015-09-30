@@ -1005,9 +1005,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
         free_json(argjson);
         printf("my64bits %llu ipaddr.%s mypriv.%02x mypub.%02x\n",(long long)plugin->nxt64bits,plugin->ipaddr,plugin->mypriv[0],plugin->mypub[0]);
+#ifdef __APPLE__
         if ( 1 )
             pangea_test(plugin,2);
-        else if ( juint(json,"pangeaport") != 0 )
+        else
+#endif
+            if ( juint(json,"pangeaport") != 0 )
         {
             PANGEA_MAXTHREADS = 1;
             THREADS[0] = tp = calloc(1,sizeof(*THREADS[0]));
