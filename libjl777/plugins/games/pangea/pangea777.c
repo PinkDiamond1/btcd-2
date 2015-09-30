@@ -55,7 +55,7 @@ bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
 uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass);
 
 
-#define PANGEA_COMMANDS "start", "newtable"
+#define PANGEA_COMMANDS "start", "newtable", "status", "turn"
 
 char *PLUGNAME(_methods)[] = { PANGEA_COMMANDS };
 char *PLUGNAME(_pubmethods)[] = { PANGEA_COMMANDS };
@@ -233,6 +233,34 @@ bits256 pangea_pubkeys(cJSON *json,struct cards777_pubdata *dp)
     return(check);
 }
 
+void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplayer,uint8_t *data,int32_t datalen,int32_t cardi)
+{
+    int32_t n,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json; struct cards777_pubdata *dp = hn->client->H.pubdata;
+    sprintf(hex,"{\"cmd\":\"%s\",\"state\":%u,\"myslot\":%d,\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,\"data\":\"",cmdstr,hn->client->H.state,hn->client->H.slot,cardi,destplayer,(long long)hn->client->H.nxt64bits,time(NULL),datalen);
+    n = (int32_t)strlen(hex);
+    init_hexbytes_noT(&hex[n],data,datalen);
+    strcat(hex,"\"}");
+    if ( (json= cJSON_Parse(hex)) == 0 )
+    {
+        printf("error creating json\n");
+        return;
+    }
+    free_json(json);
+    hexlen = (int32_t)strlen(hex)+1;
+    printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
+    if ( destplayer < 0 )
+    {
+        destbits = 0;
+        memset(destpub.bytes,0,sizeof(destpub));
+    }
+    else
+    {
+        destpub = dp->playerpubs[destplayer];
+        destbits = acct777_nxt64bits(destpub);
+    }
+    hostnet777_msg(destbits,destpub,hn,blindflag,hex,hexlen);
+}
+
 int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
     char *nrs;
@@ -261,14 +289,48 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
 
 int32_t pangea_encode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
+    char hex[CARDS777_MAXPLAYERS * CARDS777_MAXCARDS * sizeof(bits256)];
     if ( datalen != (dp->numcards * dp->N) * sizeof(bits256) )
     {
-        printf("pangea_encode invalid datalen.%d vs %ld\n",datalen,(dp->numcards + 1) * sizeof(bits256));
+        printf("pangea_encode invalid datalen.%d vs %ld\n",datalen,(dp->numcards * dp->N) * sizeof(bits256));
         return(-1);
     }
     //if ( Debuglevel > 2 )
     printf("player.%d encodes into %p\n",hn->client->H.slot,priv->outcards);
     cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->sharenrs,dp->M,(void *)data,dp->numcards,dp->N);
+    {
+        int32_t i;
+        for (i=0; i<16; i++)
+            printf("%llx ",(long long)priv->outcards[i].txid);
+        printf("privcards\n");
+    }
+    memcpy(data,priv->outcards,datalen);
+    if ( hn->client->H.slot < dp->N-1 )
+        pangea_sendcmd(hex,hn,"encode",hn->client->H.slot+1,data,datalen,-1);
+    else pangea_sendcmd(hex,hn,"final",-1,data,datalen,-1);
+    return(0);
+}
+
+int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    char hex[CARDS777_MAXPLAYERS * CARDS777_MAXCARDS * sizeof(bits256)]; int32_t j,iter,cardi,destplayer;
+    if ( datalen != (2 * dp->N) * (dp->N * sizeof(bits256)) )
+    {
+        printf("pangea_preflop invalid datalen.%d vs %ld\n",datalen,(2 * dp->N) * sizeof(bits256));
+        return(-1);
+    }
+    memcpy(priv->incards,data,sizeof(bits256) * dp->N * 2);
+    if ( hn->client->H.slot > 1 )
+        pangea_sendcmd(hex,hn,"preflop",hn->client->H.slot-1,data,dp->N * 2 * sizeof(bits256),-1);
+    else
+    {
+        for (iter=cardi=0; iter<2; iter++)
+            for (j=0; j<dp->N; j++,cardi++)
+            {
+                destplayer = (dp->button + j) % dp->N;
+                pangea_sendcmd(hex,hn,"card",destplayer,&data[(cardi*dp->N + destplayer) * sizeof(bits256)],sizeof(bits256),cardi);
+            }
+    }
     return(0);
 }
 
@@ -281,16 +343,18 @@ int32_t pangea_final(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
     }
     //if ( Debuglevel > 2 )
     printf("player.%d final into %p\n",hn->client->H.slot,priv->outcards);
-    memcpy(dp->final,data,sizeof(*dp->final) * dp->N * dp->numcards);
+    memcpy(dp->final,data,sizeof(bits256) * dp->N * dp->numcards);
     if ( hn->client->H.slot == dp->N-1 )
-        memcpy(priv->incards,data,sizeof(*priv->incards) * dp->N * dp->numcards);
-    printf("player.%d got final crc.%04x %llx\n",hn->client->H.slot,_crc32(0,data,datalen),(long long)dp->final[1].txid);
+    {
+        memcpy(priv->incards,data,sizeof(bits256) * dp->N * dp->numcards);
+        pangea_preflop(hn,json,dp,priv,data,(2 * dp->N) * (dp->N * sizeof(bits256)));
+    }
     return(0);
 }
 
 int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    int32_t cardi,destplayer,card; bits256 cardpriv;
+    int32_t cardi,destplayer,card; bits256 cardpriv,decoded;
     if ( datalen != sizeof(bits256) )
     {
         printf("pangea_decode invalid datalen.%d vs %ld\n",datalen,sizeof(bits256));
@@ -298,16 +362,18 @@ int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     }
     cardi = juint(json,"cardi");
     destplayer = juint(json,"dest");
+    memcpy(&priv->incards[cardi*dp->N + destplayer],data,sizeof(bits256));
     if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,priv->privkey,dp->cardpubs,dp->numcards,*(bits256 *)data)) >= 0 )
         printf("ERROR: player.%d got card.[%d]\n",hn->client->H.slot,card);
-    memcpy(&priv->incards[cardi*dp->N + destplayer],data,sizeof(bits256));
-    printf("decode\n");
+    decoded = cards777_decode(priv->xoverz,destplayer,*(bits256 *)data,priv->outcards,dp->numcards,dp->N);
+    memcpy(data,decoded.bytes,sizeof(decoded));
+    printf("player.%d decoded cardi.%d\n",hn->client->H.slot,cardi);
     return(0);
 }
 
 int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    int32_t cardi,destplayer,card; bits256 cardpriv;
+    int32_t cardi,destplayer,card; bits256 cardpriv; char hex[1024];
     if ( datalen != sizeof(bits256) )
     {
         printf("pangea_card invalid datalen.%d vs %ld\n",datalen,sizeof(bits256));
@@ -321,6 +387,9 @@ int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
         memcpy(&priv->incards[cardi*dp->N + destplayer],cardpriv.bytes,sizeof(bits256));
     }
     else printf("ERROR player.%d got no card\n",hn->client->H.slot);
+    if ( cardi < dp->N*2 )
+        pangea_sendcmd(hex,hn,"facedown",-1,(void *)&cardi,sizeof(cardi),cardi);
+    else pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi);
     return(0);
 }
 
@@ -430,7 +499,7 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     buf = calloc(1,len);
                 else buf = calloc(1,sizeof(bits256)*CARDS777_MAXPLAYERS*CARDS777_MAXCARDS);
                 decode_hex(buf,len,hexstr);
-            }
+            } else printf("len.%d vs hexlen.%ld (%s)\n",len,strlen(hexstr)>>1,hexstr);
             if ( (cmdstr= jstr(json,"cmd")) != 0 )
             {
                 if ( strcmp(cmdstr,"newhand") == 0 )
@@ -439,6 +508,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     pangea_encode(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"final") == 0 )
                     pangea_final(hn,json,dp,priv,buf,len);
+                else if ( strcmp(cmdstr,"preflop") == 0 )
+                    pangea_preflop(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"decode") == 0 )
                     pangea_decode(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"card") == 0 )
@@ -459,6 +530,66 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
     if ( buf != 0 )
         free(buf);
     return(hn->client->H.state);
+}
+
+cJSON *pangea_tablestatus(struct pangea_info *sp)
+{
+    cJSON *json = cJSON_CreateObject();
+    jadd64bits(json,"tableid",sp->tableid);
+    jadd64bits(json,"myind",sp->myind);
+    return(json);
+}
+
+char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json)
+{
+    int32_t i,j,threadid = 0; struct pangea_info *sp; cJSON *item,*array=0,*retjson = 0;
+    if ( tableid != 0 )
+    {
+        if ( (sp= pangea_find(tableid,threadid)) != 0 )
+        {
+            if ( (item= pangea_tablestatus(sp)) != 0 )
+            {
+                retjson = cJSON_CreateObject();
+                jaddstr(retjson,"result","success");
+                jadd(retjson,"table",item);
+                return(jprint(retjson,1));
+            }
+        }
+    }
+    else
+    {
+        for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
+        {
+            if ( (sp= TABLES[i]) != 0 )
+            {
+                for (j=0; j<sp->numaddrs; j++)
+                    if ( sp->addrs[j] == my64bits )
+                    {
+                        if ( (item= pangea_tablestatus(sp)) != 0 )
+                        {
+                            if ( array == 0 )
+                                array = cJSON_CreateArray();
+                            jaddi(array,item);
+                        }
+                        break;
+                    }
+            }
+        }
+    }
+    retjson = cJSON_CreateObject();
+    if ( array == 0 )
+        jaddstr(retjson,"error","no table status");
+    else
+    {
+        jaddstr(retjson,"result","success");
+        jadd(retjson,"tables",array);
+    }
+    return(jprint(retjson,1));
+}
+
+char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
+{
+    return(clonestr("{\"result\":\"turn not yet\"}"));
 }
 
 int32_t pangea_newdeck(union hostnet777 *src)
@@ -626,6 +757,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
     int32_t i,n,m; uint64_t senderbits; uint32_t timestamp; struct pangea_thread *tp; union hostnet777 *hn;
     while ( 1 )
     {
+        //printf("pangea idle\n");
         for (i=n=m=0; i<PANGEA_MAXTHREADS; i++)
         {
             if ( (tp= THREADS[i]) != 0 )
@@ -834,15 +966,36 @@ char *pangea_newtable(int32_t threadid,cJSON *json)
     return(clonestr("{\"error\":\"no tableid\"}"));
 }
 
-int32_t pangea_start(int32_t threadid,char *retbuf,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers,cJSON *json)
+struct pangea_thread *pangea_threadinit(struct plugin_info *plugin,int32_t maxplayers)
+{
+    struct pangea_thread *tp; struct hostnet777_server *srv;
+    PANGEA_MAXTHREADS = 1;
+    THREADS[0] = tp = calloc(1,sizeof(*THREADS[0]));
+    tp->nxt64bits = plugin->nxt64bits;
+    if ( (srv= hostnet777_server(*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,0,0,0,9)) == 0 )
+        printf("cant create hostnet777 server\n");
+    else
+    {
+        tp->hn.server = srv;
+        memcpy(srv->H.privkey.bytes,plugin->mypriv,sizeof(bits256));
+        memcpy(srv->H.pubkey.bytes,plugin->mypub,sizeof(bits256));
+    }
+    return(tp);
+}
+
+int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t maxplayers,cJSON *json)
 {
     char *addrstr,*ciphers,*playerpubs; uint8_t p2shtype; struct pangea_thread *tp; struct cards777_pubdata *dp;
-    int32_t createdflag,addrtype,i,j,n,myind=-1,r,num=0; uint64_t addrs[512]; struct pangea_info *sp; cJSON *bids;
+    int32_t createdflag,addrtype,i,j,n,myind=-1,r,num=0,threadid=0; uint64_t addrs[512]; struct pangea_info *sp; cJSON *bids;
     if ( (tp= THREADS[threadid]) == 0 )
     {
-        strcpy(retbuf,"{\"error\":\"uinitialized threadid\"}");
-        printf("%s\n",retbuf);
-        return(-1);
+        pangea_threadinit(plugin,maxplayers);
+        if ( (tp=THREADS[0]) == 0 )
+        {
+            strcpy(retbuf,"{\"error\":\"uinitialized threadid\"}");
+            printf("%s\n",retbuf);
+            return(-1);
+        }
     }
     printf("mynxt64bits.%llu base.(%s) maxplayers.%d\n",(long long)tp->nxt64bits,base,maxplayers);
     if ( base == 0 || base[0] == 0 || maxplayers < 2 || maxplayers > CARDS777_MAXPLAYERS )
@@ -974,27 +1127,27 @@ void pangea_test(struct plugin_info *plugin,int32_t numthreads)
     jadd(testjson,"bids",bids);
     jadd64bits(testjson,"offerNXT",THREADS[0]->nxt64bits);
     printf("TEST.(%s)\n",jprint(testjson,0));
-    pangea_start(0,retbuf,"BTCD",0,SATOSHIDEN,0,i,testjson);
+    pangea_start(plugin,retbuf,"BTCD",0,SATOSHIDEN,0,i,testjson);
     free_json(testjson);
     testjson = cJSON_Parse(retbuf);
     //printf("BROADCAST.(%s)\n",retbuf);
     for (threadid=1; threadid<PANGEA_MAXTHREADS; threadid++)
         pangea_newtable(threadid,testjson);
-    uint32_t timestamp; uint64_t senderbits;
+    //uint32_t timestamp; uint64_t senderbits;
     tp = THREADS[0];
-    pangea_statemachine(&tp->hn,tp->N,0);
-    pangea_poll(&senderbits,&timestamp,&tp->hn);
-    sleep(13);
-    tp = THREADS[1];
-    pangea_poll(&senderbits,&timestamp,&tp->hn);
-    pangea_statemachine(&tp->hn,tp->N,1);
+    //pangea_statemachine(&tp->hn,tp->N,0);
+    //pangea_poll(&senderbits,&timestamp,&tp->hn);
+    //sleep(3);
+    //tp = THREADS[1];
+    //pangea_poll(&senderbits,&timestamp,&tp->hn);
+    //pangea_statemachine(&tp->hn,tp->N,1);
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char *resultstr,*methodstr,*base,*retstr = 0; int32_t maxplayers; cJSON *argjson; struct pangea_thread *tp; struct hostnet777_server *srv;
+    char *resultstr,*methodstr,*base,*retstr = 0; int32_t maxplayers; cJSON *argjson;
     retbuf[0] = 0;
-    printf("<<<<<<<<<<<< INSIDE PANGEA! process %s (%s)\n",plugin->name,jsonstr);
+    fprintf(stderr,"<<<<<<<<<<<< INSIDE PANGEA! process %s (%s) forwarder.(%s) sender.(%s)\n",plugin->name,jsonstr,forwarder,sender);
     if ( initflag > 0 )
     {
         uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
@@ -1008,23 +1161,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 #ifdef __APPLE__
         if ( 0 )
             pangea_test(plugin,2);
-        else
 #endif
-            //if ( juint(json,"pangeaport") != 0 )
-            {
-                PANGEA_MAXTHREADS = 1;
-                THREADS[0] = tp = calloc(1,sizeof(*THREADS[0]));
-                tp->nxt64bits = plugin->nxt64bits;
-                if ( (srv= hostnet777_server(*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,0,0,0,9)) == 0 )
-                    printf("cant create hostnet777 server\n");
-                else
-                {
-                    tp->hn.server = srv;
-                    memcpy(srv->H.privkey.bytes,plugin->mypriv,sizeof(bits256));
-                    memcpy(srv->H.pubkey.bytes,plugin->mypub,sizeof(bits256));
-                }
-            }
-        printf("initialized\n");
+        printf("initialized PANGEA\n");
     }
     else
     {
@@ -1052,11 +1190,15 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     maxplayers = CARDS777_MAXPLAYERS;
                 if ( jstr(json,"resubmit") == 0 )
                     sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"maxplayers\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),maxplayers);
-                else pangea_start(juint(json,"threadid"),retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers,json);
+                else pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),maxplayers,json);
             } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
         }
         else if ( strcmp(methodstr,"newtable") == 0 )
             retstr = pangea_newtable(juint(json,"threadid"),json);
+        else if ( strcmp(methodstr,"status") == 0 )
+            retstr = pangea_status(plugin->nxt64bits,j64bits(json,"tableid"),json);
+        else if ( strcmp(methodstr,"turn") == 0 )
+            retstr = pangea_input(plugin->nxt64bits,j64bits(json,"tableid"),json);
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
 }

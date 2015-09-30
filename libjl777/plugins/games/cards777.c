@@ -253,7 +253,7 @@ uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uin
             {
                 if ( memcmp(xoverz,recover,size) != 0 )
                     fprintf(stderr,"(ERROR m.%d M.%d N.%d)\n",m,M,N);
-                //else fprintf(stderr,"reconstructed with m.%d M.%d N.%d\n",m,M,N);
+                else fprintf(stderr,"reconstructed with m.%d M.%d N.%d\n",m,M,N);
                 free(recover);
             }
         }

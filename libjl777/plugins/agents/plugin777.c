@@ -176,7 +176,7 @@ static int32_t nn_local_broadcast2(int32_t sock,uint64_t instanceid,int32_t flag
         if ( (sendlen= nn_send(sock,(char *)retstr,len,0)) <= 0 )
             errs++, printf("sending to socket.%d sendlen.%d len.%d (%s) [%s]\n",sock,sendlen,len,nn_strerror(nn_errno()),retstr);
         //else if ( Debuglevel > 2 )
-        //    printf("nn_local_broadcast SENT.(%s) len.%d sendlen.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,sendlen,strlen((char *)retstr),(long long)instanceid,sock);
+        //printf("nn_local_broadcast SENT.(%s) len.%d sendlen.%d vs strlen.%ld instanceid.%llu -> sock.%d\n",retstr,len,sendlen,strlen((char *)retstr),(long long)instanceid,sock);
     }
     return(errs);
 }
@@ -561,6 +561,8 @@ int32_t main
     while ( OS_getppid() == plugin->ppid )
     {
         retbuf[0] = 0;
+        //if ( strcmp(plugin->name,"pangea") == 0 )
+        //printf("%s poll %d\n",plugin->name,plugin->pullsock);
         if ( (len= nn_recv(plugin->pullsock,&line,NN_MSG,0)) > 0 )
         {
             len = (int32_t)strlen(line);

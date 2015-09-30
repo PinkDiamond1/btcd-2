@@ -272,9 +272,13 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
             printf("diff.%d > %d %u vs %u\n",diff,HOSTNET777_MAXTIMEDIFF,*timestampp,(uint32_t)time(NULL));
         else
         {
-            memset(seed.bytes,0,sizeof(seed));
-            _init_HUFF(hp,len,buf), hp->endpos = (len << 3);
-            newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
+            if ( 0 )
+            {
+                memset(seed.bytes,0,sizeof(seed)), SETBIT(seed.bytes,'0');
+                _init_HUFF(hp,len,buf), hp->endpos = (len << 3);
+                newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
+            }
+            else memcpy(dest,buf,len), newlen = len;
             //printf("T%d decrypted newlen.%d\n",threadid,newlen);
             if ( senderbits != 0 && senderpubp->txid != 0 )
             {
@@ -332,7 +336,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
 
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len)
 {
-    int32_t cipherlen,datalen,sendsock; bits256 seed; uint8_t *data,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
+    int32_t cipherlen,datalen,sendsock; bits256 seed; uint8_t *data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
     if ( destpub.txid != 0 )
         destbits = acct777_nxt64bits(destpub);
     else
@@ -350,18 +354,23 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
         printf("%llu: ind.%d no sendsock for %llx -> %llu\n",(long long)ptr->client->H.nxt64bits,ptr->client->H.slot,(long long)acct777_nxt64bits(mypub),(long long)destbits);
         return(-1);
     }
-    data = calloc(1,len*2);
-    _init_HUFF(hp,len*2,data);
-    memset(seed.bytes,0,sizeof(seed));
-    ramcoder_encoder(0,1,msg,len,hp,&seed);
-    datalen = hconv_bitlen(hp->bitoffset);
+    if ( 0 )
+    {
+        data = calloc(1,len*2);
+        _init_HUFF(hp,len*2,data);
+        memset(seed.bytes,0,sizeof(seed)), SETBIT(seed.bytes,'0');
+        ramcoder_encoder(0,1,msg,len,hp,&seed);
+        datalen = hconv_bitlen(hp->bitoffset);
+    }
+    else data = msg, datalen = len;
     if ( (cipher= hostnet777_encode(&cipherlen,data,datalen,destpub,mypriv,mypub,sig.signer64bits,sig.sigbits,sig.timestamp)) != 0 )
     {
         //printf("my.(priv.%llx pub.%llx) -> dest %llu pub.%llx cipherlen.%d %llx sendsock %d linksock.%d\n",(long long)pangea_privkey(player).txid,(long long)pangea_pubkey(player).txid,(long long)destbits,(long long)destpub.txid,cipherlen,*(long long *)cipher,sendsock,linksock);
         hostnet777_send(sendsock,cipher,cipherlen);
         free(cipher);
     }
-    free(data);
+    if ( data != msg )
+        free(data);
     return(cipherlen);
 }
 
