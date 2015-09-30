@@ -992,7 +992,7 @@ void pangea_test(struct plugin_info *plugin,int32_t numthreads)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char *resultstr,*methodstr,*base,*retstr = 0; int32_t maxplayers; cJSON *argjson; struct pangea_thread *tp;
+    char *resultstr,*methodstr,*base,*retstr = 0; int32_t maxplayers; cJSON *argjson; struct pangea_thread *tp; struct hostnet777_server *srv;
     retbuf[0] = 0;
     printf("<<<<<<<<<<<< INSIDE PANGEA! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
@@ -1006,19 +1006,26 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         free_json(argjson);
         printf("my64bits %llu ipaddr.%s mypriv.%02x mypub.%02x\n",(long long)plugin->nxt64bits,plugin->ipaddr,plugin->mypriv[0],plugin->mypub[0]);
 #ifdef __APPLE__
-        if ( 1 )
+        if ( 0 )
             pangea_test(plugin,2);
         else
 #endif
-            if ( juint(json,"pangeaport") != 0 )
-        {
-            PANGEA_MAXTHREADS = 1;
-            THREADS[0] = tp = calloc(1,sizeof(*THREADS[0]));
-            tp->nxt64bits = plugin->nxt64bits;
-            memcpy(tp->hn.client->H.privkey.bytes,plugin->mypriv,sizeof(bits256));
-            memcpy(tp->hn.client->H.pubkey.bytes,plugin->mypub,sizeof(bits256));
-        }
-     }
+            //if ( juint(json,"pangeaport") != 0 )
+            {
+                PANGEA_MAXTHREADS = 1;
+                THREADS[0] = tp = calloc(1,sizeof(*THREADS[0]));
+                tp->nxt64bits = plugin->nxt64bits;
+                if ( (srv= hostnet777_server(*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,0,0,0,9)) == 0 )
+                    printf("cant create hostnet777 server\n");
+                else
+                {
+                    tp->hn.server = srv;
+                    memcpy(srv->H.privkey.bytes,plugin->mypriv,sizeof(bits256));
+                    memcpy(srv->H.pubkey.bytes,plugin->mypub,sizeof(bits256));
+                }
+            }
+        printf("initialized\n");
+    }
     else
     {
         if ( plugin_result(retbuf,json,tag) > 0 )
