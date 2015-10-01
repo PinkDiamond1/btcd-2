@@ -60,7 +60,7 @@ bits256 cards777_cardpriv(bits256 playerpriv,bits256 *cardpubs,int32_t numcards,
     for (i=0; i<numcards; i++)
     {
         cardpriv = cards777_initcrypt(cipher,playerpriv,cardpubs[i],1);
-        //printf("{%llx} ",(long long)cardpriv.txid);
+        //printf("(%llx %llx) ",(long long)cardpriv.txid,(long long)curve25519_shared(playerpriv,cardpubs[i]).txid);
         checkpub = curve25519(cardpriv,curve25519_basepoint9());
         if ( memcmp(checkpub.bytes,cardpubs[i].bytes,sizeof(bits256)) == 0 )
         {
@@ -69,6 +69,7 @@ bits256 cards777_cardpriv(bits256 playerpriv,bits256 *cardpubs,int32_t numcards,
             return(cardpriv);
         }
     }
+    //printf("\nplayerpriv %llx cipher.%llx\n",(long long)playerpriv.txid,(long long)cipher.txid);
     memset(cardpriv.bytes,0,sizeof(cardpriv));
     return(cardpriv);
 }
@@ -134,7 +135,7 @@ void cards777_layer(bits256 *layered,bits256 *xoverz,bits256 *incards,int32_t nu
             xoverz[nonz] = fcontract(x_z);
             //printf("{%llx -> %llx}.%d ",(long long)incards[nonz].txid,(long long)layered[nonz].txid,nonz);
         }
-        //printf("card.%d from.%d\n",i,playerj);
+        //printf("card.%d\n",i);
     }
 }
 
@@ -190,7 +191,7 @@ bits256 cards777_pubkeys(bits256 *pubkeys,int32_t n,int32_t numcards)
     return(check);
 }
 
-bits256 cards777_initdeck(bits256 *cards,bits256 *cardpubs,int32_t numcards,int32_t N,bits256 *playerpubs)
+bits256 cards777_initdeck(bits256 *cards,bits256 *cardpubs,int32_t numcards,int32_t N,bits256 *playerpubs,bits256 *playerprivs)
 {
     bits256 privkey,pubkey,hash; bits320 bp,prod,hexp; int32_t i,j,nonz,num = 0; uint64_t mask = 0;
     bp = fexpand(curve25519_basepoint9());
@@ -206,8 +207,14 @@ bits256 cards777_initdeck(bits256 *cards,bits256 *cardpubs,int32_t numcards,int3
         {
             mask |= (1LL << i);
             cardpubs[num] = pubkey;
+            if ( playerprivs != 0 )
+                printf("%llx.",(long long)privkey.txid);
             for (j=0; j<N; j++,nonz++)
+            {
                 cards[nonz] = cards777_initcrypt(privkey,privkey,playerpubs[j],0);
+                if ( playerprivs != 0 )
+                    printf("[%llx * %llx -> %llx] ",(long long)cards[nonz].txid,(long long)curve25519_shared(playerprivs[j],pubkey).txid,(long long)cards777_initcrypt(cards[nonz],playerprivs[j],pubkey,1).txid);
+            }
             vcalc_sha256(0,hash.bytes,pubkey.bytes,sizeof(pubkey));
             hash.bytes[0] &= 0xf8, hash.bytes[31] &= 0x7f, hash.bytes[31] |= 64;
             hexp = fexpand(hash);
@@ -215,6 +222,8 @@ bits256 cards777_initdeck(bits256 *cards,bits256 *cardpubs,int32_t numcards,int3
             num++;
         }
     }
+    if ( playerprivs != 0 )
+        printf("\n%llx %llx playerprivs\n",(long long)playerprivs[0].txid,(long long)playerprivs[1].txid);
     if ( Debuglevel > 2 )
     {
         for (i=0; i<numcards; i++)
@@ -230,6 +239,7 @@ uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uin
     cards777_shuffle(shuffled,ciphers,numcards,N);
     cards777_layer(encoded,xoverz,shuffled,numcards,N);
     cards777_calcmofn(allshares,myshares,sharenrs,M,xoverz,numcards,N);
+    memcpy(ciphers,shuffled,numcards * N * sizeof(bits256));
     if ( 1 )
     {
         int32_t i,j,m,size; uint8_t *recover,*testshares[CARDS777_MAXPLAYERS],testnrs[255];
@@ -253,7 +263,7 @@ uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uin
             {
                 if ( memcmp(xoverz,recover,size) != 0 )
                     fprintf(stderr,"(ERROR m.%d M.%d N.%d)\n",m,M,N);
-                else fprintf(stderr,"reconstructed with m.%d M.%d N.%d\n",m,M,N);
+                //else fprintf(stderr,"reconstructed with m.%d M.%d N.%d\n",m,M,N);
                 free(recover);
             }
         }
@@ -308,7 +318,7 @@ struct cards777_pubdata *cards777_allocpub(int32_t M,int32_t numcards,int32_t N)
 
 int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_client **clients,int32_t N,int32_t numcards)
 {
-    int32_t i,j,destplayer,cardi; uint8_t sharenrs[255]; bits256 *ciphers,cardpriv,card; uint64_t mask = 0;
+    int32_t i,j; uint8_t sharenrs[255]; //,destplayer,cardibits256 *ciphers,cardpriv,card; uint64_t mask = 0;
     struct cards777_pubdata *dp; struct cards777_privdata *priv;
     if ( srv->num != N )
     {
@@ -326,13 +336,13 @@ int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_
         for (j=0; j<N; j++)
             dp->balances[j] = 100;
         priv = srv->clients[i].privdata = cards777_allocpriv(numcards,N);
-        priv->privkey = (i == 0) ? srv->H.privkey : clients[i]->H.privkey;
+        //priv->privkey = (i == 0) ? srv->H.privkey : clients[i]->H.privkey;
         /*if ( i == 0 )
             dp->checkprod = cards777_initdeck(priv->outcards,dp->cardpubs,numcards,N,dp->playerpubs), refdp = dp;
         else memcpy(dp->cardpubs,refdp->cardpubs,sizeof(*dp->cardpubs) * numcards);*/
     }
     return(0);
-    priv = srv->clients[0].privdata;
+    /*priv = srv->clients[0].privdata;
     ciphers = priv->outcards;
     for (i=1; i<N; i++)
     {
@@ -375,7 +385,7 @@ int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_
             }
         }
         printf("cardi.%d\n\n",cardi);
-    }
+    }*/
     return(0);
 }
 

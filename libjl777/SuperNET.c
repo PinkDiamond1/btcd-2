@@ -779,7 +779,7 @@ int main(int argc,const char *argv[])
     cJSON *json = 0;
     uint64_t ipbits,allocsize;
 #ifdef __APPLE__
-     if ( 0 )
+    if ( 0 )
     {
         //void poker_test();
         //poker_test(); getchar();

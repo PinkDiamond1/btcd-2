@@ -29,11 +29,16 @@
 #define CARDS777_MAXCARDS 52
 #define CARDS777_MAXPLAYERS 9
 
-struct cards777_pubdata { bits256 checkprod,*cardpubs,*playerpubs,*final; uint8_t M,N,numcards,sharenrs[255],community[5],hands[CARDS777_MAXPLAYERS][7]; uint32_t button,numhands,handmask,handranks[CARDS777_MAXPLAYERS]; int64_t tablepot,balances[CARDS777_MAXPLAYERS]; bits256 data[]; };
+struct cards777_pubdata
+{
+    bits256 checkprod,*cardpubs,*playerpubs,*final; uint8_t M,N,numcards,sharenrs[255],community[5],hands[CARDS777_MAXPLAYERS][7];
+    uint32_t button,numhands,handmask,handranks[CARDS777_MAXPLAYERS]; uint64_t havemasks[CARDS777_MAXPLAYERS];
+    int64_t tablepot,balances[CARDS777_MAXPLAYERS]; bits256 data[];
+};
 
 struct cards777_privdata
 {
-    bits256 privkey,holecards[2],*incards,*outcards,*xoverz;
+    bits256 holecards[2],*incards,*outcards,*xoverz;
     //,*reconstructed[CARDS777_MAXPLAYERS],*mofn[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS];
     uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,hole[2]; bits256 data[];
 };
@@ -57,7 +62,7 @@ int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_
 bits256 cards777_decode(bits256 *xoverz,int32_t destplayer,bits256 cipher,bits256 *outcards,int32_t numcards,int32_t N);
 bits256 cards777_cardpriv(bits256 playerpriv,bits256 *cardpubs,int32_t numcards,bits256 cipher);
 uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uint8_t *myshares[],uint8_t *sharenrs,int32_t M,bits256 *ciphers,int32_t numcards,int32_t N);
-bits256 cards777_initdeck(bits256 *cards,bits256 *cardpubs,int32_t numcards,int32_t N,bits256 *playerpubs);
+bits256 cards777_initdeck(bits256 *cards,bits256 *cardpubs,int32_t numcards,int32_t N,bits256 *playerpubs,bits256 *playerprivs);
 int32_t init_sharenrs(unsigned char sharenrs[255],unsigned char *orig,int32_t m,int32_t n);
 uint32_t set_handstr(char *handstr,uint8_t cards[7],int32_t verbose);
 int32_t hostnet777_idle(union hostnet777 *hn);
@@ -248,7 +253,7 @@ int32_t hostnet777_decode(uint64_t *senderbitsp,bits256 *sigp,uint32_t *timestam
 int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *timestampp,bits256 mypriv,bits256 mypub,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
 {
     bits256 seed,sig,msgpriv; uint64_t my64bits,destbits,senderbits,sendertmp,desttmp;
-    uint8_t *buf; int32_t hdrlen,diff,newlen = -1; HUFF H,*hp = &H; struct acct777_sig checksig;
+    uint8_t *buf; int32_t hdrlen,i,diff,newlen = -1; HUFF H,*hp = &H; struct acct777_sig checksig;
     *senderbitsp = 0;
     my64bits = acct777_nxt64bits(mypub);
     buf = calloc(1,maxlen);
@@ -272,9 +277,13 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
             printf("diff.%d > %d %u vs %u\n",diff,HOSTNET777_MAXTIMEDIFF,*timestampp,(uint32_t)time(NULL));
         else
         {
-            if ( 0 )
+            if ( 1 )
             {
-                memset(seed.bytes,0,sizeof(seed)), SETBIT(seed.bytes,'0');
+                memset(seed.bytes,0,sizeof(seed));
+                for (i='0'; i<='9'; i++)
+                    SETBIT(seed.bytes,i);
+                for (i='a'; i<='f'; i++)
+                    SETBIT(seed.bytes,i);
                 _init_HUFF(hp,len,buf), hp->endpos = (len << 3);
                 newlen = ramcoder_decoder(0,1,dest,maxlen,hp,&seed);
             }
@@ -336,7 +345,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
 
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len)
 {
-    int32_t cipherlen,datalen,sendsock; bits256 seed; uint8_t *data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
+    int32_t cipherlen,datalen,sendsock,i; bits256 seed; uint8_t *data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
     if ( destpub.txid != 0 )
         destbits = acct777_nxt64bits(destpub);
     else
@@ -354,11 +363,15 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
         printf("%llu: ind.%d no sendsock for %llx -> %llu\n",(long long)ptr->client->H.nxt64bits,ptr->client->H.slot,(long long)acct777_nxt64bits(mypub),(long long)destbits);
         return(-1);
     }
-    if ( 0 )
+    if ( 1 )
     {
         data = calloc(1,len*2);
         _init_HUFF(hp,len*2,data);
-        memset(seed.bytes,0,sizeof(seed)), SETBIT(seed.bytes,'0');
+        memset(seed.bytes,0,sizeof(seed));
+        for (i='0'; i<='9'; i++)
+            SETBIT(seed.bytes,i);
+        for (i='a'; i<='f'; i++)
+            SETBIT(seed.bytes,i);
         ramcoder_encoder(0,1,msg,len,hp,&seed);
         datalen = hconv_bitlen(hp->bitoffset);
     }
@@ -701,13 +714,13 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                 }
                                 else if ( strcmp(cmdstr,"decode") == 0 )
                                 {
-                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,priv->privkey,dp->cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
+                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
                                         printf("ERROR: player.%d got card.[%d]\n",hn->client->H.slot,card);
                                     memcpy(&priv->incards[cardi*dp->N + destplayer],buf,sizeof(bits256));
                                 }
                                 else if ( strcmp(cmdstr,"card") == 0 )
                                 {
-                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,priv->privkey,dp->cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
+                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
                                     {
                                         //printf("player.%d got card.[%d]\n",hn->client->H.slot,card);
                                         memcpy(&priv->incards[cardi*dp->N + destplayer],cardpriv.bytes,sizeof(bits256));
@@ -870,7 +883,7 @@ int32_t hostnet777_testiter(struct hostnet777_server *srv,struct hostnet777_clie
                 {
                     memset(dp->sharenrs,0,sizeof(dp->sharenrs));
                     init_sharenrs(dp->sharenrs,0,dp->N,dp->N);
-                    dp->checkprod = cards777_initdeck(priv->outcards,dp->cardpubs,dp->numcards,dp->N,dp->playerpubs);
+                    dp->checkprod = cards777_initdeck(priv->outcards,dp->cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
                     init_hexbytes_noT(nrs,dp->sharenrs,dp->N);
                     cmdstr = "pubstr";
                     srcbits = srv->H.nxt64bits;
