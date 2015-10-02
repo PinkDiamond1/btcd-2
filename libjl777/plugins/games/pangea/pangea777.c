@@ -1224,7 +1224,7 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
     return(array);
 }
 
-char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 privkey,bits256 pubkey)
+char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 privkey,bits256 pubkey,char *transport,char *ipaddr,uint16_t port)
 {
     int32_t createdflag,num,i,myind= -1; uint64_t tableid,addrs[CARDS777_MAXPLAYERS],balances[CARDS777_MAXPLAYERS],isbot[CARDS777_MAXPLAYERS];
     struct pangea_info *sp; cJSON *array; struct pangea_thread *tp; char *base,*hexstr,*endpoint,hex[1024]; uint32_t timestamp;
@@ -1248,7 +1248,7 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
                     THREADS[threadid] = tp = calloc(1,sizeof(*THREADS[threadid]));
                     if ( i == 0 )
                     {
-                        if ( (srv= hostnet777_server(privkey,pubkey,0,0,0,num)) == 0 )
+                        if ( (srv= hostnet777_server(privkey,pubkey,transport,ipaddr,port,num)) == 0 )
                             printf("cant create hostnet777 server\n");
                         else
                         {
@@ -1352,7 +1352,7 @@ struct pangea_thread *pangea_threadinit(struct plugin_info *plugin,int32_t maxpl
     PANGEA_MAXTHREADS = 1;
     THREADS[0] = tp = calloc(1,sizeof(*THREADS[0]));
     tp->nxt64bits = plugin->nxt64bits;
-    if ( (srv= hostnet777_server(*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,0,0,0,9)) == 0 )
+    if ( (srv= hostnet777_server(*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport,9)) == 0 )
         printf("cant create hostnet777 server\n");
     else
     {
@@ -1576,7 +1576,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     testjson = cJSON_Parse(retbuf);
     //printf("BROADCAST.(%s)\n",retbuf);
     for (threadid=1; threadid<PANGEA_MAXTHREADS; threadid++)
-        pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey);
+        pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey,0,0,0);
     tp = THREADS[0];
    // pangea_newdeck(&tp->hn);
 }
@@ -1633,7 +1633,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
         }
         else if ( strcmp(methodstr,"newtable") == 0 )
-            retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub);
+            retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport);
         else if ( strcmp(methodstr,"status") == 0 )
             retstr = pangea_status(plugin->nxt64bits,j64bits(json,"tableid"),json);
         else if ( strcmp(methodstr,"turn") == 0 )
