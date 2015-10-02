@@ -89,7 +89,6 @@ int32_t cards777_checkcard(bits256 *cardprivp,int32_t cardi,int32_t slot,int32_t
 int32_t hostnet777_init(union hostnet777 *hn,bits256 *privkeys,int32_t num,int32_t launchflag);
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len);
 int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime);
-int64_t hostnet777_initmT(struct hostnet777_mtime *mT,double millidiff);
 
 extern int32_t Debuglevel;
 
@@ -118,7 +117,7 @@ int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime)
     if ( mT->starttime == 0 )
     {
         mT->starttime = (uint32_t)time(NULL);
-        mT->millistart = milliseconds();
+        mT->millistart = millis;
     }
     printf("millis.%lld - millistart.%lld = %lld\n",(long long)millis,(long long)mT->millistart,(long long)(millis - mT->millistart));
     millitime = (millis - mT->millistart) + ((long long)mT->starttime * 1000);
@@ -129,14 +128,6 @@ int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime)
         mT->millidiff = (mT->millidiff * .9) + (.1 * lag);
     }
     return(millitime);
-}
-
-int64_t hostnet777_initmT(struct hostnet777_mtime *mT,double millidiff)
-{
-    mT->starttime = (uint32_t)time(NULL);
-    mT->millistart = milliseconds();
-    mT->millidiff = millidiff;
-    return(hostnet777_convmT(mT,0));
 }
 
 double hostnet777_updatelag(uint64_t senderbits,int64_t millitime,int64_t now)

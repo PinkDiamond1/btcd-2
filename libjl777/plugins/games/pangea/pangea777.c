@@ -1311,7 +1311,6 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
         }
         printf("back from pangea_create\n");
         dp = sp->dp; sp->myind = myind;
-        hostnet777_initmT(&tp->hn.client->mT,jdouble(json,"millitime"));
         dp->rakemillis = juint(json,"rakemillis");
         if ( dp->rakemillis > PANGEA_MAX_HOSTRAKE )
             dp->rakemillis = PANGEA_MAX_HOSTRAKE;
@@ -1505,7 +1504,6 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         ciphers = jprint(pangea_ciphersjson(dp,sp->priv),1);
         playerpubs = jprint(pangea_playerpubs(dp->playerpubs,num),1);
         dp->readymask |= (1 << sp->myind);
-        hostnet777_initmT(&tp->hn.server->mT,0);
         sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s,\"millitime\":\"%lld\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->mT,0)); //\"pluginrequest\":\"SuperNET\",
 #ifdef BUNDLED
         {
