@@ -40,11 +40,13 @@ struct cards777_handinfo
     uint8_t numactions,bettor,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
 };
 
+struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidiff; };
+
 struct cards777_pubdata
 {
     bits256 *playerpubs; int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS];
-    uint32_t button,numhands,rakemillis,readymask; uint64_t hostrake,bigblind,ante,pangearake; void *table;
-    struct cards777_handinfo hand; bits256 data[];
+    uint32_t button,numhands,rakemillis,readymask; uint64_t hostrake,bigblind,ante,pangearake;
+    void *table; struct cards777_handinfo hand; bits256 data[];
 };
 
 struct cards777_privdata
@@ -57,12 +59,12 @@ struct cards777_privdata
 struct hostnet777_endpoint { char endpoint[128],transport[16],ipaddr[64]; uint16_t port; };
 struct hostnet777_id { bits256 pubkey; uint64_t nxt64bits; void *privdata,*pubdata; int32_t pmsock; uint32_t lastcontact; };
 struct hostnet777_hdr { queue_t Q,Q2,Q3[2]; bits256 privkey,pubkey; void *privdata,*pubdata,*raft; uint64_t nxt64bits; int32_t slot,done,state,ind; };
-struct hostnet777_client { struct hostnet777_hdr H; int32_t pushsock,subsock; struct hostnet777_id my; };
+struct hostnet777_client { struct hostnet777_hdr H; struct hostnet777_mtime mT; int32_t pushsock,subsock; struct hostnet777_id my; };
 
 struct hostnet777_server
 {
     struct hostnet777_hdr H;
-    int32_t num,max,pullsock,pubsock; struct hostnet777_endpoint ep;
+    int32_t num,max,pullsock,pubsock; struct hostnet777_endpoint ep; struct hostnet777_mtime mT;
     struct hostnet777_id clients[];
 };
 union hostnet777 { struct hostnet777_server *server; struct hostnet777_client *client; };
@@ -86,6 +88,8 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
 int32_t cards777_checkcard(bits256 *cardprivp,int32_t cardi,int32_t slot,int32_t destplayer,bits256 playerpriv,bits256 *cardpubs,int32_t numcards,bits256 card);
 int32_t hostnet777_init(union hostnet777 *hn,bits256 *privkeys,int32_t num,int32_t launchflag);
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len);
+int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime);
+int64_t hostnet777_initmT(struct hostnet777_mtime *mT,double millidiff);
 
 extern int32_t Debuglevel;
 
@@ -107,6 +111,35 @@ int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,
 void free_queueitem(void *itemptr);
 
 static bits256 zeropoint;
+
+int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime)
+{
+    int64_t lag,millitime,millis = (uint64_t)milliseconds();
+    millitime = (millis - mT->millistart) + (mT->starttime * 1000);
+    if ( othermillitime != 0 )
+    {
+        millitime += mT->millidiff;
+        lag = (othermillitime - millitime);
+        mT->millidiff = (mT->millidiff * .9) + (.1 * lag);
+    }
+    return(millitime);
+}
+
+int64_t hostnet777_initmT(struct hostnet777_mtime *mT,double millidiff)
+{
+    mT->starttime = (uint32_t)time(NULL);
+    mT->millistart = milliseconds();
+    mT->millidiff = millidiff;
+    return(hostnet777_convmT(mT,0));
+}
+
+double hostnet777_updatelag(uint64_t senderbits,int64_t millitime,int64_t now)
+{
+    printf("updatelag %llu: %lld\n",(long long)senderbits,(long long)(millitime - now));
+    return(millitime - now);
+}
+
+
 
 int32_t hostnet777_send(int32_t sock,void *ptr,int32_t len)
 {
@@ -284,7 +317,7 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
     {
         if ( (diff= (*timestampp - (uint32_t)time(NULL))) < 0 )
             diff = -diff;
-        if ( diff > HOSTNET777_MAXTIMEDIFF )
+        if ( 0 && diff > HOSTNET777_MAXTIMEDIFF )
             printf("diff.%d > %d %u vs %u\n",diff,HOSTNET777_MAXTIMEDIFF,*timestampp,(uint32_t)time(NULL));
         else
         {
@@ -321,9 +354,9 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
     return(newlen);
 }
 
-void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag)
+void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag,struct hostnet777_mtime *mT)
 {
-    char *jsonstr = 0; bits256 sig; uint32_t timestamp; int32_t len; uint64_t senderbits; uint8_t *ptr; cJSON *json; long extra;
+    char *jsonstr = 0; bits256 sig; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr; cJSON *json; long extra;
     extra = sizeof(*senderpubp) + sizeof(*destbitsp) + sizeof(sig) + sizeof(senderbits) + sizeof(timestamp);
     if ( (len= origlen) > extra )
     {
@@ -333,6 +366,8 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
             jsonstr = (char *)&ptr[sizeof(struct queueitem)];
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
+                millitime = j64bits(json,"millitime");
+                now = hostnet777_convmT(mT,millitime);
                 if ( pmflag != 0 && juint(json,"timestamp") != timestamp && juint(json,"timestamp")+1 != timestamp )
                     printf("msg.(%s) timestamp.%u mismatch | now.%ld\n",jsonstr,timestamp,time(NULL)), free(ptr);
                 else if ( pmflag != 0 && j64bits(json,"sender") != senderbits )
@@ -405,11 +440,11 @@ int32_t hostnet777_idle(union hostnet777 *hn)
     {
         mypriv = hn->client->H.privkey, mypub = hn->client->H.pubkey;
         if ( (sock= hn->client->subsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
-            hostnet777_processmsg(&destbits,&senderpub,&hn->client->H.Q,mypriv,mypub,msg,len,0), n++;
+            hostnet777_processmsg(&destbits,&senderpub,&hn->client->H.Q,mypriv,mypub,msg,len,0,&hn->client->mT), n++;
         if ( (sock= hn->client->my.pmsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
         {
             //printf("client got pmsock.%d\n",len);
-            hostnet777_processmsg(&destbits,&senderpub,&hn->client->H.Q,mypriv,mypub,msg,len,1), n++;
+            hostnet777_processmsg(&destbits,&senderpub,&hn->client->H.Q,mypriv,mypub,msg,len,1,&hn->client->mT), n++;
         }
     }
     else
@@ -418,7 +453,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
         if ( (sock= hn->server->pullsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
         {
             hostnet777_send(hn->server->pubsock,msg,len);
-            hostnet777_processmsg(&destbits,&senderpub,&hn->server->H.Q,mypriv,mypub,msg,len,0), n++;
+            hostnet777_processmsg(&destbits,&senderpub,&hn->server->H.Q,mypriv,mypub,msg,len,0,&hn->server->mT), n++;
             //printf("got pullsock destbits.%llu sender.%llu\n",(long long)destbits,(long long)acct777_nxt64bits(senderpub));
             hostnet777_lastcontact(hn->server,senderpub);
         }
@@ -434,7 +469,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                         if  ( j == 0 )
                         {
                             //printf("server got PM sock.%d\n",hn->server->clients[j].pmsock);
-                            hostnet777_processmsg(&destbits,&senderpub,&hn->server->H.Q,mypriv,mypub,msg,len,1);
+                            hostnet777_processmsg(&destbits,&senderpub,&hn->server->H.Q,mypriv,mypub,msg,len,1,&hn->server->mT);
                             hostnet777_lastcontact(hn->server,senderpub);
                         }
                         else
