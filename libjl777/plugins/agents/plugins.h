@@ -365,7 +365,7 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
         else if ( strcmp(dp->name,"jumblr") == 0 ) return(jumblr_main(n,args));
         else if ( strcmp(dp->name,"SuperNET") == 0 ) return(SuperNET_main(n,args));
         else if ( strcmp(dp->name,"dcnet") == 0 ) return(dcnet_main(n,args));
-        else if ( strcmp(dp->name,"pangea") == 0 ) return(pangea_main(n,args));
+        //else if ( strcmp(dp->name,"pangea") == 0 ) return(pangea_main(n,args));
         //else if ( strcmp(dp->name,"teleport") == 0 ) return(teleport_main(n,args));
 #ifdef INSIDE_MGW
         else if ( strcmp(dp->name,"ramchain") == 0 ) return(ramchain_main(n,args));
@@ -379,7 +379,7 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
 int32_t is_bundled_plugin(char *plugin)
 {
     if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"kv777") == 0 || strcmp(plugin,"coins") == 0 || strcmp(plugin,"relay") == 0 ||strcmp(plugin,"prices") == 0 || strcmp(plugin,"dcnet") == 0 || strcmp(plugin,"jumblr") == 0 ||
-        strcmp(plugin,"pangea") == 0 || //strcmp(plugin,"teleport") == 0
+        //strcmp(plugin,"pangea") == 0 || //strcmp(plugin,"teleport") == 0
 #ifdef INSIDE_MGW
         strcmp(plugin,"ramchain") == 0 || strcmp(plugin,"MGW") == 0 ||
 #endif
