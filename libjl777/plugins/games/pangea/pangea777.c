@@ -351,7 +351,7 @@ int32_t pangea_encoded(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     char *hex;
     if ( data == 0 || datalen != (dp->numcards * dp->N) * sizeof(bits256) )
     {
-        printf("pangea_encode invalid datalen.%d vs %ld\n",datalen,(dp->numcards * dp->N) * sizeof(bits256));
+        printf("pangea_encode invalid datalen.%d vs %ld (%s)\n",datalen,(dp->numcards * dp->N) * sizeof(bits256),jprint(json,0));
         return(-1);
     }
     cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs,dp->M,(void *)data,dp->numcards,dp->N);
@@ -496,6 +496,7 @@ int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
     int32_t senderind;
     senderind = juint(json,"myind");
     dp->readymask |= (1 << senderind);
+    printf("player.%d got ready from senderind.%d\n",hn->client->H.slot,senderind);
     if ( hn->client->H.slot == 0 && (dp->readymask == ((1 << dp->N) - 1)) )
         pangea_newdeck(hn);
     return(0);
@@ -1220,7 +1221,7 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
 char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 privkey,bits256 pubkey)
 {
     int32_t createdflag,num,i,myind= -1; uint64_t tableid,addrs[CARDS777_MAXPLAYERS],balances[CARDS777_MAXPLAYERS],isbot[CARDS777_MAXPLAYERS];
-    struct pangea_info *sp; cJSON *array; struct pangea_thread *tp; char *base,*hexstr,hex[1024]; uint32_t timestamp;
+    struct pangea_info *sp; cJSON *array; struct pangea_thread *tp; char *base,*hexstr,*endpoint,hex[1024]; uint32_t timestamp;
     struct cards777_pubdata *dp; struct hostnet777_server *srv;
     //printf("T%d NEWTABLE.(%s)\n",threadid,jprint(json,0));
     if ( (tableid= j64bits(json,"tableid")) != 0 && (base= jstr(json,"base")) != 0 && (timestamp= juint(json,"timestamp")) != 0 )
@@ -1253,10 +1254,13 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
                     else
                     {
                         PANGEA_MAXTHREADS = 1;
-                        if ( (tp->hn.client= hostnet777_client(privkey,pubkey,srv->ep.endpoint,i)) == 0 )
+                        if ( (endpoint= jstr(json,"pangea_endpoint")) != 0 )
                         {
-                            memcpy(tp->hn.client->H.privkey.bytes,privkey.bytes,sizeof(bits256));
-                            memcpy(tp->hn.client->H.pubkey.bytes,pubkey.bytes,sizeof(bits256));
+                            if ( (tp->hn.client= hostnet777_client(privkey,pubkey,endpoint,i)) == 0 )
+                            {
+                                memcpy(tp->hn.client->H.privkey.bytes,privkey.bytes,sizeof(bits256));
+                                memcpy(tp->hn.client->H.pubkey.bytes,pubkey.bytes,sizeof(bits256));
+                            }
                         }
                     }
                     tp->nxt64bits = my64bits;
@@ -1322,7 +1326,8 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
         if ( myind >= 0 && createdflag != 0 && addrs[myind] == tp->nxt64bits )
         {
             memcpy(sp->addrs,addrs,sizeof(*addrs) * dp->N);
-            pangea_sendcmd(hex,&tp->hn,"encoded",1,0,0,0,0);
+            dp->readymask |= (1 << sp->myind);
+            pangea_sendcmd(hex,&tp->hn,"ready",1,0,0,0,0);
             return(clonestr("{\"result\":\"newtable created\"}"));
         }
         else if ( createdflag == 0 )
@@ -1472,6 +1477,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         addrstr = jprint(addrs_jsonarray(addrs,num),1);
         ciphers = jprint(pangea_ciphersjson(dp,sp->priv),1);
         playerpubs = jprint(pangea_playerpubs(dp->playerpubs,num),1);
+        dp->readymask |= (1 << sp->myind);
         sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr); //\"pluginrequest\":\"SuperNET\",
 #ifdef BUNDLED
         {
