@@ -118,8 +118,9 @@ int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime)
     {
         mT->starttime = (uint32_t)time(NULL);
         mT->millistart = millis;
+        printf("set millistart.%p %lld\n",mT,(long long)millis);
     }
-    printf("millis.%lld - millistart.%lld = %lld\n",(long long)millis,(long long)mT->millistart,(long long)(millis - mT->millistart));
+    printf("%p millis.%lld - millistart.%lld = %lld\n",mT,(long long)millis,(long long)mT->millistart,(long long)(millis - mT->millistart));
     millitime = (millis - mT->millistart) + ((long long)mT->starttime * 1000);
     if ( othermillitime != 0 )
     {
