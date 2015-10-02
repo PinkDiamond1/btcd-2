@@ -145,7 +145,7 @@ bits256 pangea_pubkeys(cJSON *json,struct cards777_pubdata *dp)
 void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplayer,uint8_t *data,int32_t datalen,int32_t cardi,int32_t turni)
 {
     int32_t n,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json; struct cards777_pubdata *dp = hn->client->H.pubdata;
-    sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"state\":%u,\"turni\":%d,\"myind\":%d,\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,\"data\":\"",cmdstr,(long long)hostnet777_convmT(&hn->client->mT,0),hn->client->H.state,turni,hn->client->H.slot,cardi,destplayer,(long long)hn->client->H.nxt64bits,time(NULL),datalen);
+    sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"state\":%u,\"turni\":%d,\"myind\":%d,\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,\"data\":\"",cmdstr,(long long)hostnet777_convmT(&hn->client->H.mT,0),hn->client->H.state,turni,hn->client->H.slot,cardi,destplayer,(long long)hn->client->H.nxt64bits,time(NULL),datalen);
     if ( data != 0 && datalen != 0 )
     {
         n = (int32_t)strlen(hex);
@@ -485,7 +485,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
     dp->hand.checkprod = dp->hand.cardpubs[dp->numcards] = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
     init_hexbytes_noT(nrs,dp->hand.sharenrs,dp->N);
     len = (dp->numcards + 1) * sizeof(bits256);
-    sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"state\":%u,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"sharenrs\":\"%s\",\"n\":%u,\"data\":\"","newhand",(long long)hostnet777_convmT(&src->server->mT,0),state,(long long)src->client->H.nxt64bits,time(NULL),nrs,len);
+    sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"state\":%u,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"sharenrs\":\"%s\",\"n\":%u,\"data\":\"","newhand",(long long)hostnet777_convmT(&src->server->H.mT,0),state,(long long)src->client->H.nxt64bits,time(NULL),nrs,len);
     n = (int32_t)strlen(hex);
     memcpy(data,dp->hand.cardpubs,len);
     init_hexbytes_noT(&hex[n],data,len);
@@ -1504,7 +1504,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         ciphers = jprint(pangea_ciphersjson(dp,sp->priv),1);
         playerpubs = jprint(pangea_playerpubs(dp->playerpubs,num),1);
         dp->readymask |= (1 << sp->myind);
-        sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s,\"millitime\":\"%lld\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->mT,0)); //\"pluginrequest\":\"SuperNET\",
+        sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s,\"millitime\":\"%lld\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->H.mT,0)); //\"pluginrequest\":\"SuperNET\",
 #ifdef BUNDLED
         {
             char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
