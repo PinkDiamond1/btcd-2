@@ -1096,7 +1096,7 @@ char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json)
 
 int32_t pangea_idle(struct plugin_info *plugin)
 {
-    int32_t i,n,m; uint64_t senderbits; uint32_t timestamp; struct pangea_thread *tp; union hostnet777 *hn; char hex[1024];
+    int32_t i,n,m; uint64_t senderbits; uint32_t timestamp; struct pangea_thread *tp; union hostnet777 *hn; struct cards777_pubdata *dp; char hex[1024];
     while ( 1 )
     {
         //printf("pangea idle\n");
@@ -1113,7 +1113,8 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     pangea_poll(&senderbits,&timestamp,hn);
                     if ( time(NULL) > hn->client->H.lastping + 10 )
                     {
-                        pangea_sendcmd(hex,hn,"ping",-1,(void *)&Pangea_waiting,sizeof(Pangea_waiting),Pangea_userinput_cardi,Pangea_userinput_starttime);
+                        dp = hn->client->H.pubdata;
+                        pangea_sendcmd(hex,hn,"ping",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),Pangea_userinput_cardi,Pangea_userinput_starttime);
                         hn->client->H.lastping = (uint32_t)time(NULL);
                     }
                 }
