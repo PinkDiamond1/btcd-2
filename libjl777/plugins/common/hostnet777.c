@@ -115,11 +115,15 @@ static bits256 zeropoint;
 int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime)
 {
     int64_t lag,millitime,millis = (uint64_t)milliseconds();
+    if ( mT->starttime == 0 )
+    {
+        mT->starttime = (uint32_t)time(NULL);
+        mT->millistart = milliseconds();
+    }
     millitime = (millis - mT->millistart) + ((long long)mT->starttime * 1000);
-    printf("MT starttime.%u + %lld\n",mT->starttime,(long long)mT->millistart);
     if ( othermillitime != 0 )
     {
-        millitime += mT->millidiff;
+        //millitime += mT->millidiff;
         lag = (othermillitime - millitime);
         mT->millidiff = (mT->millidiff * .9) + (.1 * lag);
     }

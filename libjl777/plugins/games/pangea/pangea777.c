@@ -218,6 +218,12 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
     return(retval);
 }
 
+int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    printf("GOTPING.(%s)\n",jprint(json,0));
+    return(0);
+}
+
 int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
     int32_t i,j; char *nrs; bits256 *final,*cardpubs;
@@ -1007,6 +1013,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
             {
                 if ( strcmp(cmdstr,"newhand") == 0 )
                     pangea_newhand(hn,json,dp,priv,buf,len);
+                else if ( strcmp(cmdstr,"ping") == 0 )
+                    pangea_ping(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"ready") == 0 )
                     pangea_ready(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"encoded") == 0 )
@@ -1088,7 +1096,7 @@ char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json)
 
 int32_t pangea_idle(struct plugin_info *plugin)
 {
-    int32_t i,n,m; uint64_t senderbits; uint32_t timestamp; struct pangea_thread *tp; union hostnet777 *hn;
+    int32_t i,n,m; uint64_t senderbits; uint32_t timestamp; struct pangea_thread *tp; union hostnet777 *hn; char hex[1024];
     while ( 1 )
     {
         //printf("pangea idle\n");
@@ -1103,6 +1111,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     if ( hostnet777_idle(hn) != 0 )
                         m++;
                     pangea_poll(&senderbits,&timestamp,hn);
+                    pangea_sendcmd(hex,hn,"ping",-1,(void *)&Pangea_waiting,sizeof(Pangea_waiting),Pangea_userinput_cardi,Pangea_userinput_starttime);
                 }
             }
         }
@@ -1111,8 +1120,9 @@ int32_t pangea_idle(struct plugin_info *plugin)
         if ( m == 0 )
             msleep(3);
     }
-    if ( THREADS[0] != 0 && Pangea_waiting != 0 )
-        pangea_userpoll(&THREADS[0]->hn);
+    for (i=0; i<_PANGEA_MAXTHREADS; i++)
+        if ( THREADS[i] != 0 && Pangea_waiting != 0 )
+            pangea_userpoll(&THREADS[i]->hn);
     return(0);
 }
 
