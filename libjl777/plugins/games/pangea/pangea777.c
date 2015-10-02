@@ -1230,7 +1230,7 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
     int32_t createdflag,num,i,myind= -1; uint64_t tableid,addrs[CARDS777_MAXPLAYERS],balances[CARDS777_MAXPLAYERS],isbot[CARDS777_MAXPLAYERS];
     struct pangea_info *sp; cJSON *array; struct pangea_thread *tp; char *base,*hexstr,*endpoint,hex[1024]; uint32_t timestamp;
     struct cards777_pubdata *dp; struct hostnet777_server *srv;
-    //printf("T%d NEWTABLE.(%s)\n",threadid,jprint(json,0));
+    printf("T%d NEWTABLE.(%s)\n",threadid,jprint(json,0));
     if ( (tableid= j64bits(json,"tableid")) != 0 && (base= jstr(json,"base")) != 0 && (timestamp= juint(json,"timestamp")) != 0 )
     {
         if ( (array= jarray(&num,json,"addrs")) == 0 || num < 2 || num > CARDS777_MAXPLAYERS )
@@ -1492,7 +1492,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         playerpubs = jprint(pangea_playerpubs(dp->playerpubs,num),1);
         dp->readymask |= (1 << sp->myind);
         hostnet777_initmT(&tp->hn.server->mT,0);
-         sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s,\"millitime\":\"%llu\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->mT,0)); //\"pluginrequest\":\"SuperNET\",
+        sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s,\"millitime\":\"%llu\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->mT,0)); //\"pluginrequest\":\"SuperNET\",
 #ifdef BUNDLED
         {
             char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
@@ -1501,6 +1501,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
                 free(str);
         }
 #endif
+        printf("START.(%s)\n",retbuf);
         free(addrstr), free(ciphers), free(playerpubs), free(balancestr), free(isbotstr);
     }
     return(0);
