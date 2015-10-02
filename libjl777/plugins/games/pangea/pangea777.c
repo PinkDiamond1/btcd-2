@@ -220,18 +220,22 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
 
 int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    printf("GOTPING.(%s)\n",jprint(json,0));
+    int32_t senderind;
+    senderind = juint(json,"myind");
+    dp->othercardpubs[senderind] = *(uint64_t *)data;
+    printf("GOTPING.(%s) %llx\n",jprint(json,0),(long long)dp->othercardpubs[senderind]);
     return(0);
 }
 
 int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    int32_t i,j; char *nrs; bits256 *final,*cardpubs;
+    int32_t i,j; char *nrs; bits256 *final,*cardpubs; char hex[1024];
     if ( data == 0 || datalen != (dp->numcards + 1) * sizeof(bits256) )
     {
         printf("pangea_newhand invalid datalen.%d vs %ld\n",datalen,(dp->numcards + 1) * sizeof(bits256));
         return(-1);
     }
+    printf("NEWHAND\n");
     memset(priv->hole,0,sizeof(priv->hole));
     memset(priv->holecards,0,sizeof(priv->holecards));
     dp->numhands++;
@@ -286,6 +290,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
             break;
         }
     }
+    pangea_sendcmd(hex,hn,"ping",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),Pangea_userinput_cardi,Pangea_userinput_starttime);
     return(0);
 }
 
@@ -475,7 +480,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
 int32_t pangea_newdeck(union hostnet777 *src)
 {
     uint8_t data[(CARDS777_MAXCARDS + 1) * sizeof(bits256)]; struct cards777_pubdata *dp; char nrs[512],hex[32768]; bits256 destpub;//,privs[9];
-    struct cards777_privdata *priv; int32_t n,hexlen,len,state = 0;
+    struct cards777_privdata *priv; int32_t n,i,hexlen,len,state = 0;
     dp = src->client->H.pubdata;
     priv = src->client->H.privdata;
     memset(dp->hand.sharenrs,0,sizeof(dp->hand.sharenrs));
@@ -494,6 +499,13 @@ int32_t pangea_newdeck(union hostnet777 *src)
     memset(destpub.bytes,0,sizeof(destpub));
     hostnet777_msg(0,destpub,src,0,hex,hexlen);
     printf("NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
+    for (i=0; i<10; i++)
+    {
+        if ( dp->othercardpubs[1] == dp->hand.checkprod.txid )
+            break;
+        sleep(1);
+        fprintf(stderr,"%llx ",dp->othercardpubs[1]);
+    }
     pangea_sendcmd(hex,src,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
     //printf("NEWDECK.(%s)\n",hex);
     return(state);
