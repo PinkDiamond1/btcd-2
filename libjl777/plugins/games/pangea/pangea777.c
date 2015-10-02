@@ -32,6 +32,7 @@
 
 #define _PANGEA_MAXTHREADS 9
 #define PANGEA_MINRAKE_MILLIS 10
+#define PANGEA_USERTIMEOUT 20
 
 struct pangea_info
 {
@@ -562,6 +563,8 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jadd(json,"bets",bets);
     jaddnum(json,"totalbets",dstr(total));
     jadd(json,"hand",pangea_handjson(&dp->hand,sp->priv->hole,dp->isbot[sp->myind]));
+    if ( Pangea_userinput_starttime != 0 )
+        jaddnum(json,"timeleft",Pangea_userinput_starttime+PANGEA_USERTIMEOUT-time(NULL));
     return(json);
 }
 
@@ -635,7 +638,7 @@ void pangea_userpoll(union hostnet777 *hn)
     int32_t cardi,action = -1; uint64_t amount=0,sum,betsize; char hex[1024]; struct cards777_pubdata *dp = hn->client->H.pubdata;
     cardi = Pangea_userinput_cardi;
     betsize = Pangea_userinput_betsize;
-    if ( time(NULL) < Pangea_userinput_starttime+20 && Pangea_userinput[0] == 0 )
+    if ( time(NULL) < Pangea_userinput_starttime+PANGEA_USERTIMEOUT && Pangea_userinput[0] == 0 )
     {
         if ( Pangea_userinput[0] != 0 )
         {
@@ -668,7 +671,7 @@ void pangea_userpoll(union hostnet777 *hn)
                     else printf("unsupported userinput command.(%s)\n",Pangea_userinput);
                 }
             }
-            fprintf(stderr,"%ld ",Pangea_userinput_starttime+20-time(NULL));
+            fprintf(stderr,"%ld ",Pangea_userinput_starttime+PANGEA_USERTIMEOUT-time(NULL));
         }
         if ( amount > dp->balances[hn->client->H.slot] )
             amount = dp->balances[hn->client->H.slot], action = CARDS777_ALLIN;
@@ -1327,7 +1330,7 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
         {
             memcpy(sp->addrs,addrs,sizeof(*addrs) * dp->N);
             dp->readymask |= (1 << sp->myind);
-            pangea_sendcmd(hex,&tp->hn,"ready",1,0,0,0,0);
+            pangea_sendcmd(hex,&tp->hn,"ready",0,0,0,0,0);
             return(clonestr("{\"result\":\"newtable created\"}"));
         }
         else if ( createdflag == 0 )
@@ -1498,7 +1501,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
     sleep(3);
     int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
-    numthreads = 2; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = 10;
+    numthreads = 9; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = 10;
     plugin->sleepmillis = 1;
     PANGEA_MAXTHREADS = numthreads;
     if ( plugin->transport[0] == 0 )
@@ -1591,7 +1594,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         free_json(argjson);
         printf("my64bits %llu ipaddr.%s mypriv.%02x mypub.%02x\n",(long long)plugin->nxt64bits,plugin->ipaddr,plugin->mypriv[0],plugin->mypub[0]);
 #ifdef __APPLE__
-        if ( 0 )
+        if ( 1 )
             portable_thread_create((void *)pangea_test,plugin);//,9,SATOSHIDEN,SATOSHIDEN/10,10);
 #endif
         printf("initialized PANGEA\n");
