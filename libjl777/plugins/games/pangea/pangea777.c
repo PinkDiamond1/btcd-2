@@ -507,7 +507,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
         fprintf(stderr,"%llx ",dp->othercardpubs[1]);
     }
     pangea_sendcmd(hex,src,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
-    //printf("NEWDECK.(%s)\n",hex);
+    printf("NEWDECK.(%s)\n",hex);
     return(state);
 }
 
