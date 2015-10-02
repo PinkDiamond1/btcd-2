@@ -497,9 +497,12 @@ int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
     int32_t senderind;
     senderind = juint(json,"myind");
     dp->readymask |= (1 << senderind);
-    printf("player.%d got ready from senderind.%d\n",hn->client->H.slot,senderind);
+    printf("player.%d got ready from senderind.%d readymask.%x\n",hn->client->H.slot,senderind,dp->readymask);
     if ( hn->client->H.slot == 0 && (dp->readymask == ((1 << dp->N) - 1)) )
+    {
+        printf("send newdeck\n");
         pangea_newdeck(hn);
+    }
     return(0);
 }
 
@@ -1330,7 +1333,7 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
         {
             memcpy(sp->addrs,addrs,sizeof(*addrs) * dp->N);
             dp->readymask |= (1 << sp->myind);
-            pangea_sendcmd(hex,&tp->hn,"ready",0,0,0,0,0);
+            pangea_sendcmd(hex,&tp->hn,"ready",-1,0,0,0,0);
             return(clonestr("{\"result\":\"newtable created\"}"));
         }
         else if ( createdflag == 0 )
@@ -1575,7 +1578,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     for (threadid=1; threadid<PANGEA_MAXTHREADS; threadid++)
         pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey);
     tp = THREADS[0];
-    pangea_newdeck(&tp->hn);
+   // pangea_newdeck(&tp->hn);
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)

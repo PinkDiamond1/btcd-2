@@ -240,7 +240,7 @@ uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uin
     cards777_layer(encoded,xoverz,shuffled,numcards,N);
     cards777_calcmofn(allshares,myshares,sharenrs,M,xoverz,numcards,N);
     memcpy(ciphers,shuffled,numcards * N * sizeof(bits256));
-    if ( 1 )
+    if ( 0 )
     {
         int32_t i,j,m,size; uint8_t *recover,*testshares[CARDS777_MAXPLAYERS],testnrs[255];
         size = N * sizeof(bits256) * numcards;
