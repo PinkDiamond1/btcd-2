@@ -31,8 +31,9 @@
 #include "../../utils/curve25519.h"
 
 #define _PANGEA_MAXTHREADS 9
-#define PANGEA_MINRAKE_MILLIS 10
+#define PANGEA_MINRAKE_MILLIS 5
 #define PANGEA_USERTIMEOUT 20
+#define PANGEA_MAX_HOSTRAKE 10
 
 struct pangea_info
 {
@@ -1297,6 +1298,8 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
         printf("back from pangea_create\n");
         dp = sp->dp; sp->myind = myind;
         dp->rakemillis = juint(json,"rakemillis");
+        if ( dp->rakemillis > PANGEA_MAX_HOSTRAKE )
+            dp->rakemillis = PANGEA_MAX_HOSTRAKE;
         dp->table = sp;
         tp->numcards = dp->numcards, tp->N = dp->N, tp->M = dp->M;
         if ( threadid == 0 )
@@ -1370,7 +1373,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
     uint8_t p2shtype; struct pangea_info *sp; cJSON *bids,*walletitem,*item;
     memset(addrs,0,sizeof(addrs));
     memset(balances,0,sizeof(balances));
-    if ( rakemillis < 0 || rakemillis > 100 )
+    if ( rakemillis < 0 || rakemillis > PANGEA_MAX_HOSTRAKE )
     {
         printf("illegal rakemillis.%d\n",rakemillis);
         strcpy(retbuf,"{\"error\":\"illegal rakemillis\"}");
@@ -1459,7 +1462,10 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
     if ( createdflag != 0 && myind == 0 && addrs[myind] == tp->nxt64bits )
     {
         tp->numcards = dp->numcards, tp->N = dp->N, tp->M = dp->M;
-        dp->rakemillis = juint(json,"rakemillis") + PANGEA_MINRAKE_MILLIS;
+        dp->rakemillis = juint(json,"rakemillis");
+        if ( dp->rakemillis > PANGEA_MAX_HOSTRAKE )
+            dp->rakemillis = PANGEA_MAX_HOSTRAKE;
+        dp->rakemillis += PANGEA_MINRAKE_MILLIS;
         tp->hn.server->clients[myind].pubdata = dp;
         tp->hn.server->clients[myind].privdata = sp->priv;
         tp->hn.server->H.pubdata = dp;
@@ -1504,7 +1510,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
     sleep(3);
     int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
-    numthreads = 9; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = 10;
+    numthreads = 9; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
     plugin->sleepmillis = 1;
     PANGEA_MAXTHREADS = numthreads;
     if ( plugin->transport[0] == 0 )

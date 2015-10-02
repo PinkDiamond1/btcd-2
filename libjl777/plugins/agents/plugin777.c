@@ -328,9 +328,15 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
             }
             if ( (nxt64bits= get_API_nxt64bits(cJSON_GetObjectItem(obj,"serviceNXT"))) != 0 )
                 expand_nxt64bits(plugin->SERVICENXT,nxt64bits);
-            myipaddr = cJSON_str(cJSON_GetObjectItem(obj,"ipaddr"));
+            myipaddr = cJSON_str(cJSON_GetObjectItem(obj,"myipaddr"));
             if ( is_ipaddr(myipaddr) != 0 )
                 strcpy(plugin->ipaddr,myipaddr);
+            else
+            {
+                myipaddr = cJSON_str(cJSON_GetObjectItem(obj,"ipaddr"));
+                if ( is_ipaddr(myipaddr) != 0 )
+                    strcpy(plugin->ipaddr,myipaddr);
+            }
             if ( plugin->ipaddr[0] == 0 )
                 strcpy(plugin->ipaddr,"127.0.0.1");
             plugin->port = juint(obj,"port");
@@ -340,6 +346,7 @@ static int32_t process_json(char *retbuf,int32_t max,struct plugin_info *plugin,
                 safecopy(plugin->transport,jstr(obj,"transport"),sizeof(plugin->transport));
             if ( plugin->transport[0] == 0 )
                 strcpy(plugin->transport,"tcp");
+            printf("TRANSPORT.(%s) IPADDR.(%s) port.%d pangeaport.%d\n",plugin->transport,plugin->ipaddr,plugin->port,plugin->pangeaport);
         }
     }
     //fprintf(stderr,"tag.%llu initflag.%d got jsonargs.(%s) [%s] %p\n",(long long)tag,initflag,jsonargs,jsonstr,obj);
