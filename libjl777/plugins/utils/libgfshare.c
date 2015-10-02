@@ -323,7 +323,7 @@ int32_t init_sharenrs(unsigned char sharenrs[255],unsigned char *orig,int32_t m,
         return(-1);
     }
     randvals = calloc(1,65536);
-    gfshare_fill_rand(randvals,sizeof(randvals));
+    gfshare_fill_rand(randvals,65536);
     memset(sharenrs,0,n);
     if ( orig == 0 && n == m )
     {
@@ -347,9 +347,9 @@ int32_t init_sharenrs(unsigned char sharenrs[255],unsigned char *orig,int32_t m,
         i = j = 0;
         while ( i < m )
         {
-            if ( j >= sizeof(randvals) )
+            if ( j >= 65536 )
             {
-                gfshare_fill_rand(randvals,sizeof(randvals));
+                gfshare_fill_rand(randvals,65536);
                 printf("refill j.%d\n",j);
                 j = 0;
             }
