@@ -58,7 +58,7 @@ struct cards777_privdata
 
 struct hostnet777_endpoint { char endpoint[128],transport[16],ipaddr[64]; uint16_t port; };
 struct hostnet777_id { bits256 pubkey; uint64_t nxt64bits; void *privdata,*pubdata; int32_t pmsock; uint32_t lastcontact; };
-struct hostnet777_hdr { queue_t Q,Q2,Q3[2]; bits256 privkey,pubkey; void *privdata,*pubdata,*raft; uint64_t nxt64bits; int32_t slot,done,state,ind; };
+struct hostnet777_hdr { queue_t Q,Q2,Q3[2]; bits256 privkey,pubkey; void *privdata,*pubdata,*raft; uint64_t nxt64bits; uint32_t lastping; int32_t slot,done,state,ind; };
 struct hostnet777_client { struct hostnet777_hdr H; struct hostnet777_mtime mT; int32_t pushsock,subsock; struct hostnet777_id my; };
 
 struct hostnet777_server

@@ -1111,7 +1111,11 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     if ( hostnet777_idle(hn) != 0 )
                         m++;
                     pangea_poll(&senderbits,&timestamp,hn);
-                    pangea_sendcmd(hex,hn,"ping",-1,(void *)&Pangea_waiting,sizeof(Pangea_waiting),Pangea_userinput_cardi,Pangea_userinput_starttime);
+                    if ( time(NULL) > hn->client->H.lastping + 10 )
+                    {
+                        pangea_sendcmd(hex,hn,"ping",-1,(void *)&Pangea_waiting,sizeof(Pangea_waiting),Pangea_userinput_cardi,Pangea_userinput_starttime);
+                        hn->client->H.lastping = (uint32_t)time(NULL);
+                    }
                 }
             }
         }
