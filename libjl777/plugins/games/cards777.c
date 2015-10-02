@@ -311,8 +311,8 @@ struct cards777_pubdata *cards777_allocpub(int32_t M,int32_t numcards,int32_t N)
     dp = calloc(1,sizeof(*dp) + sizeof(bits256) * ((N + numcards + 1) + (N * numcards)));
     dp->M = M, dp->N = N, dp->numcards = numcards;
     dp->playerpubs = &dp->data[0];
-    dp->cardpubs = &dp->playerpubs[N];
-    dp->final = &dp->cardpubs[numcards + 1];
+    dp->hand.cardpubs = &dp->playerpubs[N];
+    dp->hand.final = &dp->hand.cardpubs[numcards + 1];
     return(dp);
 }
 
@@ -330,7 +330,7 @@ int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_
     for (i=0; i<N; i++)
     {
         dp = srv->clients[i].pubdata = cards777_allocpub(M,numcards,N);
-        memcpy(dp->sharenrs,sharenrs,dp->N);
+        memcpy(dp->hand.sharenrs,sharenrs,dp->N);
         for (j=0; j<N; j++)
             dp->playerpubs[j] = srv->clients[j].pubkey;
         for (j=0; j<N; j++)

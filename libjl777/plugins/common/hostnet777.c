@@ -24,16 +24,27 @@
 #include "../utils/bits777.c"
 #include "../utils/ramcoder.c"
 
-#define HOSTNET777_MAXTIMEDIFF 3
+#define HOSTNET777_MAXTIMEDIFF 10
 
 #define CARDS777_MAXCARDS 52
 #define CARDS777_MAXPLAYERS 9
+#define CARDS777_ALLIN CARDS777_MAXPLAYERS
+#define CARDS777_FOLD -1
+
+struct cards777_handinfo
+{
+    bits256 checkprod,*cardpubs,*final;
+    int64_t havemasks[CARDS777_MAXPLAYERS],betsize,lastraise,bets[CARDS777_MAXPLAYERS];
+    uint32_t starttime,handmask,lastbettor,handranks[CARDS777_MAXPLAYERS];
+    int8_t betstatus[CARDS777_MAXPLAYERS];
+    uint8_t numactions,bettor,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
+};
 
 struct cards777_pubdata
 {
-    bits256 checkprod,*cardpubs,*playerpubs,*final; uint8_t M,N,numcards,sharenrs[255],community[5],hands[CARDS777_MAXPLAYERS][7];
-    uint32_t button,numhands,handmask,handranks[CARDS777_MAXPLAYERS]; uint64_t havemasks[CARDS777_MAXPLAYERS];
-    int64_t tablepot,balances[CARDS777_MAXPLAYERS]; bits256 data[];
+    bits256 *playerpubs; int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS]; uint32_t button,numhands,rakemillis;
+    uint64_t hostrake,bigblind,ante,pangearake; void *table;
+    struct cards777_handinfo hand; bits256 data[];
 };
 
 struct cards777_privdata
@@ -685,42 +696,42 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                 if ( strcmp(cmdstr,"pubstr") == 0 )
                                 {
                                     //printf("player.%d got pubstr\n",hn->client->H.slot);
-                                    memcpy(dp->cardpubs,buf,len);
+                                    memcpy(dp->hand.cardpubs,buf,len);
                                     if ( (nrs= jstr(json,"sharenrs")) != 0 )
-                                        decode_hex(dp->sharenrs,(int32_t)strlen(nrs)>>1,nrs);
-                                    memset(dp->handranks,0,sizeof(dp->handranks));
+                                        decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
+                                    memset(dp->hand.handranks,0,sizeof(dp->hand.handranks));
                                     memset(priv->hole,0,sizeof(priv->hole));
                                     memset(priv->holecards,0,sizeof(priv->holecards));
-                                    memset(dp->community,0,sizeof(dp->community));
-                                    dp->handmask = 0;
+                                    memset(dp->hand.community,0,sizeof(dp->hand.community));
+                                    dp->hand.handmask = 0;
                                     dp->numhands++;
                                     dp->button++;
                                     if ( dp->button >= dp->N )
                                         dp->button = 0;
-                                    dp->tablepot = 3, dp->balances[dp->button]--, dp->balances[(dp->button + 1) % dp->N] -= 2;
+                                    dp->balances[dp->button]--, dp->balances[(dp->button + 1) % dp->N] -= 2;
                                 }
                                 else if ( strcmp(cmdstr,"encode") == 0 )
                                 {
                                     if ( Debuglevel > 2 )
                                         printf("player.%d encodes\n",hn->client->H.slot);
-                                    cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->sharenrs,dp->M,(void *)buf,dp->numcards,dp->N);
+                                    cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs,dp->M,(void *)buf,dp->numcards,dp->N);
                                 }
                                 else if ( strcmp(cmdstr,"final") == 0 )
                                 {
-                                    memcpy(dp->final,buf,sizeof(*dp->final) * dp->N * dp->numcards);
+                                    memcpy(dp->hand.final,buf,sizeof(*dp->hand.final) * dp->N * dp->numcards);
                                     if ( hn->client->H.slot == dp->N-1 )
                                         memcpy(priv->incards,buf,sizeof(*priv->incards) * dp->N * dp->numcards);
                                     //printf("player.%d got final crc.%04x %llx\n",hn->client->H.slot,_crc32(0,buf,len),(long long)dp->final[1].txid);
                                 }
                                 else if ( strcmp(cmdstr,"decode") == 0 )
                                 {
-                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
+                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
                                         printf("ERROR: player.%d got card.[%d]\n",hn->client->H.slot,card);
                                     memcpy(&priv->incards[cardi*dp->N + destplayer],buf,sizeof(bits256));
                                 }
                                 else if ( strcmp(cmdstr,"card") == 0 )
                                 {
-                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
+                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
                                     {
                                         //printf("player.%d got card.[%d]\n",hn->client->H.slot,card);
                                         memcpy(&priv->incards[cardi*dp->N + destplayer],cardpriv.bytes,sizeof(bits256));
@@ -736,7 +747,7 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                     if ( revealed < 0 || revealed != buf[1] )
                                         printf(">>>>>>>>>>>>>>> ERROR ");
                                     //printf("player.%d was REVEALED.[%d] (%s) cardi.%d\n",hn->client->H.slot,buf[1],hexstr,cardi);
-                                    dp->community[cardi - 2*dp->N] = buf[1];
+                                    dp->hand.community[cardi - 2*dp->N] = buf[1];
                                 }
                                 else if ( strcmp(cmdstr,"showdown") == 0 )
                                 {
@@ -748,32 +759,32 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                         else
                                         {
                                             //printf("sender.%d (%s) (%d %d)\n",senderslot,handstr,buf[5],buf[6]);
-                                            dp->handranks[senderslot] = rank;
-                                            memcpy(dp->hands[senderslot],buf,7);
-                                            dp->handmask |= (1 << senderslot);
-                                            if ( dp->handmask == (1 << dp->N)-1 )
+                                            dp->hand.handranks[senderslot] = rank;
+                                            memcpy(dp->hand.hands[senderslot],buf,7);
+                                            dp->hand.handmask |= (1 << senderslot);
+                                            if ( dp->hand.handmask == (1 << dp->N)-1 )
                                             {
                                                 bestj = 0;
-                                                bestrank = dp->handranks[0];
+                                                bestrank = dp->hand.handranks[0];
                                                 for (j=1; j<dp->N; j++)
-                                                    if ( dp->handranks[j] > bestrank )
+                                                    if ( dp->hand.handranks[j] > bestrank )
                                                     {
-                                                        bestrank = dp->handranks[j];
+                                                        bestrank = dp->hand.handranks[j];
                                                         bestj = j;
                                                     }
-                                                rank = set_handstr(tmp,dp->hands[bestj],0);
+                                                rank = set_handstr(tmp,dp->hand.hands[bestj],0);
                                                 if ( rank == bestrank )
                                                 {
                                                     for (j=0; j<dp->N; j++)
                                                     {
-                                                        rank = set_handstr(tmp,dp->hands[j],0);
+                                                        rank = set_handstr(tmp,dp->hand.hands[j],0);
                                                         if ( tmp[strlen(tmp)-1] == ' ' )
                                                             tmp[strlen(tmp)-1] = 0;
                                                         printf("%14s|",tmp[0]!=' '?tmp:tmp+1);
                                                         //printf("(%2d %2d).%d ",dp->hands[j][5],dp->hands[j][6],(int32_t)dp->balances[j]);
                                                     }
-                                                    rank = set_handstr(tmp,dp->hands[bestj],0);
-                                                    dp->balances[bestj] += dp->tablepot, dp->tablepot = 0;
+                                                    rank = set_handstr(tmp,dp->hand.hands[bestj],0);
+                                                    dp->balances[bestj] += 3;
                                                     printf("->P%d $%-5lld %s N%d p%d $%d\n",bestj,(long long)dp->balances[bestj],tmp,dp->numhands,hn->client->H.slot,(int32_t)dp->balances[hn->client->H.slot]);
                                                 } else printf("bestrank.%u mismatch %u\n",bestrank,rank);
                                             }
@@ -881,16 +892,16 @@ int32_t hostnet777_testiter(struct hostnet777_server *srv,struct hostnet777_clie
             {
                 if ( iter == 0 )
                 {
-                    memset(dp->sharenrs,0,sizeof(dp->sharenrs));
-                    init_sharenrs(dp->sharenrs,0,dp->N,dp->N);
-                    dp->checkprod = cards777_initdeck(priv->outcards,dp->cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
-                    init_hexbytes_noT(nrs,dp->sharenrs,dp->N);
+                    memset(dp->hand.sharenrs,0,sizeof(dp->hand.sharenrs));
+                    init_sharenrs(dp->hand.sharenrs,0,dp->N,dp->N);
+                    dp->hand.checkprod = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
+                    init_hexbytes_noT(nrs,dp->hand.sharenrs,dp->N);
                     cmdstr = "pubstr";
                     srcbits = srv->H.nxt64bits;
                     len = dp->numcards*sizeof(bits256);
                     sprintf(hex,"{\"cmd\":\"%s\",\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"sharenrs\":\"%s\",\"n\":%u,\"data\":\"",cmdstr,cardi,destplayer,(long long)srcbits,time(NULL),nrs,len);
                     n = (int32_t)strlen(hex);
-                    memcpy(data,dp->cardpubs,len);
+                    memcpy(data,dp->hand.cardpubs,len);
                     init_hexbytes_noT(&hex[n],data,len);
                     strcat(hex,"\"}");
                     hexlen = (int32_t)strlen(hex)+1;
@@ -938,7 +949,7 @@ int32_t hostnet777_testiter(struct hostnet777_server *srv,struct hostnet777_clie
             {
                 len = 7;
                 for (k=0; k<5; k++)
-                    data[k] = dp->community[k];
+                    data[k] = dp->hand.community[k];
                 data[k++] = priv->hole[0];
                 data[k++] = priv->hole[1];
                 rank = set_handstr(handstr,data,0);
