@@ -13,7 +13,7 @@
  *                                                                            *
  ******************************************************************************/
 
-//#define BUNDLED
+#define BUNDLED
 #define PLUGINSTR "pangea"
 #define PLUGNAME(NAME) pangea ## NAME
 #define STRUCTNAME struct PLUGNAME(_info) 
