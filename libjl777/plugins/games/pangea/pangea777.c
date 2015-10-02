@@ -1099,8 +1099,13 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
     if ( createdflagp != 0 )
         *createdflagp = 0;
     for (i=0; i<numaddrs; i++)
+        printf("%llu ",(long long)addrs[i]);
+    printf("numaddrs.%d\n",numaddrs);
+    for (i=0; i<numaddrs; i++)
+    {
         if ( addrs[i] == tp->nxt64bits )
             break;
+    }
     if ( i == numaddrs )
     {
         printf("this node not in addrs\n");
@@ -1232,11 +1237,13 @@ char *pangea_newtable(int32_t threadid,cJSON *json)
                 isbot[i] = j64bits(jitem(array,i),0);
         }
         else memset(isbot,0,sizeof(isbot));
+        printf("call pangea_create\n");
         if ( (sp= pangea_create(tp,&createdflag,base,timestamp,addrs,num,j64bits(json,"bigblind"),j64bits(json,"ante"),balances,isbot)) == 0 )
         {
             printf("cant create table.(%s) numaddrs.%d\n",base,num);
             return(clonestr("{\"error\":\"cant create table\"}"));
         }
+        printf("back from pangea_create\n");
         dp = sp->dp; sp->myind = myind;
         dp->rakemillis = juint(json,"rakemillis");
         dp->table = sp;
@@ -1266,7 +1273,7 @@ char *pangea_newtable(int32_t threadid,cJSON *json)
         {
             hexstr = jstr(jitem(array,i),0);
             decode_hex(dp->playerpubs[i].bytes,sizeof(bits256),hexstr);
-            //printf("set playerpubs.(%s) %llx\n",hexstr,(long long)dp->playerpubs[i].txid);
+            printf("set playerpubs.(%s) %llx\n",hexstr,(long long)dp->playerpubs[i].txid);
         }
         if ( myind >= 0 && createdflag != 0 && addrs[myind] == tp->nxt64bits )
         {
@@ -1302,14 +1309,15 @@ struct pangea_thread *pangea_threadinit(struct plugin_info *plugin,int32_t maxpl
 
 int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t rakemillis,int32_t maxplayers,cJSON *json)
 {
-    char *addrstr,*ciphers,*playerpubs,*balancestr,*isbotstr; uint8_t p2shtype; struct pangea_thread *tp; struct cards777_pubdata *dp;
-    int32_t createdflag,addrtype,i,j,n,myind=-1,r,num=0,threadid=0; uint64_t addrs[512],balances[512],isbot[512],tmp;
+    char *addrstr,*ciphers,*playerpubs,*balancestr,*isbotstr,destNXT[64]; struct pangea_thread *tp; struct cards777_pubdata *dp;
+    int32_t createdflag,addrtype,haspubkey,i,j,n,myind=-1,r,num=0,threadid=0; uint64_t addrs[512],balances[512],isbot[512],tmp; uint8_t p2shtype;
     struct pangea_info *sp; cJSON *bids,*walletitem,*item;
     memset(addrs,0,sizeof(addrs));
     memset(balances,0,sizeof(balances));
     if ( rakemillis < 0 || rakemillis > 100 )
     {
         printf("illegal rakemillis.%d\n",rakemillis);
+        strcpy(retbuf,"{\"error\":\"illegal rakemillis\"}");
         return(-1);
     }
     if ( bigblind == 0 )
@@ -1386,8 +1394,10 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
     if ( (sp= pangea_create(tp,&createdflag,base,timestamp,addrs,num,bigblind,ante,balances,isbot)) == 0 )
     {
         printf("cant create table.(%s) numaddrs.%d\n",base,num);
+        strcpy(retbuf,"{\"error\":\"cant create table\"}");
         return(-1);
     }
+    printf("back from pangea_create\n");
     dp = sp->dp, dp->table = sp;
     sp->myind = myind;
     if ( createdflag != 0 && myind == 0 && addrs[myind] == tp->nxt64bits )
@@ -1401,7 +1411,13 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         init_sharenrs(dp->hand.sharenrs,0,dp->N,dp->N);
         for (j=0; j<dp->N; j++)
         {
-            dp->playerpubs[j] = THREADS[j]->hn.client->H.pubkey;
+            if ( THREADS[j] != 0 )
+                dp->playerpubs[j] = THREADS[j]->hn.client->H.pubkey;
+            else
+            {
+                expand_nxt64bits(destNXT,addrs[j]);
+                dp->playerpubs[j] = issue_getpubkey(&haspubkey,destNXT);
+            }
             //printf("thread[%d] pub.%llx priv.%llx\n",j,(long long)dp->playerpubs[j].txid,(long long)THREADS[j]->hn.client->H.privkey.txid);
         }
         isbotstr = jprint(addrs_jsonarray(isbot,num),1);
@@ -1409,7 +1425,15 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         addrstr = jprint(addrs_jsonarray(addrs,num),1);
         ciphers = jprint(pangea_ciphersjson(dp,sp->priv),1);
         playerpubs = jprint(pangea_playerpubs(dp->playerpubs,num),1);
-        sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"pluginrequest\":\"SuperNET\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr);
+        sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"balances\":%s,\"isbot\":%s}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->rakemillis,(long long)ante,playerpubs,addrstr,balancestr,isbotstr); //\"pluginrequest\":\"SuperNET\",
+#ifdef BUNDLED
+        {
+            char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
+            char *str; uint32_t nonce;
+            if ( (str= busdata_sync(&nonce,retbuf,"allnodes",0)) != 0 )
+                free(str);
+        }
+#endif
         free(addrstr), free(ciphers), free(playerpubs), free(balancestr), free(isbotstr);
     }
     return(0);
@@ -1421,7 +1445,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
     sleep(3);
     int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
-    numthreads = 9; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = 10;
+    numthreads = 2; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = 10;
     plugin->sleepmillis = 1;
     PANGEA_MAXTHREADS = numthreads;
     if ( plugin->transport[0] == 0 )
@@ -1537,6 +1561,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"start") == 0 )
         {
+            strcpy(retbuf,"{\"result\":\"start issued\"}");
             if ( (base= jstr(json,"base")) != 0 )
             {
                 if ( (maxplayers= juint(json,"maxplayers")) < 2 )
