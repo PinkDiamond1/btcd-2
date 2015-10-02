@@ -120,7 +120,7 @@ int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime)
         mT->millistart = millis;
         printf("set millistart.%p %lld\n",mT,(long long)millis);
     }
-    printf("%p millis.%lld - millistart.%lld = %lld\n",mT,(long long)millis,(long long)mT->millistart,(long long)(millis - mT->millistart));
+    //printf("%p millis.%lld - millistart.%lld = %lld\n",mT,(long long)millis,(long long)mT->millistart,(long long)(millis - mT->millistart));
     millitime = (millis - mT->millistart) + ((long long)mT->starttime * 1000);
     if ( othermillitime != 0 )
     {
@@ -364,7 +364,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
             {
                 millitime = j64bits(json,"millitime");
                 now = hostnet777_convmT(mT,millitime);
-                printf("now.%lld vs millitime.%lld lag.%lld\n",(long long)now,(long long)millitime,(long long)(millitime - now));
+                //printf("now.%lld vs millitime.%lld lag.%lld\n",(long long)now,(long long)millitime,(long long)(millitime - now));
                 if ( pmflag != 0 && juint(json,"timestamp") != timestamp && juint(json,"timestamp")+1 != timestamp )
                     printf("msg.(%s) timestamp.%u mismatch | now.%ld\n",jsonstr,timestamp,time(NULL)), free(ptr);
                 else if ( pmflag != 0 && j64bits(json,"sender") != senderbits )
