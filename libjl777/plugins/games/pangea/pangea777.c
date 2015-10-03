@@ -765,13 +765,16 @@ void pangea_statusprint(struct cards777_pubdata *dp,struct cards777_privdata *pr
     for (i=0; i<dp->N; i++)
         pangea_playerprint(dp,i,myind);
     handstr[0] = 0;
-    for (i=0; i<5; i++)
-        if ( (hand[i]= dp->hand.community[i]) == 0xff )
-            break;
-    if ( i == 5 )
+    if ( dp->hand.community[0] != dp->hand.community[1] )
     {
-        if ( (hand[5]= priv->hole[0]) != 0xff && (hand[6]= priv->hole[1]) != 0xff )
-            set_handstr(handstr,hand,1);
+        for (i=0; i<5; i++)
+            if ( (hand[i]= dp->hand.community[i]) == 0xff )
+                break;
+        if ( i == 5 )
+        {
+            if ( (hand[5]= priv->hole[0]) != 0xff && (hand[6]= priv->hole[1]) != 0xff )
+                set_handstr(handstr,hand,1);
+        }
     }
     printf("%s\n",handstr);
 }
@@ -789,8 +792,8 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     if ( datalen == sizeof(uint32_t) )
         memcpy(&starttime,data,sizeof(starttime)), dp->hand.starttime = starttime, betsize = dp->hand.betsize;
     else memcpy(&betsize,data,sizeof(betsize)), starttime = dp->hand.starttime;
-    if ( turni >= 0 && turni < dp->N )
-        dp->hand.undergun = turni;
+    //if ( senderind == 0 && turni >= 0 && turni < dp->N )
+    //    dp->hand.undergun = turni;
     if ( turni == hn->client->H.slot )
     {
         sp = dp->table;
@@ -1086,7 +1089,9 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         }
     }
     if ( Debuglevel > 1 || hn->client->H.slot == 0 )
-        printf("player.%d got pangea_action.%d for player.%d action.%d amount %.8f | numactions.%d\n",hn->client->H.slot,cardi,senderind,action,dstr(amount),dp->hand.numactions);
+    {
+        printf("player.%d got pangea_action.%d for player.%d action.%d amount %.8f | numactions.%d\n%s\n",hn->client->H.slot,cardi,senderind,action,dstr(amount),dp->hand.numactions,jprint(pangea_tablestatus(dp->table),1));
+    }
     return(0);
 }
 
