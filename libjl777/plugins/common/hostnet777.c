@@ -89,6 +89,7 @@ int32_t cards777_checkcard(bits256 *cardprivp,int32_t cardi,int32_t slot,int32_t
 int32_t hostnet777_init(union hostnet777 *hn,bits256 *privkeys,int32_t num,int32_t launchflag);
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len);
 int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime);
+bits256 cards777_pubkeys(bits256 *pubkeys,int32_t numcards,bits256 cmppubkey);
 
 extern int32_t Debuglevel;
 
@@ -352,7 +353,7 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
 
 void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag,struct hostnet777_mtime *mT)
 {
-    char *jsonstr = 0; bits256 sig; int64_t diff; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr; cJSON *json; long extra;
+    char *jsonstr = 0; bits256 sig; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr; cJSON *json; long extra;
     extra = sizeof(*senderpubp) + sizeof(*destbitsp) + sizeof(sig) + sizeof(senderbits) + sizeof(timestamp);
     if ( (len= origlen) > extra )
     {

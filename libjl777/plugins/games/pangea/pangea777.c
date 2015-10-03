@@ -119,29 +119,6 @@ void pangea_free(struct pangea_info *sp)
     free(sp);
 }
 
-bits256 pangea_pubkeys(struct cards777_pubdata *dp)
-{
-    int32_t i; bits256 bp,pubkey,hash,check; bits320 prod,hexp; // cJSON *array; char *hexstr;
-    memset(check.bytes,0,sizeof(check));
-    memset(bp.bytes,0,sizeof(bp)), bp.bytes[0] = 9;
-    prod = fmul(fexpand(bp),crecip(fexpand(bp)));
-    for (i=0; i<52; i++)
-    {
-        pubkey = dp->hand.cardpubs[i];
-        vcalc_sha256(0,hash.bytes,pubkey.bytes,sizeof(pubkey));
-        dp->hand.cardpubs[i] = pubkey;
-        hash.bytes[0] &= 0xf8, hash.bytes[31] &= 0x7f, hash.bytes[31] |= 64;
-        hexp = fexpand(hash);
-        prod = fmul(prod,hexp);
-    }
-    pubkey = dp->hand.cardpubs[dp->numcards];
-    check = fcontract(prod);
-    if ( memcmp(check.bytes,pubkey.bytes,sizeof(check)) != 0 )
-        printf("permicheck.%llx != prod.%llx\n",(long long)check.txid,(long long)pubkey.txid);
-    else printf("pubkeys matched\n");
-    return(check);
-}
-
 void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplayer,uint8_t *data,int32_t datalen,int32_t cardi,int32_t turni)
 {
     int32_t n,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json; struct cards777_pubdata *dp = hn->client->H.pubdata;
@@ -239,7 +216,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     for (i=0; i<5; i++)
         dp->hand.community[i] = 0xff;
     memcpy(dp->hand.cardpubs,data,(dp->numcards + 1) * sizeof(bits256));
-    dp->hand.checkprod = pangea_pubkeys(dp);
+    dp->hand.checkprod = cards777_pubkeys(dp->hand.cardpubs,dp->numcards,dp->hand.cardpubs[dp->numcards]);
     //printf("player.%d (%llx vs %llx) got cardpubs.%llx\n",hn->client->H.slot,(long long)hn->client->H.pubkey.txid,(long long)dp->playerpubs[hn->client->H.slot].txid,(long long)dp->checkprod.txid);
     if ( (nrs= jstr(json,"sharenrs")) != 0 )
         decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
@@ -494,13 +471,10 @@ int32_t pangea_newdeck(union hostnet777 *src)
     return(state);
 }
 
-int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
-    int32_t senderind,i;
-    senderind = juint(json,"myind");
-    dp->othercardpubs[senderind] = *(uint64_t *)data;
-    printf("player.%d got pangea_gotdeck from senderind.%d\n",hn->client->H.slot,senderind);
-    if ( hn->client->H.slot == 0 )
+    int32_t i,hexlen; bits256 destpub;
+    if ( dp->newhand[0] != 0 )
     {
         for (i=0; i<dp->N; i++)
         {
@@ -508,8 +482,29 @@ int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
                 break;
         }
         if ( i == dp->N )
+        {
+            dp->newhand[0] = 0;
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
+        }
+        else if ( time(NULL) > dp->startdecktime+10 )
+        {
+            hexlen = (int32_t)strlen(dp->newhand)+1;
+            memset(destpub.bytes,0,sizeof(destpub));
+            hostnet777_msg(0,destpub,hn,0,dp->newhand,hexlen);
+            dp->startdecktime = (uint32_t)time(NULL);
+            printf("RESEND NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
+        }
     }
+}
+
+int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    int32_t senderind;
+    senderind = juint(json,"myind");
+    dp->othercardpubs[senderind] = *(uint64_t *)data;
+    printf("player.%d got pangea_gotdeck from senderind.%d\n",hn->client->H.slot,senderind);
+    if ( hn->client->H.slot == 0 )
+        pangea_serverstate(hn,dp,priv);
     return(0);
 }
 
@@ -1142,6 +1137,8 @@ int32_t pangea_idle(struct plugin_info *plugin)
                         pangea_sendcmd(hex,hn,"ping",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),Pangea_userinput_cardi,Pangea_userinput_starttime);
                         hn->client->H.lastping = (uint32_t)time(NULL);
                     }
+                    if ( hn->client->H.slot == 0 )
+                        pangea_serverstate(hn,dp,hn->server->H.privdata);
                 }
             }
         }
