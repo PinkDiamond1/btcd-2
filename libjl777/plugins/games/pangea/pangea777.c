@@ -119,7 +119,7 @@ void pangea_free(struct pangea_info *sp)
     free(sp);
 }
 
-bits256 pangea_pubkeys(cJSON *json,struct cards777_pubdata *dp)
+bits256 pangea_pubkeys(struct cards777_pubdata *dp)
 {
     int32_t i; bits256 bp,pubkey,hash,check; bits320 prod,hexp; // cJSON *array; char *hexstr;
     memset(check.bytes,0,sizeof(check));
@@ -137,8 +137,8 @@ bits256 pangea_pubkeys(cJSON *json,struct cards777_pubdata *dp)
     pubkey = dp->hand.cardpubs[dp->numcards];
     check = fcontract(prod);
     if ( memcmp(check.bytes,pubkey.bytes,sizeof(check)) != 0 )
-        printf("permicheck.%llx != prod.%llx (%s)\n",(long long)check.txid,(long long)pubkey.txid,jprint(json,0));
-    //else printf("pubkeys matched\n");
+        printf("permicheck.%llx != prod.%llx\n",(long long)check.txid,(long long)pubkey.txid);
+    else printf("pubkeys matched\n");
     return(check);
 }
 
@@ -218,15 +218,6 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
     return(retval);
 }
 
-int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
-{
-    int32_t senderind;
-    senderind = juint(json,"myind");
-    dp->othercardpubs[senderind] = *(uint64_t *)data;
-    printf("GOTPING.(%s) %llx\n",jprint(json,0),(long long)dp->othercardpubs[senderind]);
-    return(0);
-}
-
 int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
     int32_t i,j; char *nrs; bits256 *final,*cardpubs; char hex[1024];
@@ -248,7 +239,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     for (i=0; i<5; i++)
         dp->hand.community[i] = 0xff;
     memcpy(dp->hand.cardpubs,data,(dp->numcards + 1) * sizeof(bits256));
-    dp->hand.checkprod = pangea_pubkeys(json,dp);
+    dp->hand.checkprod = pangea_pubkeys(dp);
     //printf("player.%d (%llx vs %llx) got cardpubs.%llx\n",hn->client->H.slot,(long long)hn->client->H.pubkey.txid,(long long)dp->playerpubs[hn->client->H.slot].txid,(long long)dp->checkprod.txid);
     if ( (nrs= jstr(json,"sharenrs")) != 0 )
         decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
@@ -498,6 +489,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
     hexlen = (int32_t)strlen(dp->newhand)+1;
     memset(destpub.bytes,0,sizeof(destpub));
     hostnet777_msg(0,destpub,src,0,dp->newhand,hexlen);
+    dp->startdecktime = (uint32_t)time(NULL);
     printf("NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
     return(state);
 }
@@ -506,6 +498,7 @@ int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
 {
     int32_t senderind,i;
     senderind = juint(json,"myind");
+    dp->othercardpubs[senderind] = *(uint64_t *)data;
     printf("player.%d got pangea_gotdeck from senderind.%d\n",hn->client->H.slot,senderind);
     if ( hn->client->H.slot == 0 )
     {
@@ -531,6 +524,15 @@ int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
         printf("send newdeck\n");
         pangea_newdeck(hn);
     }
+    return(0);
+}
+
+int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    int32_t senderind;
+    senderind = juint(json,"myind");
+    dp->othercardpubs[senderind] = *(uint64_t *)data;
+    //printf("GOTPING.(%s) %llx\n",jprint(json,0),(long long)dp->othercardpubs[senderind]);
     return(0);
 }
 
