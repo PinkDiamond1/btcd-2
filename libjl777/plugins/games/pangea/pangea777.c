@@ -1103,7 +1103,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
     char handstr[128],hex[1024]; int32_t rank,j,n,senderslot; bits256 hole[2],hand; uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS];
     senderslot = juint(json,"myind");
     hole[0] = *(bits256 *)data, hole[1] = *(bits256 *)&data[sizeof(bits256)];
-    printf("showdown: sender.%d [%d] [%d]\n",senderslot,hole[0].bytes[1],hole[1].bytes[1]);
+    printf("showdown: sender.%d [%d] [%d] dp.%p\n",senderslot,hole[0].bytes[1],hole[1].bytes[1],dp);
     for (j=0; j<5; j++)
         hand.bytes[j] = dp->hand.community[j];
     hand.bytes[j++] = hole[0].bytes[1];
