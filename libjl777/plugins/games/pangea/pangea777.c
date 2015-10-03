@@ -862,7 +862,11 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
                     if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 )
                         action = 0;
                     else if ( strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 )
-                        action = 1, amount = dp->hand.lastraise;
+                    {
+                        action = 1;
+                        if ( (amount= dp->hand.lastraise) < j64bits(json,"amount") )
+                            amount = j64bits(json,"amount");
+                    }
                     else printf("unsupported userinput command.(%s)\n",actionstr);
                 }
                 else
@@ -875,6 +879,8 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
                         amount = (dp->hand.betsize - sum);
                         if ( amount < 2*dp->hand.lastraise )
                             amount = 2*dp->hand.lastraise;
+                        if ( j64bits(json,"amount") > amount )
+                            amount = j64bits(json,"amount");
                     }
                     else if ( strcmp(actionstr,"fold") == 0 )
                         action = 0;
