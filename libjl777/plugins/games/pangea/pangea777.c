@@ -678,7 +678,7 @@ uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t tur
         {
             amount = (betsize - sum);
             total = pangea_totalbet(dp);
-            threshold = (10 * amount)/total;
+            threshold = (100 * amount)/total;
             if ( r/n > threshold )
             {
                 action = 1;
@@ -1031,7 +1031,7 @@ int32_t pangea_again(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t sl
     printf("balances %.8f [%.8f]\n",dstr(total),dstr(total + dp->hostrake + dp->pangearake));
     if ( n == 1 )
     {
-        printf("Only player.%d left with %.8f | get sigs and cashout\n",activej,dstr(dp->balances[activej]));
+        printf("Only player.%d left with %.8f | get sigs and cashout after numhands.%d\n",activej,dstr(dp->balances[activej]),dp->numhands);
         return(1);
     }
     else
@@ -1161,7 +1161,7 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
     priv = hn->client->H.privdata;
     if ( (jsonstr= queue_dequeue(&hn->client->H.Q,1)) != 0 )
     {
-        printf("GOT.(%s)\n",jsonstr);
+        //printf("GOT.(%s)\n",jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             *senderbitsp = j64bits(json,"sender");
