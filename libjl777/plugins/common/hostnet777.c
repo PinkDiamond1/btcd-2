@@ -527,7 +527,7 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
         return(-1);
     }
     sprintf(endpoint,"%s://%s:%u",srv->ep.transport,srv->ep.ipaddr,srv->ep.port + slot + 2);
-    srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_PAIR",NN_PAIR,srv->ep.port + slot + 2,10,1);
+    srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_PAIR",NN_PAIR,srv->ep.port + slot + 2,100,10);
     srv->clients[slot].pubkey = clientpub;
     srv->clients[slot].nxt64bits = nxt64bits;
     srv->clients[slot].lastcontact = (uint32_t)time(NULL);
@@ -555,14 +555,14 @@ struct hostnet777_client *hostnet777_client(bits256 privkey,bits256 pubkey,char 
     endbuf[strlen(endbuf)-4] = 0;
     port = atoi(&srvendpoint[strlen(endbuf)]);
     sprintf(endbuf2,"%s%u",endbuf,port + 2 + slot);
-    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PAIR",NN_PAIR,0,10,1);
+    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PAIR",NN_PAIR,0,100,10);
     printf("PAIR %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+2+slot);
     sprintf(endbuf2,"%s%u",endbuf,port + 1);
-    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,10,1);
+    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,100,10);
     printf("SUB %d from (%s) port.%d\n",ptr->subsock,endbuf2,port+1);
     nn_setsockopt(ptr->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
     sprintf(endbuf2,"%s%u",endbuf,port);
-    ptr->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,10,1);
+    ptr->pushsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,100,10);
     printf("PUSH %d to (%s)\n",ptr->pushsock,endbuf2);
     return(ptr);
 }
@@ -611,10 +611,10 @@ struct hostnet777_server *hostnet777_server(bits256 srvprivkey,bits256 srvpubkey
     srv->H.pubkey = srv->clients[0].pubkey = srvpubkey;
     srv->H.nxt64bits = srv->clients[0].nxt64bits = acct777_nxt64bits(srvpubkey);
     sprintf(ep->endpoint,"%s://%s:%u",transport,ipaddr,port + 1);
-    srv->pubsock = nn_createsocket(ep->endpoint,1,"NN_PUB",NN_PUB,port + 1,10,1);
+    srv->pubsock = nn_createsocket(ep->endpoint,1,"NN_PUB",NN_PUB,port + 1,100,10);
     printf("PUB.%d to (%s)\n",srv->pubsock,ep->endpoint);
     sprintf(ep->endpoint,"%s://%s:%u",transport,ipaddr,port);
-    srv->pullsock = nn_createsocket(ep->endpoint,1,"NN_PULL",NN_PULL,port,10,1);
+    srv->pullsock = nn_createsocket(ep->endpoint,1,"NN_PULL",NN_PULL,port,100,10);
     printf("PULL.%d from (%s)\n",srv->pullsock,ep->endpoint);
     srv->num = 1;
     return(srv);
