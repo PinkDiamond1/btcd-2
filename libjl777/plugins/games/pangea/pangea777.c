@@ -808,7 +808,7 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
             dp->hand.userinput_starttime = (uint32_t)time(NULL);
             dp->hand.cardi = cardi;
             dp->hand.betsize = betsize;
-            fprintf(stderr,"Waiting for user input: ");
+            fprintf(stderr,"Waiting for user input cardi.%d: ",cardi);
         }
     }
     return(0);
@@ -883,6 +883,7 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
             if ( amount > dp->balances[sp->myind] )
                 amount = dp->balances[sp->myind], action = CARDS777_ALLIN;
             pangea_sendcmd(hex,&sp->tp->hn,"action",-1,(void *)&amount,sizeof(amount),dp->hand.cardi,action);
+            printf("ACTION.(%s)\n",hex);
             return(clonestr("{\"result\":\"action submitted\"}"));
         }
         else return(clonestr("{\"error\":\"illegal action specified, must be: check, call, bet, raise, fold or allin\"}"));
@@ -1773,6 +1774,16 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             portable_thread_create((void *)pangea_test,plugin);//,9,SATOSHIDEN,SATOSHIDEN/10,10);
 #endif
         printf("initialized PANGEA\n");
+        if ( 0 )
+        {
+            int32_t i; char str[8];
+            for (i=0; i<52; i++)
+            {
+                cardstr(str,i);
+                printf("(%d %s) ",i,str);
+            }
+            printf("cards\n");
+        }
     }
     else
     {

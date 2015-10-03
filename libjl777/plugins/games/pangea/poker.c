@@ -56,7 +56,7 @@ int32_t cardstr(char *cardstr,uint8_t card)
 {
     int32_t suit; char *cardc = "A234567890JQK",suitc[4] = { 'c', 'd', 'h', 's' };
     suit = card / 13;
-    card /= 13;
+    card %= 13;
     if ( card == 10 )
         sprintf(cardstr,"10%c",suitc[suit]);
     else sprintf(cardstr,"%c%c",cardc[card],suitc[suit]);
