@@ -909,6 +909,7 @@ uint64_t pangea_winnings(uint64_t *pangearakep,uint64_t *hostrakep,uint64_t tota
 int32_t pangea_sidepots(uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS],union hostnet777 *hn,struct cards777_pubdata *dp)
 {
     int32_t i,j,nonz,n = 0; uint64_t bet,minbet = 0;
+    printf("calc sidepots\n");
     for (j=0; j<dp->N; j++)
         sidepots[0][j] = dp->hand.bets[j];
     nonz = 1;
@@ -943,7 +944,7 @@ int32_t pangea_sidepots(uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYE
         }
         n++;
     }
-    if ( hn->server->H.slot == 0 && n > 1 )
+    if ( hn->server->H.slot == 0 )//&& n > 1 )
     {
         for (i=0; i<n; i++)
         {
@@ -1774,6 +1775,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             portable_thread_create((void *)pangea_test,plugin);//,9,SATOSHIDEN,SATOSHIDEN/10,10);
 #endif
         printf("initialized PANGEA\n");
+        Debuglevel = 3;
         if ( 0 )
         {
             int32_t i; char str[8];
