@@ -1082,8 +1082,12 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         else
         {
             for (i=0; i<5; i++)
+            {
                 if ( dp->hand.community[i] == 0xff )
                     break;
+                printf("%02x ",dp->hand.community[i]);
+            }
+            printf("COMMUNITY\n");
             if ( i == 0 )
             {
                 cardi = dp->N * 2;
