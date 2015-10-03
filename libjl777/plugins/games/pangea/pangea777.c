@@ -556,6 +556,7 @@ cJSON *pangea_handjson(struct cards777_handinfo *hand,uint8_t *holecards,int32_t
         {
             jaddinum(array,card);
             cardstr(&cstr[strlen(cstr)],card);
+            strcat(cstr," ");
         }
     }
     jaddstr(json,"community",cstr);
@@ -615,7 +616,7 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jadd(json,"balances",array);
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
-        jaddistr(json,pangea_statusstr(dp->hand.betstatus[i]));
+        jaddistr(array,pangea_statusstr(dp->hand.betstatus[i]));
     jadd(json,"status",array);
     bets = cJSON_CreateArray();
     for (total=i=0; i<dp->N; i++)
@@ -1102,13 +1103,13 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
     char handstr[128],hex[1024]; int32_t rank,j,n,senderslot; bits256 hole[2],hand; uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS];
     senderslot = juint(json,"myind");
     hole[0] = *(bits256 *)data, hole[1] = *(bits256 *)&data[sizeof(bits256)];
-    //printf("showdown: sender.%d [%d] [%d]\n",senderslot,hole[0].bytes[1],hole[1].bytes[1]);
+    printf("showdown: sender.%d [%d] [%d]\n",senderslot,hole[0].bytes[1],hole[1].bytes[1]);
     for (j=0; j<5; j++)
         hand.bytes[j] = dp->hand.community[j];
     hand.bytes[j++] = hole[0].bytes[1];
     hand.bytes[j++] = hole[1].bytes[1];
     rank = set_handstr(handstr,hand.bytes,0);
-    //printf("sender.%d (%s) (%d %d) rank.%x\n",senderslot,handstr,hole[0].bytes[1],hole[1].bytes[1],rank);
+    printf("sender.%d (%s) (%d %d) rank.%x\n",senderslot,handstr,hole[0].bytes[1],hole[1].bytes[1],rank);
     dp->hand.handranks[senderslot] = rank;
     memcpy(dp->hand.hands[senderslot],hand.bytes,7);
     dp->hand.handmask |= (1 << senderslot);
@@ -1140,6 +1141,7 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
     priv = hn->client->H.privdata;
     if ( (jsonstr= queue_dequeue(&hn->client->H.Q,1)) != 0 )
     {
+        printf("GOT.(%s)\n",jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             *senderbitsp = j64bits(json,"sender");
@@ -1259,7 +1261,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                         m++;
                     pangea_poll(&senderbits,&timestamp,hn);
                     if ( hn->client->H.slot == 0 )
-                        pinggap = 1;
+                        pinggap = 10;
                     if ( time(NULL) > hn->client->H.lastping + pinggap )
                     {
                         dp = hn->client->H.pubdata;
@@ -1775,7 +1777,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             portable_thread_create((void *)pangea_test,plugin);//,9,SATOSHIDEN,SATOSHIDEN/10,10);
 #endif
         printf("initialized PANGEA\n");
-        Debuglevel = 3;
         if ( 0 )
         {
             int32_t i; char str[8];
