@@ -32,7 +32,7 @@
 
 #define _PANGEA_MAXTHREADS 9
 #define PANGEA_MINRAKE_MILLIS 5
-#define PANGEA_USERTIMEOUT 20
+#define PANGEA_USERTIMEOUT 60
 #define PANGEA_MAX_HOSTRAKE 10
 
 struct pangea_info
@@ -277,9 +277,9 @@ int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
         if ( Debuglevel > 2 )
             printf("player.%d got card.[%d]\n",hn->client->H.slot,card);
         memcpy(&priv->incards[cardi*dp->N + destplayer],cardpriv.bytes,sizeof(bits256));
-    }
-    else printf("ERROR player.%d got no card %llx\n",hn->client->H.slot,*(long long *)data);
+    } else printf("ERROR player.%d got no card %llx\n",hn->client->H.slot,*(long long *)data);
     priv->holecards[cardi / dp->N] = cardpriv, priv->hole[cardi / dp->N] = cardpriv.bytes[1];
+    printf(">>>>>>>>>> dest.%d priv.%p holecards[%d] cardi.%d / dp->N %d (%d %d)\n",destplayer,priv,priv->hole[cardi / dp->N],cardi,dp->N,priv->hole[0],priv->hole[1]);
     if ( cardi < dp->N*2 )
         pangea_sendcmd(hex,hn,"facedown",-1,(void *)&cardi,sizeof(cardi),cardi,-1);
     else pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,-1);
