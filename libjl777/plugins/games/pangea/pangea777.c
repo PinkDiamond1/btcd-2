@@ -994,7 +994,7 @@ int64_t pangea_splitpot(uint64_t sidepot[CARDS777_MAXPLAYERS],union hostnet777 *
             rank = set_handstr(handstr,dp->hand.hands[j],0);
             if ( handstr[strlen(handstr)-1] == ' ' )
                 handstr[strlen(handstr)-1] = 0;
-            if ( hn->server->H.slot == 0 )
+            //if ( hn->server->H.slot == 0 )
                 printf("(p%d %14s)",j,handstr[0]!=' '?handstr:handstr+1);
             //printf("(%2d %2d).%d ",dp->hands[j][5],dp->hands[j][6],(int32_t)dp->balances[j]);
         }
@@ -1009,7 +1009,7 @@ int64_t pangea_splitpot(uint64_t sidepot[CARDS777_MAXPLAYERS],union hostnet777 *
             dp->balances[winners[j]] += split;
         if ( split*numwinners + rake + pangearake != total )
             printf("pangea_split total error %.8f != split %.8f numwinners %d rake %.8f pangearake %.8f\n",dstr(total),dstr(split),numwinners,dstr(rake),dstr(pangearake));
-        if ( hn->server->H.slot == 0 )
+        //if ( hn->server->H.slot == 0 )
         {
             printf(" total %.8f split %.8f rake %.8f Prake %.8f %s N%d winners ",dstr(total),dstr(split),dstr(rake),dstr(pangearake),besthandstr,dp->numhands);
             for (j=0; j<numwinners; j++)
