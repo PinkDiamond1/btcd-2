@@ -169,29 +169,6 @@ uint8_t *cards777_recover(uint8_t *shares[],uint8_t *sharenrs,int32_t M,int32_t 
     return(recover);
 }
 
-/*bits256 cards777_pubkeys(bits256 *pubkeys,int32_t n,int32_t numcards)
-{
-    int32_t i; bits256 hash,check; bits320 prod,hexp,bp;
-    memset(check.bytes,0,sizeof(check));
-    if ( n == numcards+1 )
-    {
-        bp = fexpand(curve25519_basepoint9());
-        prod = fmul(bp,crecip(bp));
-        for (i=0; i<numcards; i++)
-        {
-            vcalc_sha256(0,hash.bytes,pubkeys[i].bytes,sizeof(pubkeys[i]));
-            hash.bytes[0] &= 0xf8, hash.bytes[31] &= 0x7f, hash.bytes[31] |= 64;
-            hexp = fexpand(hash);
-            prod = fmul(prod,hexp);
-        }
-        check = fcontract(prod);
-        if ( memcmp(check.bytes,pubkeys[numcards].bytes,sizeof(check)) != 0 )
-            printf("permicheck.%llx != prod.%llx\n",(long long)check.txid,(long long)pubkeys[numcards].txid);
-        else printf("pubkeys matched %llx\n",(long long)check.txid);
-    } else printf("cards777_pubkeys n.%d != numcards.%d+1\n",n,numcards);
-    return(check);
-}*/
-
 bits256 cards777_pubkeys(bits256 *pubkeys,int32_t numcards,bits256 cmppubkey)
 {
     int32_t i; bits256 bp,pubkey,hash,check; bits320 prod,hexp; // cJSON *array; char *hexstr;
