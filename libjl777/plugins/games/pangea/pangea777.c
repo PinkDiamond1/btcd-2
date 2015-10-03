@@ -1792,7 +1792,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     {
         uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
         //PANGEA.readyflag = 1;
-        plugin->sleepmillis = 1;
+        plugin->sleepmillis = 100;
         plugin->allowremote = 1;
         argjson = cJSON_Parse(jsonstr);
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
