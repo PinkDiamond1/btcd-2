@@ -486,9 +486,9 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
         }
         if ( i == dp->N )
         {
-            dp->newhand[0] = 0;
             printf("SERVERSTATE issues encoded\n");
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
+            dp->newhand[0] = 0;
         }
         else if ( time(NULL) > dp->startdecktime+10 )
         {
