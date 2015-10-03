@@ -124,7 +124,7 @@ int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime)
     millitime = (millis - mT->millistart) + ((long long)mT->starttime * 1000);
     if ( othermillitime != 0 )
     {
-        //millitime += mT->millidiff;
+        millitime += mT->millidiff;
         lag = (othermillitime - millitime);
         mT->millidiff = (mT->millidiff * .9) + (.1 * lag);
     }
@@ -352,7 +352,7 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
 
 void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag,struct hostnet777_mtime *mT)
 {
-    char *jsonstr = 0; bits256 sig; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr; cJSON *json; long extra;
+    char *jsonstr = 0; bits256 sig; int64_t diff; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr; cJSON *json; long extra;
     extra = sizeof(*senderpubp) + sizeof(*destbitsp) + sizeof(sig) + sizeof(senderbits) + sizeof(timestamp);
     if ( (len= origlen) > extra )
     {
