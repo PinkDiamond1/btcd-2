@@ -447,7 +447,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     }
     init_hexbytes_noT(hexstr,data,sizeof(bits256));
     cardi = juint(json,"cardi");
-    if ( Debuglevel > 2 || hn->client->H.slot == 0 )
+    //if ( Debuglevel > 2 || hn->client->H.slot == 0 )
         printf("player.%d COMMUNITY.[%d] (%s) cardi.%d\n",hn->client->H.slot,data[1],hexstr,cardi);
     dp->hand.community[cardi - 2*dp->N] = data[1];
     return(0);
@@ -1068,18 +1068,19 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         }
         return(0);
     }
-    if ( hn->client->H.slot == 0 )
+    now = (uint32_t)time(NULL);
+    while ( ++dp->hand.numactions < dp->N )
     {
-        now = (uint32_t)time(NULL);
-        while ( ++dp->hand.numactions < dp->N )
-        {
-            dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
-            if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD && dp->hand.betstatus[dp->hand.undergun] != CARDS777_ALLIN )
-                break;
-        }
-        if ( dp->hand.numactions < dp->N )
-            pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
-        else
+        dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
+        if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD && dp->hand.betstatus[dp->hand.undergun] != CARDS777_ALLIN )
+            break;
+    }
+    if ( dp->hand.numactions < dp->N )
+        pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
+    else
+    {
+        dp->hand.numactions = 0;
+        if ( hn->client->H.slot == 0 )
         {
             if ( cardi == dp->N*2 )
             {
