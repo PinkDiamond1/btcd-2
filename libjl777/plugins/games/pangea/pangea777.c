@@ -1680,8 +1680,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport);
         else if ( strcmp(methodstr,"status") == 0 )
             retstr = pangea_status(plugin->nxt64bits,j64bits(json,"tableid"),json);
-        else if ( strcmp(methodstr,"turn") == 0 )
-            retstr = pangea_input(plugin->nxt64bits,j64bits(json,"tableid"),json);
+        //else if ( strcmp(methodstr,"turn") == 0 )
+        //    retstr = pangea_input(plugin->nxt64bits,j64bits(json,"tableid"),json);
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
 }
