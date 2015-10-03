@@ -35,9 +35,9 @@ struct cards777_handinfo
 {
     bits256 checkprod,*cardpubs,*final;
     int64_t havemasks[CARDS777_MAXPLAYERS],betsize,lastraise,bets[CARDS777_MAXPLAYERS];
-    uint32_t starttime,handmask,lastbettor,handranks[CARDS777_MAXPLAYERS];
+    uint32_t starttime,handmask,lastbettor,cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
     int8_t betstatus[CARDS777_MAXPLAYERS];
-    uint8_t numactions,bettor,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
+    uint8_t numactions,undergun,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
 };
 
 struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidiff; };
