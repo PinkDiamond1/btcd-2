@@ -294,7 +294,7 @@ int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
         printf("pangea_preflop invalid datalen.%d vs %ld\n",datalen,(2 * dp->N) * sizeof(bits256));
         return(-1);
     }
-    //printf("preflop player.%d\n",hn->client->H.slot);
+    printf("preflop player.%d\n",hn->client->H.slot);
     memcpy(priv->incards,data,datalen);
     if ( hn->client->H.slot > 1 )
     {
@@ -338,10 +338,13 @@ int32_t pangea_encoded(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs,dp->M,(void *)data,dp->numcards,dp->N);
     //int32_t i; for (i=0; i<dp->numcards*dp->N; i++)
     //    printf("%llx ",(long long)priv->outcards[i].txid);
-    //printf("player.%d encodes into %p %llx -> %llx\n",hn->client->H.slot,priv->outcards,*(uint64_t *)data,(long long)priv->outcards[0].txid);
+    printf("player.%d encodes into %p %llx -> %llx\n",hn->client->H.slot,priv->outcards,*(uint64_t *)data,(long long)priv->outcards[0].txid);
     hex = malloc(65536);
     if ( hn->client->H.slot < dp->N-1 )
+    {
+        printf("send encoded\n");
         pangea_sendcmd(hex,hn,"encoded",hn->client->H.slot+1,priv->outcards[0].bytes,datalen,dp->N*dp->numcards,-1);
+    }
     else
     {
         pangea_sendcmd(hex,hn,"final",-1,priv->outcards[0].bytes,datalen,dp->N*dp->numcards,-1);
@@ -358,7 +361,7 @@ int32_t pangea_final(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
         printf("pangea_final invalid datalen.%d vs %ld\n",datalen,(dp->numcards * dp->N) * sizeof(bits256));
         return(-1);
     }
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf("player.%d final into %p\n",hn->client->H.slot,priv->outcards);
     memcpy(dp->hand.final,data,sizeof(bits256) * dp->N * dp->numcards);
     if ( hn->client->H.slot == dp->N-1 )
@@ -484,6 +487,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
         if ( i == dp->N )
         {
             dp->newhand[0] = 0;
+            printf("SERVERSTATE issues encoded\n");
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
         }
         else if ( time(NULL) > dp->startdecktime+10 )
