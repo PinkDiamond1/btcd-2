@@ -290,7 +290,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
             break;
         }
     }
-    pangea_sendcmd(hex,hn,"ping",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),Pangea_userinput_cardi,Pangea_userinput_starttime);
+    pangea_sendcmd(hex,hn,"gotdeck",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),Pangea_userinput_cardi,Pangea_userinput_starttime);
     return(0);
 }
 
@@ -479,8 +479,8 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
 
 int32_t pangea_newdeck(union hostnet777 *src)
 {
-    uint8_t data[(CARDS777_MAXCARDS + 1) * sizeof(bits256)]; struct cards777_pubdata *dp; char nrs[512],hex[32768]; bits256 destpub;//,privs[9];
-    struct cards777_privdata *priv; int32_t n,i,hexlen,len,state = 0;
+    uint8_t data[(CARDS777_MAXCARDS + 1) * sizeof(bits256)]; struct cards777_pubdata *dp; char nrs[512]; bits256 destpub;//,privs[9];
+    struct cards777_privdata *priv; int32_t n,hexlen,len,state = 0;
     dp = src->client->H.pubdata;
     priv = src->client->H.privdata;
     memset(dp->hand.sharenrs,0,sizeof(dp->hand.sharenrs));
@@ -490,25 +490,34 @@ int32_t pangea_newdeck(union hostnet777 *src)
     dp->hand.checkprod = dp->hand.cardpubs[dp->numcards] = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
     init_hexbytes_noT(nrs,dp->hand.sharenrs,dp->N);
     len = (dp->numcards + 1) * sizeof(bits256);
-    sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"state\":%u,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"sharenrs\":\"%s\",\"n\":%u,\"data\":\"","newhand",(long long)hostnet777_convmT(&src->server->H.mT,0),state,(long long)src->client->H.nxt64bits,time(NULL),nrs,len);
-    n = (int32_t)strlen(hex);
+    sprintf(dp->newhand,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"state\":%u,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"sharenrs\":\"%s\",\"n\":%u,\"data\":\"","newhand",(long long)hostnet777_convmT(&src->server->H.mT,0),state,(long long)src->client->H.nxt64bits,time(NULL),nrs,len);
+    n = (int32_t)strlen(dp->newhand);
     memcpy(data,dp->hand.cardpubs,len);
-    init_hexbytes_noT(&hex[n],data,len);
-    strcat(hex,"\"}");
-    hexlen = (int32_t)strlen(hex)+1;
+    init_hexbytes_noT(&dp->newhand[n],data,len);
+    strcat(dp->newhand,"\"}");
+    hexlen = (int32_t)strlen(dp->newhand)+1;
     memset(destpub.bytes,0,sizeof(destpub));
-    hostnet777_msg(0,destpub,src,0,hex,hexlen);
+    hostnet777_msg(0,destpub,src,0,dp->newhand,hexlen);
     printf("NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
-    for (i=0; i<10; i++)
-    {
-        if ( dp->othercardpubs[1] == dp->hand.checkprod.txid )
-            break;
-        sleep(1);
-        fprintf(stderr,"%llx ",dp->othercardpubs[1]);
-    }
-    pangea_sendcmd(hex,src,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
-    printf("NEWDECK.(%s)\n",hex);
     return(state);
+}
+
+int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    int32_t senderind,i;
+    senderind = juint(json,"myind");
+    printf("player.%d got pangea_gotdeck from senderind.%d\n",hn->client->H.slot,senderind);
+    if ( hn->client->H.slot == 0 )
+    {
+        for (i=0; i<dp->N; i++)
+        {
+            if ( dp->othercardpubs[i] != dp->hand.checkprod.txid )
+                break;
+        }
+        if ( i == dp->N )
+            pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
+    }
+    return(0);
 }
 
 int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
@@ -1027,6 +1036,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     pangea_newhand(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"ping") == 0 )
                     pangea_ping(hn,json,dp,priv,buf,len);
+                else if ( strcmp(cmdstr,"gotdeck") == 0 )
+                    pangea_gotdeck(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"ready") == 0 )
                     pangea_ready(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"encoded") == 0 )
