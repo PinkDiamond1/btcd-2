@@ -1068,19 +1068,18 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         }
         return(0);
     }
-    now = (uint32_t)time(NULL);
-    while ( ++dp->hand.numactions < dp->N )
+    if ( hn->client->H.slot == 0 )
     {
-        dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
-        if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD && dp->hand.betstatus[dp->hand.undergun] != CARDS777_ALLIN )
-            break;
-    }
-    if ( dp->hand.numactions < dp->N )
-        pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
-    else
-    {
-        dp->hand.numactions = 0;
-        if ( hn->client->H.slot == 0 )
+        now = (uint32_t)time(NULL);
+        while ( ++dp->hand.numactions < dp->N )
+        {
+            dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
+            if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD && dp->hand.betstatus[dp->hand.undergun] != CARDS777_ALLIN )
+                break;
+        }
+        if ( dp->hand.numactions < dp->N )
+            pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
+        else
         {
             if ( cardi == dp->N*2 )
             {
