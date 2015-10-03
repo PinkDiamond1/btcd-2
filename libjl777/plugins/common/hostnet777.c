@@ -372,7 +372,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
                     printf("msg.(%ld) sender.%llu mismatch vs json.%llu\n",strlen(jsonstr),(long long)senderbits,(long long)j64bits(json,"sender")), free(ptr);
                 else
                 {
-                    //printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
+                    printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
                     queue_enqueue("host777",Q,(void *)ptr);
                 }
                 free_json(json);
@@ -708,6 +708,7 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
     {
         if ( (jsonstr= queue_dequeue(&hn->client->H.Q,1)) != 0 )
         {
+            printf("DEQ.(%s)\n",jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 *senderbitsp = j64bits(json,"sender");

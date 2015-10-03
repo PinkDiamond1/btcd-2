@@ -154,7 +154,11 @@ uint8_t *cards777_recover(uint8_t *shares[],uint8_t *sharenrs,int32_t M,int32_t 
 {
     void *G; int32_t i,size; uint8_t *recover,recovernrs[255];
     size = N * sizeof(bits256) * numcards;
-    recover = calloc(1,size);
+    if ( (recover= calloc(1,size)) == 0 )
+    {
+        printf("cards777_recover: unexpected out of memory error\n");
+        return(0);
+    }
     memset(recovernrs,0,sizeof(recovernrs));
     for (i=0; i<N; i++)
         if ( shares[i] != 0 )
@@ -299,7 +303,11 @@ bits256 cards777_decode(bits256 *xoverz,int32_t destplayer,bits256 cipher,bits25
 struct cards777_privdata *cards777_allocpriv(int32_t numcards,int32_t N)
 {
     struct cards777_privdata *priv;
-    priv = calloc(1,sizeof(*priv) + sizeof(bits256) * ((N+3) * N * numcards));
+    if ( (priv= calloc(1,sizeof(*priv) + sizeof(bits256) * ((N+3) * N * numcards))) == 0 )
+    {
+        printf("cards777_allocpriv: unexpected out of memory error\n");
+        return(0);
+    }
     priv->incards = &priv->data[0];
     priv->outcards = &priv->incards[N * numcards];
     priv->xoverz = &priv->outcards[N * numcards];
@@ -310,7 +318,11 @@ struct cards777_privdata *cards777_allocpriv(int32_t numcards,int32_t N)
 struct cards777_pubdata *cards777_allocpub(int32_t M,int32_t numcards,int32_t N)
 {
     struct cards777_pubdata *dp;
-    dp = calloc(1,sizeof(*dp) + sizeof(bits256) * ((N + numcards + 1) + (N * numcards)));
+    if ( (dp= calloc(1,sizeof(*dp) + sizeof(bits256) * ((N + numcards + 1) + (N * numcards)))) == 0 )
+    {
+        printf("cards777_allocpub: unexpected out of memory error\n");
+        return(0);
+    }
     dp->M = M, dp->N = N, dp->numcards = numcards;
     dp->playerpubs = &dp->data[0];
     dp->hand.cardpubs = &dp->playerpubs[N];

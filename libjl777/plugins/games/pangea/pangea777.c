@@ -504,6 +504,13 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             printf("RESEND NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
         }
     }
+    else if ( dp->hand.final[0].txid == 0 )
+    {
+        if ( time(NULL) > dp->startdecktime+20 )
+        {
+            printf("host didnt get final in time\n");
+        }
+    }
 }
 
 int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
@@ -1113,7 +1120,7 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
     priv = hn->client->H.privdata;
     if ( (jsonstr= queue_dequeue(&hn->client->H.Q,1)) != 0 )
     {
-        //printf("GOT.(%s)\n",jsonstr);
+        //printf("player.%d GOT.(%s)\n",hn->client->H.slot,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             *senderbitsp = j64bits(json,"sender");
@@ -1206,7 +1213,6 @@ char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json)
     retjson = cJSON_CreateObject();
     if ( array == 0 )
         jaddstr(retjson,"error","no table status");
-    
     else
     {
         jaddstr(retjson,"result","success");
@@ -1222,12 +1228,12 @@ int32_t pangea_idle(struct plugin_info *plugin)
     union hostnet777 *hn; struct cards777_pubdata *dp; char hex[1024];
     while ( 1 )
     {
-        //printf("pangea idle\n");
         for (i=n=m=0; i<_PANGEA_MAXTHREADS; i++)
         {
             if ( (tp= THREADS[i]) != 0 )
             {
                 hn = &tp->hn;
+                //printf("pangea idle player.%d\n",hn->client->H.slot);
                 if ( hn->client->H.done == 0 )
                 {
                     n++;
@@ -1733,7 +1739,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     free_json(testjson);
     testjson = cJSON_Parse(retbuf);
     //printf("BROADCAST.(%s)\n",retbuf);
-    for (threadid=1; threadid<PANGEA_MAXTHREADS; threadid++)
+    for (threadid=1; threadid<numthreads; threadid++)
         pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey,0,0,0);
     tp = THREADS[0];
     pangea_newdeck(&tp->hn);
