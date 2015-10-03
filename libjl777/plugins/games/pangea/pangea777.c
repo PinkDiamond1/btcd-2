@@ -1085,8 +1085,8 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
             else pangea_sendcmd(hex,hn,"showdown",-1,priv->holecards[0].bytes,sizeof(priv->holecards),cardi,dp->hand.undergun);
         }
     }
-    if ( Debuglevel > 2 || hn->client->H.slot == 0 )
-        printf("player.%d got pangea_action.%d for player.%d action.%d amount %.8f\n",hn->client->H.slot,cardi,senderind,action,dstr(amount));
+    if ( Debuglevel > 1 || hn->client->H.slot == 0 )
+        printf("player.%d got pangea_action.%d for player.%d action.%d amount %.8f | numactions.%d\n",hn->client->H.slot,cardi,senderind,action,dstr(amount),dp->hand.numactions);
     return(0);
 }
 
@@ -1258,7 +1258,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                         dp = hn->client->H.pubdata;
                         pangea_sendcmd(hex,hn,"ping",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),dp->hand.cardi,dp->hand.undergun);
                         hn->client->H.lastping = (uint32_t)time(NULL);
-                        pangea_statusprint(dp,hn->client->H.privdata,hn->client->H.slot);
+                        //pangea_statusprint(dp,hn->client->H.privdata,hn->client->H.slot);
                     }
                     if ( hn->client->H.slot == 0 )
                         pangea_serverstate(hn,dp,hn->server->H.privdata);
