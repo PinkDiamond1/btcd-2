@@ -1081,14 +1081,30 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
             pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
         else
         {
-            if ( cardi == dp->N*2 )
+            for (i=0; i<5; i++)
+                if ( dp->hand.community[i] == 0xff )
+                    break;
+            if ( i == 0 )
             {
+                cardi = dp->N * 2;
                 for (i=0; i<3; i++,cardi++)
                     pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
             }
-            else if ( cardi < dp->N*2 + 4 )
-                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun), cardi++;
-            else pangea_sendcmd(hex,hn,"showdown",-1,priv->holecards[0].bytes,sizeof(priv->holecards),cardi,dp->hand.undergun);
+            else if ( i == 3 )
+            {
+                cardi = dp->N * 2 + 3;
+                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+            }
+            else if ( i == 4 )
+            {
+                cardi = dp->N * 2 + 4;
+                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+            }
+            else
+            {
+                cardi = dp->N * 2 + 5;
+                pangea_sendcmd(hex,hn,"showdown",-1,priv->holecards[0].bytes,sizeof(priv->holecards),cardi,dp->hand.undergun);
+            }
         }
     }
     if ( Debuglevel > 1 || hn->client->H.slot == 0 )
