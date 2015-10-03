@@ -785,7 +785,7 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
         return(clonestr("{\"error\":\"you are not playing on any tables\"}"));
     if ( num != 1 )
         return(clonestr("{\"error\":\"more than one active table\"}"));
-    else if ( (dp= sp->dp) != 0 )
+    else if ( (dp= sp->dp) == 0 )
         return(clonestr("{\"error\":\"no pubdata ptr for table\"}"));
     else if ( dp->hand.undergun != sp->myind )
         return(clonestr("{\"error\":\"not your turn\"}"));
