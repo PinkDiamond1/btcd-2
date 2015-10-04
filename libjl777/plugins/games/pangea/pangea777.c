@@ -95,8 +95,10 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
             else break;
         }
         if ( i > 0 )
+        {
             sprintf(hoststr,"\"state\":%u,\"community\":%s,",hn->client->H.state,jprint(array,1));
-        cardi = dp->N*2 + i;
+            cardi = dp->N*2 + i;
+        }
     }
     sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"turni\":%d,\"myind\":%d,\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,%s\"data\":\"",cmdstr,(long long)hostnet777_convmT(&hn->client->H.mT,0),turni,hn->client->H.slot,cardi,destplayer,(long long)hn->client->H.nxt64bits,time(NULL),datalen,hoststr);
     if ( data != 0 && datalen != 0 )
@@ -522,7 +524,7 @@ int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
 
 int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    int32_t senderind,i,n; cJSON *array;
+    int32_t senderind;//,i,n; cJSON *array;
     senderind = juint(json,"myind");
     dp->othercardpubs[senderind] = *(uint64_t *)data;
     if ( senderind == 0 )
