@@ -318,7 +318,7 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
             printf("diff.%d > %d %u vs %u\n",diff,HOSTNET777_MAXTIMEDIFF,*timestampp,(uint32_t)time(NULL));
         else
         {
-            if ( 1 )
+            if ( 0 )
             {
                 memset(seed.bytes,0,sizeof(seed));
                 for (i='0'; i<='9'; i++)
@@ -407,7 +407,7 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
         printf("%llu: ind.%d no sendsock for %llx -> %llu\n",(long long)ptr->client->H.nxt64bits,ptr->client->H.slot,(long long)acct777_nxt64bits(mypub),(long long)destbits);
         return(-1);
     }
-    if ( 1 )
+    if ( 0 )
     {
         data = calloc(1,len*2);
         _init_HUFF(hp,len*2,data);
