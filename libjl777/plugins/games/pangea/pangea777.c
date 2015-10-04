@@ -971,6 +971,11 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
             hexstr = jstr(jitem(array,i),0);
             decode_hex(dp->playerpubs[i].bytes,sizeof(bits256),hexstr);
             printf("set playerpubs.(%s) %llx\n",hexstr,(long long)dp->playerpubs[i].txid);
+            if ( dp->playerpubs[i].txid == 0 )
+            {
+                printf("player.%d has no NXT pubkey\n",i);
+                return(clonestr("{\"error\":\"not all players have published NXT pubkeys\"}"));
+            }
         }
         if ( myind >= 0 && createdflag != 0 && addrs[myind] == tp->nxt64bits )
         {
@@ -1098,7 +1103,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
     if ( (sp= pangea_create(tp,&createdflag,base,timestamp,addrs,num,bigblind,ante,balances,isbot)) == 0 )
     {
         printf("cant create table.(%s) numaddrs.%d\n",base,num);
-        strcpy(retbuf,"{\"error\":\"cant create table\"}");
+        strcpy(retbuf,"{\"error\":\"cant create table, make sure all players have published NXT pubkeys\"}");
         return(-1);
     }
     printf("back from pangea_create\n");
