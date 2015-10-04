@@ -318,7 +318,7 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
             printf("diff.%d > %d %u vs %u\n",diff,HOSTNET777_MAXTIMEDIFF,*timestampp,(uint32_t)time(NULL));
         else
         {
-            if ( 0 )
+            if ( 1 )
             {
                 memset(seed.bytes,0,sizeof(seed));
                 for (i='0'; i<='9'; i++)
@@ -357,7 +357,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
     extra = sizeof(*senderpubp) + sizeof(*destbitsp) + sizeof(sig) + sizeof(senderbits) + sizeof(timestamp);
     if ( (len= origlen) > extra )
     {
-        printf("got msglen.%d\n",origlen);
+        //printf("got msglen.%d\n",origlen);
         ptr = malloc(len*4 + 8192 + sizeof(struct queueitem) - extra);
         if ( (len= hostnet777_decrypt(senderpubp,&senderbits,&timestamp,mypriv,mypub,&ptr[sizeof(struct queueitem)],len*4,msg,len)) > 1 && len < len*4 )
         {
@@ -408,7 +408,7 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
         printf("%llu: ind.%d no sendsock for %llx -> %llu\n",(long long)ptr->client->H.nxt64bits,ptr->client->H.slot,(long long)acct777_nxt64bits(mypub),(long long)destbits);
         return(-1);
     }
-    if ( 0 )
+    if ( 1 )
     {
         data = calloc(1,len*2);
         _init_HUFF(hp,len*2,data);
