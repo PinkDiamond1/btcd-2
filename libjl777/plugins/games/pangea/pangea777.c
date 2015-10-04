@@ -430,6 +430,12 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
             printf("REJECT card from non-host\n");
             return(-1);
         }
+        else
+        {
+            for (cardi++; cardi<5; cardi++)
+                if ( dp->hand.community[cardi] == 0xff )
+                    break;
+        }
     }
     dp->hand.community[cardi] = data[1];
     return(0);
