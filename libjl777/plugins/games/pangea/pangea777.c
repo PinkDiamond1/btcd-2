@@ -528,12 +528,12 @@ int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     if ( senderind == 0 )
     {
         dp->hand.undergun = juint(json,"turni");
-        dp->hand.cardi = juint(json,"cardi");
+        /*dp->hand.cardi = juint(json,"cardi");
         if ( (array= jarray(&n,json,"community")) != 0 )
         {
             for (i=0; i<n; i++)
                 dp->hand.community[i] = juint(jitem(array,i),0);
-        }
+        }*/
     }
     //printf("player.%d GOTPING.(%s) %llx\n",hn->client->H.slot,jprint(json,0),(long long)dp->othercardpubs[senderind]);
     return(0);
