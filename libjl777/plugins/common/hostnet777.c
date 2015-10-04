@@ -309,7 +309,7 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
         if ( destbits != 0 )
             printf("hostnet777: got my own msg?\n");
     }
-    //printf("decrypt(%d) destbits.%llu my64.%llu mypriv.%llx mypub.%llx senderpub.%llx shared.%llx\n",len,(long long)destbits,(long long)my64bits,(long long)mypriv.txid,(long long)mypub.txid,(long long)senderpubp->txid,(long long)seed.txid);
+printf("decrypt(%d) destbits.%llu my64.%llu mypriv.%llx mypub.%llx senderpub.%llx shared.%llx\n",len,(long long)destbits,(long long)my64bits,(long long)mypriv.txid,(long long)mypub.txid,(long long)senderpubp->txid,(long long)seed.txid);
     if ( hostnet777_decode(&sendertmp,&sig,timestampp,&desttmp,(void *)buf,src,&len,mypriv.bytes) == 0 )
     {
         if ( (diff= (*timestampp - (uint32_t)time(NULL))) < 0 )
