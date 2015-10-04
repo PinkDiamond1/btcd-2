@@ -898,6 +898,11 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
                         PANGEA_MAXTHREADS = 1;
                         if ( (endpoint= jstr(json,"pangea_endpoint")) != 0 )
                         {
+                            if ( strncmp(endpoint,"tcp://127.0.0.1",strlen("tcp://127.0.0.1")) == 0 || strncmp(endpoint,"ws://127.0.0.1",strlen("ws://127.0.0.1")) == 0 )
+                            {
+                                printf("ILLEGAL pangea_endpoint.(%s)\n",endpoint);
+                                return(clonestr("{\"error\":\"contact pangea host and tell them to add myipaddr to their SuperNET.conf\"}"));
+                            }
                             if ( (tp->hn.client= hostnet777_client(privkey,pubkey,endpoint,i)) == 0 )
                             {
                                 memcpy(tp->hn.client->H.privkey.bytes,privkey.bytes,sizeof(bits256));

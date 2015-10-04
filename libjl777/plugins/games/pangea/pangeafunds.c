@@ -542,45 +542,52 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     }
     if ( hn->client->H.slot == 0 )
     {
-        now = (uint32_t)time(NULL);
-        while ( ++dp->hand.numactions < dp->N )
-        {
-            dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
-            if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD && dp->hand.betstatus[dp->hand.undergun] != CARDS777_ALLIN )
+        for (i=0; i<dp->N; i++)
+            if ( dp->hand.betstatus[i] != CARDS777_FOLD && dp->hand.betstatus[i] != CARDS777_ALLIN )
                 break;
+        if ( i != dp->N )
+        {
+            now = (uint32_t)time(NULL);
+            while ( ++dp->hand.numactions < dp->N )
+            {
+                dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
+                if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD && dp->hand.betstatus[dp->hand.undergun] != CARDS777_ALLIN )
+                    break;
+            }
+            if ( dp->hand.numactions < dp->N )
+            {
+                pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
+                printf("send turn.%d\n",dp->hand.undergun);
+                return(0);
+            }
         }
-        if ( dp->hand.numactions < dp->N )
-            pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
+        for (i=0; i<5; i++)
+        {
+            if ( dp->hand.community[i] == 0xff )
+                break;
+            printf("%02x ",dp->hand.community[i]);
+        }
+        printf("COMMUNITY\n");
+        if ( i == 0 )
+        {
+            cardi = dp->N * 2;
+            for (i=0; i<3; i++,cardi++)
+                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+        }
+        else if ( i == 3 )
+        {
+            cardi = dp->N * 2 + 3;
+            pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+        }
+        else if ( i == 4 )
+        {
+            cardi = dp->N * 2 + 4;
+            pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+        }
         else
         {
-            for (i=0; i<5; i++)
-            {
-                if ( dp->hand.community[i] == 0xff )
-                    break;
-                printf("%02x ",dp->hand.community[i]);
-            }
-            printf("COMMUNITY\n");
-            if ( i == 0 )
-            {
-                cardi = dp->N * 2;
-                for (i=0; i<3; i++,cardi++)
-                    pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
-            }
-            else if ( i == 3 )
-            {
-                cardi = dp->N * 2 + 3;
-                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
-            }
-            else if ( i == 4 )
-            {
-                cardi = dp->N * 2 + 4;
-                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
-            }
-            else
-            {
-                cardi = dp->N * 2 + 5;
-                pangea_sendcmd(hex,hn,"showdown",-1,priv->holecards[0].bytes,sizeof(priv->holecards),cardi,dp->hand.undergun);
-            }
+            cardi = dp->N * 2 + 5;
+            pangea_sendcmd(hex,hn,"showdown",-1,priv->holecards[0].bytes,sizeof(priv->holecards),cardi,dp->hand.undergun);
         }
     }
     if ( Debuglevel > 1 || hn->client->H.slot == 0 )
