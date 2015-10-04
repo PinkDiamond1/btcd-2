@@ -357,6 +357,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
     extra = sizeof(*senderpubp) + sizeof(*destbitsp) + sizeof(sig) + sizeof(senderbits) + sizeof(timestamp);
     if ( (len= origlen) > extra )
     {
+        printf("got msglen.%d\n",origlen);
         ptr = malloc(len*4 + 8192 + sizeof(struct queueitem) - extra);
         if ( (len= hostnet777_decrypt(senderpubp,&senderbits,&timestamp,mypriv,mypub,&ptr[sizeof(struct queueitem)],len*4,msg,len)) > 1 && len < len*4 )
         {
