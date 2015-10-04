@@ -287,10 +287,12 @@ int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
                 decoded = cards777_decode(priv->xoverz,destplayer,priv->incards[cardi*dp->N + destplayer],priv->outcards,dp->numcards,dp->N);
                 *(bits256 *)&data[(cardi*dp->N + destplayer) * sizeof(bits256)] = decoded;
             }
+        printf("issue preflop\n");
         pangea_sendcmd(hex,hn,"preflop",hn->client->H.slot-1,data,datalen,dp->N * 2 * dp->N,-1);
     }
     else
     {
+        printf("sendout cards\n");
         for (iter=cardi=0; iter<2; iter++)
             for (i=0; i<dp->N; i++,cardi++)
             {
@@ -477,13 +479,13 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
             dp->newhand[0] = 0;
         }
-        else if ( dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
+        else if ( 0 && dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
         {
             pangea_sendnewdeck(hn,dp);
             printf("resend NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
         }
     }
-    else if ( dp->hand.final[0].txid == 0 )
+    else if ( 0 && dp->hand.final[0].txid == 0 )
     {
         if ( dp->startdecktime != 0 && time(NULL) > dp->startdecktime+20 )
         {
@@ -533,7 +535,7 @@ int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
                 dp->hand.community[i] = juint(jitem(array,i),0);
         }
     }
-    printf("player.%d GOTPING.(%s) %llx\n",hn->client->H.slot,jprint(json,0),(long long)dp->othercardpubs[senderind]);
+    //printf("player.%d GOTPING.(%s) %llx\n",hn->client->H.slot,jprint(json,0),(long long)dp->othercardpubs[senderind]);
     return(0);
 }
 
