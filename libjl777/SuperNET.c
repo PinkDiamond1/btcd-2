@@ -180,7 +180,7 @@ char *process_nn_message(int32_t sock,char *jsonstr)
 char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr,int32_t duration)
 {
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
-    struct destbuf plugin,method,request; char *bstr,*retstr,*methodstr;
+    struct destbuf plugin,method,request; char *bstr,*retstr=0,*methodstr;
     uint64_t daemonid,instanceid,tag;
     int32_t override=0,broadcastflag = 0;
     cJSON *json;
@@ -198,10 +198,14 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
         {
             if ( strcmp(plugin.buf,"pangea") == 0 )
             {
-                if ( (methodstr= jstr(json,"method")) != 0 && strcmp(methodstr,"turn") == 0 )
+                if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"turn") == 0 || strcmp(methodstr,"status") == 0) )
                 {
+                    char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json);
                     char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json);
-                    retstr = pangea_input(SUPERNET.my64bits,j64bits(json,"tableid"),json);
+                    if ( strcmp(methodstr,"turn") == 0 )
+                        retstr = pangea_input(SUPERNET.my64bits,j64bits(json,"tableid"),json);
+                    else if ( strcmp(methodstr,"status") == 0 )
+                        retstr = pangea_status(SUPERNET.my64bits,j64bits(json,"tableid"),json);
                     free_json(json);
                     return(retstr);
                 }
