@@ -198,10 +198,11 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
         {
             if ( strcmp(plugin.buf,"pangea") == 0 )
             {
-                if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"turn") == 0 || strcmp(methodstr,"status") == 0 || strcmp(methodstr,"rosetta") == 0 || strcmp(methodstr,"rates") == 0) )
+                if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"turn") == 0 || strcmp(methodstr,"status") == 0 || strcmp(methodstr,"rosetta") == 0 || strcmp(methodstr,"rates") == 0 || strcmp(methodstr,"buyin") == 0) )
                 {
                     char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json);
                     char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json);
+                    char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json);
                     char *pangea_univ(uint8_t *mypriv,cJSON *json);
                     if ( strcmp(methodstr,"turn") == 0 )
                         retstr = pangea_input(SUPERNET.my64bits,j64bits(json,"tableid"),json);
@@ -209,6 +210,8 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
                         retstr = pangea_status(SUPERNET.my64bits,j64bits(json,"tableid"),json);
                     else if ( strcmp(methodstr,"rosetta") == 0 )
                         retstr = pangea_univ(SUPERNET.myprivkey,json);
+                    else if ( strcmp(methodstr,"buyin") == 0 )
+                        retstr = pangea_buyin(SUPERNET.myprivkey,j64bits(json,"tableid"),json);
                     else if ( strcmp(methodstr,"rates") == 0 )
                         retstr = peggyrates(0,jstr(json,"name"));
                     free_json(json);

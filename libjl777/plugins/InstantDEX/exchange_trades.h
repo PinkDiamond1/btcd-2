@@ -486,7 +486,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
     sprintf(url,"http://www.btc38.com/trade/t_api/%s",path);
     if ( (data= curl_post(&cHandle,url,0,cmdbuf,0,0,0,0)) != 0 )
     {
-        printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
+        //printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
         if ( (json= cJSON_Parse(data)) != 0 )
         {
             if ( juint(json,"success") > 0 && (resultobj= cJSON_GetObjectItem(json,"return")) != 0 )
@@ -508,7 +508,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
             jaddstr(json,"result",data);
             data = jprint(json,1);
         } else free_json(json);
-        printf("btc38 returning.(%s) in %p\n",data,data);
+        //printf("btc38 returning.(%s) in %p\n",data,data);
         *retstrp = data;
     }
     else if ( data != 0 )
@@ -560,7 +560,7 @@ uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
     sprintf(url,"https://api.huobi.com/apiv3");
     if ( (data= curl_post(&cHandle,url,0,cmdbuf,"Content-Type:application/x-www-form-urlencoded",0,0,0)) != 0 )
     {
-        printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
+        //printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
         if ( (json= cJSON_Parse(data)) != 0 )
         {
             txid = j64bits(json,"order_id");
@@ -679,7 +679,7 @@ uint64_t okcoin_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     sprintf(url,"https://www.okcoin.com/api/v1/%s",path);
     if ( (data= curl_post(&cHandle,url,0,cmdbuf,0,0,0,0)) != 0 ) // "{\"Content-type\":\"application/x-www-form-urlencoded\"}","{\"User-Agent\":\"OKCoin Javascript API Client\"}"
     {
-        printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
+        //printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
         if ( (json= cJSON_Parse(data)) != 0 )
         {
             txid = j64bits(json,"order_id");
@@ -756,7 +756,7 @@ uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *_base
         sprintf(hdr2,"Json-Rpc-Tonce: %llu",(long long)tonce);
         if ( (data= curl_post(&cHandle,url,0,jsonbuf,hdr1,hdr2,0,0)) != 0 )
         {
-            printf("submit cmd.(%s) [%s]\n",jsonbuf,data);
+            //printf("submit cmd.(%s) [%s]\n",jsonbuf,data);
             if ( (json= cJSON_Parse(data)) != 0 )
             {
                 txid = j64bits(json,"order_id");
