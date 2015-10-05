@@ -361,6 +361,8 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jadd64bits(json,"tableid",sp->tableid);
     jadd64bits(json,"myind",sp->myind);
     dp = sp->dp;
+    jaddnum(json,"minbuyin",dp->minbuyin);
+    jaddnum(json,"maxbuyin",dp->maxbuyin);
     jaddnum(json,"button",dp->button);
     jaddnum(json,"M",dp->M);
     jaddnum(json,"N",dp->N);
