@@ -1374,6 +1374,7 @@ char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
         amount = (buyin * sp->bigblind);
         if ( buyin >= sp->dp->minbuyin && buyin <= sp->dp->maxbuyin )
             pangea_sendcmd(hex,&sp->tp->hn,"addfunds",-1,(void *)&amount,sizeof(amount),sp->myind,-1);
+        else return(clonestr("{\"error\":\"buyin too small or too big\"}"));
     }
     return(clonestr("{\"error\":\"cant buyin unless you are part of the table\"}"));
 }
