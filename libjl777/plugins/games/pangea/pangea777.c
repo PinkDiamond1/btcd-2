@@ -1373,24 +1373,27 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
-        else if ( strcmp(methodstr,"start") == 0 )
+        else if ( sender == 0 || sender[0] == 0 )
         {
-            strcpy(retbuf,"{\"result\":\"start issued\"}");
-            if ( (base= jstr(json,"base")) != 0 )
+            if ( strcmp(methodstr,"start") == 0 )
             {
-                if ( (maxplayers= juint(json,"maxplayers")) < 2 )
-                    maxplayers = 2;
-                else if ( maxplayers > CARDS777_MAXPLAYERS )
-                    maxplayers = CARDS777_MAXPLAYERS;
-                if ( jstr(json,"resubmit") == 0 )
-                    sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"rakemillis\":\"%u\"}, {\"maxplayers\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers);
-                else pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,json);
-            } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
+                strcpy(retbuf,"{\"result\":\"start issued\"}");
+                if ( (base= jstr(json,"base")) != 0 )
+                {
+                    if ( (maxplayers= juint(json,"maxplayers")) < 2 )
+                        maxplayers = 2;
+                    else if ( maxplayers > CARDS777_MAXPLAYERS )
+                        maxplayers = CARDS777_MAXPLAYERS;
+                    if ( jstr(json,"resubmit") == 0 )
+                        sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"rakemillis\":\"%u\"}, {\"maxplayers\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers);
+                    else pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,json);
+                } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
+            }
+            else if ( strcmp(methodstr,"newtable") == 0 )
+                retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport);
+            else if ( strcmp(methodstr,"status") == 0 )
+                retstr = pangea_status(plugin->nxt64bits,j64bits(json,"tableid"),json);
         }
-        else if ( strcmp(methodstr,"newtable") == 0 )
-            retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport);
-        else if ( strcmp(methodstr,"status") == 0 )
-            retstr = pangea_status(plugin->nxt64bits,j64bits(json,"tableid"),json);
         //else if ( strcmp(methodstr,"turn") == 0 )
         //    retstr = pangea_input(plugin->nxt64bits,j64bits(json,"tableid"),json);
     }
