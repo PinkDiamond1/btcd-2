@@ -599,7 +599,7 @@ int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         if ( dp->pmworks != ((1 << dp->N) - 1) )
             printf("PMworks: %x %x %x\n",dp->pmworks,dp->pmviaworks,dp->broadcastworks);
     }
-    printf("got pmtest.%d from %d cardi.%d\n",turni,senderind,cardi);
+    //printf("got pmtest.%d from %d cardi.%d\n",turni,senderind,cardi);
     if ( hn->client->H.slot == 0 )
     {
         if ( dp->pmworks == ((1 << dp->N) - 1) )
@@ -607,9 +607,11 @@ int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     }
     else
     {
-        printf("respond pmtest\n");
-        pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),senderind,turni);
-        pangea_sendcmd(hex,hn,"pmtest",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,turni);
+        if ( dp->pmworks != ((1 << dp->N) - 1) )
+        {
+            pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),senderind,turni);
+            pangea_sendcmd(hex,hn,"pmtest",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,turni);
+        }
     }
     return(0);
 }
