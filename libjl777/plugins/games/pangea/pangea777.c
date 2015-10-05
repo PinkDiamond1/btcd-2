@@ -115,7 +115,7 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     free_json(json);
     hexlen = (int32_t)strlen(hex)+1;
     //printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
-    if ( destplayer < 0 )
+    if ( destplayer < 0 || ((1LL << destplayer) & dp->pmworks) == 0 )
     {
         destbits = 0;
         memset(destpub.bytes,0,sizeof(destpub));
@@ -473,7 +473,11 @@ int32_t pangea_newdeck(union hostnet777 *src)
 
 void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
-    int32_t i;
+    int32_t i; struct pangea_info *sp = dp->table;
+    if ( time(NULL) > sp->timestamp+20 && dp->pmworks != ((1 << dp->N) - 1) )
+    {
+        printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
+    }
     if ( dp->newhand[0] != 0 )
     {
         for (i=0; i<dp->N; i++)
@@ -516,14 +520,33 @@ int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
 
 int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    int32_t senderind;
+    int32_t senderind; char hex[2048];
     senderind = juint(json,"myind");
     dp->readymask |= (1 << senderind);
     printf("player.%d got ready from senderind.%d readymask.%x\n",hn->client->H.slot,senderind,dp->readymask);
-    if ( hn->client->H.slot == 0 && (dp->readymask == ((1 << dp->N) - 1)) )
+    if ( hn->client->H.slot == 0 )
     {
-        printf("send newdeck\n");
-        pangea_newdeck(hn);
+        if ( dp->readymask == ((1 << dp->N) - 1) )
+        {
+            printf("send newdeck\n");
+            pangea_newdeck(hn);
+        }
+        if ( (dp->pmworks & (1 << senderind)) == 0 )
+            pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,-1);
+    }
+    return(0);
+}
+
+int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    int32_t senderind; char hex[2048];
+    senderind = juint(json,"myind");
+    dp->pmworks |= (1 << senderind);
+    pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,-1);
+    if ( hn->client->H.slot == 0 )
+    {
+        if ( dp->pmworks == ((1 << dp->N) - 1) )
+            printf("all pms work\n");
     }
     return(0);
 }
@@ -535,8 +558,8 @@ int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     dp->othercardpubs[senderind] = *(uint64_t *)data;
     if ( senderind == 0 )
     {
-        dp->hand.undergun = juint(json,"turni");
-        /*dp->hand.cardi = juint(json,"cardi");
+        /*dp->hand.undergun = juint(json,"turni");
+        dp->hand.cardi = juint(json,"cardi");
         if ( (array= jarray(&n,json,"community")) != 0 )
         {
             for (i=0; i<n; i++)
@@ -614,6 +637,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     pangea_newhand(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"ping") == 0 )
                     pangea_ping(hn,json,dp,priv,buf,len);
+                else if ( strcmp(cmdstr,"pmtest") == 0 )
+                    pangea_pmtest(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"gotdeck") == 0 )
                     pangea_gotdeck(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"ready") == 0 )
@@ -634,6 +659,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     pangea_faceup(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"turn") == 0 )
                     pangea_turn(hn,json,dp,priv,buf,len);
+                else if ( strcmp(cmdstr,"confirmturn") == 0 )
+                    pangea_confirmturn(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"action") == 0 )
                     pangea_action(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"showdown") == 0 )

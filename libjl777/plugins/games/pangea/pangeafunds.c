@@ -64,7 +64,7 @@ void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t c
     now = (uint32_t)time(NULL);
     dp->hand.undergun = ((dp->button + 2) % dp->N);
     dp->hand.numactions = 0;
-    pangea_sendcmd(hex,hn,"turn",-1,(void *)&now,sizeof(now),cardi,dp->hand.undergun);
+    pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
 }
 
 int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t player,int64_t bet)
@@ -373,6 +373,10 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jaddnum(json,"ante",dstr(dp->ante));
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
+        jaddinum(array,dstr(dp->turnis[i]));
+    jadd(json,"turns",array);
+    array = cJSON_CreateArray();
+    for (i=0; i<dp->N; i++)
         jaddinum(array,dstr(dp->balances[i]));
     jadd(json,"balances",array);
     array = cJSON_CreateArray();
@@ -422,9 +426,9 @@ void pangea_statusprint(struct cards777_pubdata *dp,struct cards777_privdata *pr
     printf("%s\n",handstr);
 }
 
-int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    uint32_t starttime; int32_t turni,cardi; uint64_t betsize=SATOSHIDEN,amount=0; struct pangea_info *sp; char hex[1024];
+    uint32_t starttime; int32_t i,turni,cardi,senderind; uint64_t betsize=SATOSHIDEN,amount=0; struct pangea_info *sp=0; char hex[1024];
     if ( data == 0 )
     {
         printf("pangea_turn: null data\n");
@@ -432,27 +436,53 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     }
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
-    if ( datalen == sizeof(uint32_t) )
-        memcpy(&starttime,data,sizeof(starttime)), dp->hand.starttime = starttime, betsize = dp->hand.betsize;
-    else memcpy(&betsize,data,sizeof(betsize)), starttime = dp->hand.starttime;
-    if ( turni == hn->client->H.slot )
+    senderind = juint(json,"myind");
+    if ( datalen == sizeof(betsize) )
+        memcpy(&betsize,data,sizeof(betsize)), starttime = dp->hand.starttime;
+    if ( senderind == 0 && (sp = dp->table) != 0 )
     {
-        sp = dp->table;
-        printf("%s\n",jprint(pangea_tablestatus(sp),1));
-        pangea_statusprint(dp,priv,hn->client->H.slot);
-        if ( dp->hand.betsize != betsize )
-            printf("pangea_turn warning hand.betsize %.8f != betsize %.8f\n",dstr(dp->hand.betsize),dstr(betsize));
-        if ( dp->isbot[hn->client->H.slot] != 0 )
-            pangea_bot(hn,dp,turni,cardi,betsize);
-        else if ( dp->hand.betstatus[hn->client->H.slot] == CARDS777_FOLD || dp->hand.betstatus[hn->client->H.slot] == CARDS777_ALLIN )
-            pangea_sendcmd(hex,hn,"action",-1,(void *)&amount,sizeof(amount),cardi,0);
-        else
+        dp->hand.undergun = turni;
+        if ( turni == hn->client->H.slot )
         {
-            dp->hand.userinput_starttime = (uint32_t)time(NULL);
-            dp->hand.cardi = cardi;
-            dp->hand.betsize = betsize;
-            fprintf(stderr,"Waiting for user input cardi.%d: ",cardi);
+            printf("%s\n",jprint(pangea_tablestatus(sp),1));
+            pangea_statusprint(dp,priv,hn->client->H.slot);
+            if ( dp->hand.betsize != betsize )
+                printf("pangea_turn warning hand.betsize %.8f != betsize %.8f\n",dstr(dp->hand.betsize),dstr(betsize));
+            if ( dp->isbot[hn->client->H.slot] != 0 )
+                pangea_bot(hn,dp,turni,cardi,betsize);
+            else if ( dp->hand.betstatus[hn->client->H.slot] == CARDS777_FOLD || dp->hand.betstatus[hn->client->H.slot] == CARDS777_ALLIN )
+                pangea_sendcmd(hex,hn,"action",-1,(void *)&amount,sizeof(amount),cardi,0);
+            else
+            {
+                dp->hand.userinput_starttime = (uint32_t)time(NULL);
+                dp->hand.cardi = cardi;
+                dp->hand.betsize = betsize;
+                dp->hand.undergun = -1;
+                fprintf(stderr,"Waiting for user input cardi.%d: ",cardi);
+            }
         }
+    }
+    else if ( sp != 0 )
+    {
+        dp->turnis[senderind] = turni;
+        for (i=0; i<dp->N; i++)
+            if ( dp->turnis[senderind] != turni )
+                break;
+        if ( hn->client->H.slot == 0 && i == dp->N )
+            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
+    }
+    return(0);
+}
+
+int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    int32_t senderind,turni,cardi; char hex[2048]; struct pangea_info *sp = dp->table;
+    senderind = juint(json,"myind");
+    turni = juint(json,"turni");
+    cardi = juint(json,"cardi");
+    if ( senderind == 0 && sp != 0 && hn->client->H.slot != 0 )
+    {
+        pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
     }
     return(0);
 }
