@@ -474,7 +474,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
 void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
     int32_t i; struct pangea_info *sp = dp->table;
-    if ( time(NULL) > sp->timestamp+20 && dp->pmworks != ((1 << dp->N) - 1) )
+    if ( time(NULL) > sp->timestamp+20 && time(NULL) < sp->timestamp+22 && dp->pmworks != ((1 << dp->N) - 1) )
     {
         printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
     }
@@ -1177,6 +1177,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         }
 #endif
         printf("START.(%s)\n",retbuf);
+        dp->pmworks |= (1 << sp->myind);
         free(addrstr), free(ciphers), free(playerpubs), free(balancestr), free(isbotstr);
     }
     return(0);
@@ -1373,6 +1374,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
+        else if ( strcmp(methodstr,"newtable") == 0 )
+            retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport);
         else if ( sender == 0 || sender[0] == 0 )
         {
             if ( strcmp(methodstr,"start") == 0 )
@@ -1389,8 +1392,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     else pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,json);
                 } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
             }
-            else if ( strcmp(methodstr,"newtable") == 0 )
-                retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport);
             else if ( strcmp(methodstr,"status") == 0 )
                 retstr = pangea_status(plugin->nxt64bits,j64bits(json,"tableid"),json);
         }
