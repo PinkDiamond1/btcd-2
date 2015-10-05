@@ -1373,9 +1373,9 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
 char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
     struct pangea_info *sp; uint32_t buyin; uint64_t amount = 0; char hex[1024];
-    if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 && sp->tp != 0 && (buyin= juint(json,"amount")) != 0 )
+    if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 && sp->tp != 0 && (amount= juint(json,"amount")) != 0 )
     {
-        amount = (buyin * sp->bigblind);
+        buyin = (uint32_t)(amount / sp->dp->bigblind);
         if ( buyin >= sp->dp->minbuyin && buyin <= sp->dp->maxbuyin )
             pangea_sendcmd(hex,&sp->tp->hn,"addfunds",-1,(void *)&amount,sizeof(amount),sp->myind,-1);
         else return(clonestr("{\"error\":\"buyin too small or too big\"}"));
