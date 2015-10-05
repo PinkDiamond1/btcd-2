@@ -1251,18 +1251,22 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
 
 char *pangea_univ(uint8_t *mypriv,cJSON *json)
 {
-    char *addrtypes[][2] = { {"BTC","0"}, {"LTC","48"}, {"BTCD","60"}, {"DOGE","30"}, {"VRC","70"}, {"OPAL","115"}, {"BITS","25"} };
+    char *addrtypes[][3] = { {"BTC","0","80"}, {"LTC","48"}, {"BTCD","60","bc"}, {"DOGE","30"}, {"VRC","70"}, {"OPAL","115"}, {"BITS","25"} };
     //int32_t getprivkey(uint8_t privkey[32],char *name,char *coinaddr);
-    char *wipstr,*coin,*coinaddr,pubkeystr[67],rsaddr[64],destaddr[64]; uint8_t priv[32],pub[33]; int32_t i; uint64_t nxt64bits; cJSON *retjson,*item;
-    if ( (wipstr= jstr(json,"wip")) != 0 )
+    char *wipstr,*coin,*coinaddr,pubkeystr[67],rsaddr[64],destaddr[64],wifbuf[128]; uint8_t priv[32],pub[33],addrtype; int32_t i;
+    uint64_t nxt64bits; cJSON *retjson,*item;
+    if ( (coin= jstr(json,"coin")) != 0 )
     {
-        printf("got wip.(%s)\n",wipstr);
-        btc_wip2priv(priv,wipstr);
-    }
-    else if ( (coin= jstr(json,"coin")) != 0 && (coinaddr= jstr(json,"addr")) != 0 )
-    {
-        if ( getprivkey(priv,coin,coinaddr) < 0 )
-            return(clonestr("{\"error\":\"cant get privkey\"}"));
+        if ( (wipstr= jstr(json,"wif")) != 0 || (wipstr= jstr(json,"wip")) != 0 )
+        {
+            printf("got wip.(%s)\n",wipstr);
+            btc_wip2priv(priv,wipstr);
+        }
+        else if ( (coinaddr= jstr(json,"addr")) != 0 )
+        {
+            if ( getprivkey(priv,coin,coinaddr) < 0 )
+                return(clonestr("{\"error\":\"cant get privkey\"}"));
+        }
     }
     else memcpy(priv,mypriv,sizeof(priv));
     int32_t btc_wip2priv(uint8_t privkey[32],char *wipstr);
@@ -1272,10 +1276,21 @@ char *pangea_univ(uint8_t *mypriv,cJSON *json)
     init_hexbytes_noT(pubkeystr,pub,33);
     printf("pubkey.%s\n",pubkeystr);
     retjson = cJSON_CreateObject();
+    jaddstr(retjson,"btcpubkey",pubkeystr);
     for (i=0; i<sizeof(addrtypes)/sizeof(*addrtypes); i++)
     {
         if ( btc_coinaddr(destaddr,atoi(addrtypes[i][1]),pubkeystr) == 0 )
-            jaddstr(retjson,addrtypes[i][0],destaddr);
+        {
+            item = cJSON_CreateObject();
+            jaddstr(item,"addr",destaddr);
+            if ( addrtypes[i][2] != 0 )
+            {
+                decode_hex(&addrtype,1,addrtypes[i][2]);
+                btc_priv2wip(wifbuf,priv,addrtype);
+                jaddstr(item,"wif",wifbuf);
+            }
+            jadd(retjson,addrtypes[i][0],item);
+        }
     }
     nxt64bits = nxt_priv2addr(rsaddr,pubkeystr,priv);
     item = cJSON_CreateObject();
@@ -1283,8 +1298,6 @@ char *pangea_univ(uint8_t *mypriv,cJSON *json)
     jadd64bits(item,"address",nxt64bits);
     jaddstr(item,"pubkey",pubkeystr);
     jadd(retjson,"NXT",item);
-    btc_priv2wip(pubkeystr,priv);
-    jaddstr(retjson,"wip",pubkeystr);
     return(jprint(retjson,1));
 }
 

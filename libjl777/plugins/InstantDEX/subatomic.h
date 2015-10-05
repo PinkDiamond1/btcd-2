@@ -226,14 +226,18 @@ int32_t btc_convaddr(char *hexaddr,char *addr58)
     return(-1);
 }
 
-int32_t btc_priv2wip(char *wipstr,uint8_t privkey[32])
+int32_t btc_priv2wip(char *wipstr,uint8_t privkey[32],uint8_t addrtype)
 {
-    uint8_t tmp[36]; char hexstr[67];
+    uint8_t tmp[128]; char hexstr[67]; cstring *btc_addr;
     memcpy(tmp,privkey,32);
     tmp[32] = 1;
-    init_hexbytes_noT(hexstr,tmp,33);
-    btc_coinaddr(wipstr,privkey[0],hexstr);
-    printf("-> wip.(%s)\n",wipstr);
+    init_hexbytes_noT(hexstr,tmp,32);
+    if ( (btc_addr= base58_encode_check(addrtype,true,tmp,33)) != 0 )
+    {
+        strcpy(wipstr,btc_addr->str);
+        cstr_free(btc_addr,true);
+    }
+    printf("-> (%s) -> wip.(%s) addrtype.%02x\n",hexstr,wipstr,addrtype);
     return(0);
 }
 
@@ -248,7 +252,7 @@ int32_t btc_wip2priv(uint8_t privkey[32],char *wipstr)
         memcpy(privkey,cstr->str,cstr->len);
         len = (int32_t)cstr->len;
         char tmp[138];
-        btc_priv2wip(tmp,privkey);
+        btc_priv2wip(tmp,privkey,addrtype);
         printf("addrtype.%02x wipstr.(%llx) len.%d\n",addrtype,*(long long *)privkey,len);
         cstr_free(cstr,true);
     }
