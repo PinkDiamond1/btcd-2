@@ -211,7 +211,7 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
                     else if ( strcmp(methodstr,"rosetta") == 0 )
                         retstr = pangea_univ(SUPERNET.myprivkey,json);
                     else if ( strcmp(methodstr,"buyin") == 0 )
-                        retstr = pangea_buyin(SUPERNET.myprivkey,j64bits(json,"tableid"),json);
+                        retstr = pangea_buyin(SUPERNET.my64bits,j64bits(json,"tableid"),json);
                     else if ( strcmp(methodstr,"rates") == 0 )
                         retstr = peggyrates(0,jstr(json,"name"));
                     free_json(json);

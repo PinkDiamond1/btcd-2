@@ -370,6 +370,8 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
             }
             if ( j64bits(json,"ante") != 0 )
                 iQ->s.relamount = j64bits(json,"ante");
+            iQ->s.minbuyin = juint(json,"minbuyin");
+            iQ->s.maxbuyin = juint(json,"maxbuyin");
         }
         if ( iQ->s.price == 0. )
             iQ->s.price = 1.;
