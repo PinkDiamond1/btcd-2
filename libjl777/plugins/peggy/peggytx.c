@@ -293,6 +293,26 @@ int64_t peggy_txind_bets(uint8_t *txbuf,int32_t len,struct accts777_info *accts,
     return(0);
 }
 
+int32_t peggy_univ2addr(char *coinaddr,struct peggy_univaddr *ua)
+{
+    return(btc_convrmd160(coinaddr,ua->addrtype,ua->rmd160));
+}
+
+int32_t peggy_addr2univ(struct peggy_univaddr *ua,char *coinaddr,char *coin)
+{
+    char hexstr[512]; uint8_t hex[21];
+    if ( btc_convaddr(hexstr,coinaddr) == 0 )
+    {
+        decode_hex(hex,21,hexstr);
+        memset(ua,0,sizeof(*ua));
+        ua->addrtype = hex[0];
+        memcpy(ua->rmd160,hex+1,20);
+        strncpy(ua->coin,coin,sizeof(ua->coin)-1);
+        return(0);
+    }
+    return(-1);
+}
+
 int64_t peggy_txind_send(uint8_t *txbuf,int32_t len,struct peggy_info *PEGS,uint32_t blocknum,uint32_t blocktimestamp,uint64_t signer64bits,uint64_t signer64bitsB,int64_t fundedvalue,struct peggy_input *in,uint32_t ratio,struct peggy_output *out)
 {
     struct acct777 *acct; struct ramkv777 *kv; struct ramkv777_item *item;
@@ -339,7 +359,8 @@ int64_t peggy_txind_send(uint8_t *txbuf,int32_t len,struct peggy_info *PEGS,uint
     len = txind777_txbuf(txbuf,len,rawind,sizeof(uint32_t));
     if ( out->type == PEGGY_ADDRBTCD )
     {
-        if ( acct == 0 || opreturns_queue_payment(&accts->PaymentsQ,blocktimestamp,addr->coinaddr,value) < 0 )
+        char coinaddr[64];
+        if ( peggy_univ2addr(coinaddr,&addr->coinaddr) < 0 || acct == 0 || opreturns_queue_payment(&accts->PaymentsQ,blocktimestamp,coinaddr,value) < 0 )
             return(-1);
     }
     else if ( out->type == PEGGY_ADDRCREATE )
@@ -440,8 +461,7 @@ int64_t peggy_txind(int64_t *tipvaluep,struct peggy_info *PEGS,uint32_t blocknum
                 if ( Ptx->numoutputs == 1 )
                 {
                     len = txind777_txbuf(txbuf,len,Ptx->funding.amount,sizeof(Ptx->funding.amount));
-                    for (i=0; i<BTCDADDRSIZE; i++)
-                        txbuf[len++] = Ptx->funding.src.coinaddr[i];
+                    memcpy(txbuf,&Ptx->funding.src.coinaddr,sizeof(Ptx->funding.src.coinaddr)), len += sizeof(Ptx->funding.src.coinaddr);
                     if ( (txind= peggy_txind_send(txbuf,len,PEGS,blocknum,blocktimestamp,signer64bits,0,actionflag*Ptx->funding.amount,0,PRICE_RESOLUTION,&Ptx->outputs[0])) > 0 )
                         *tipvaluep = 0;
                 }
@@ -505,10 +525,17 @@ int64_t peggy_txind(int64_t *tipvaluep,struct peggy_info *PEGS,uint32_t blocknum
             return(-1);
         else if ( Ptx->txtype == PEGGY_TXBET )
         {
+            char coinaddr[64];
             len = txind777_txbuf(txbuf,len,Ptx->funding.amount,sizeof(Ptx->funding.amount));
-            for (i=0; i<BTCDADDRSIZE; i++)
-                txbuf[len++] = Ptx->funding.src.coinaddr[i];
-            if ( (txind= peggy_txind_bets(txbuf,len,accts,blocknum,blocktimestamp,actionflag,Ptx,Ptx->funding.amount,Ptx->funding.src.coinaddr,Ptx->details.bets,Ptx->numdetails)) > 0 )
+            memcpy(txbuf,&Ptx->funding.src.coinaddr,sizeof(Ptx->funding.src.coinaddr)), len += sizeof(Ptx->funding.src.coinaddr);
+            //for (i=0; i<BTCDADDRSIZE; i++)
+            //    txbuf[len++] = Ptx->funding.src.coinaddr[i];
+            if ( peggy_univ2addr(coinaddr,&Ptx->funding.src.coinaddr) < 0 )
+            {
+                printf("illegal coinaddr\n");
+                return(-1);
+            }
+            if ( (txind= peggy_txind_bets(txbuf,len,accts,blocknum,blocktimestamp,actionflag,Ptx,Ptx->funding.amount,coinaddr,Ptx->details.bets,Ptx->numdetails)) > 0 )
                 *tipvaluep = 0;
         }
         else if ( Ptx->txtype == PEGGY_TXMICROPAY )
@@ -517,7 +544,7 @@ int64_t peggy_txind(int64_t *tipvaluep,struct peggy_info *PEGS,uint32_t blocknum
     return(txind);
 }
 
-int64_t peggy_process(void *_PEGS,int32_t flags,char *fundedcoinaddr,uint64_t fundedvalue,uint8_t *data,int32_t datalen,uint32_t blocknum,uint32_t blocktimestamp,uint32_t stakedblock)
+int64_t peggy_process(void *_PEGS,int32_t flags,void *fca,uint64_t fundedvalue,uint8_t *data,int32_t datalen,uint32_t blocknum,uint32_t blocktimestamp,uint32_t stakedblock)
 {
     struct peggy_tx Ptx; int32_t len,signedcount; int64_t txind = -1,tipvalue; struct peggy_info *PEGS = _PEGS;
     tipvalue = fundedvalue;

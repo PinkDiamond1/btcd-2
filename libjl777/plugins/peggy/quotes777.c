@@ -611,7 +611,7 @@ struct peggy_info *peggy_genesis(int32_t lookbacks[OPRETURNS_CONTEXTS],struct pe
     if ( opret[0] == OP_RETURN_OPCODE )
     {
         offset = hdecode_varint(&len,opret,1,sizeof(opret));
-        if ( opret[offset] == 'P' && opret[offset+1] == 'E' && opret[offset+2] == 'G' )
+        if ( opret[offset] == 'P' && opret[offset+1] == 'A' && opret[offset+2] == 'X' )
         {
             if ( (n= serdes777_deserialize(&signedcount,&Ptx,firsttimestamp,opret+offset+3,(int32_t)len-3)) > 0 )
             {
@@ -855,7 +855,7 @@ void *peggy_replay(char *path,struct txinds777_info *opreturns,void *_PEGS,uint3
     if ( data != 0 && data[0] == OP_RETURN_OPCODE )
     {
         offset = hdecode_varint(&len,data,1,sizeof(opret));
-        if ( data[offset] == 'P' && data[offset+1] == 'E' && data[offset+2] == 'G' )
+        if ( data[offset] == 'P' && data[offset+1] == 'A' && data[offset+2] == 'X' )
         {
             if ( (n= serdes777_deserialize(&signedcount,&Ptx,0,&data[offset+3],(int32_t)(len - 3))) < 0 )
                 printf("peggy_process.%d peggy_deserialize error datalen.%d t%d\n",blocknum,datalen,Ptx.timestamp);
@@ -872,7 +872,7 @@ void *peggy_replay(char *path,struct txinds777_info *opreturns,void *_PEGS,uint3
                 else if ( PEGS != 0 && Ptx.timestamp > PEGS->genesistime )
                 {
                     Ptx.flags |= PEGGY_FLAGS_PEGGYBASE;
-                    if ( peggy_process(PEGS,1,Ptx.funding.src.coinaddr,Ptx.funding.amount,&data[offset+3],(int32_t)len-3,blocknum,Ptx.timestamp,blocknum) < 0 )
+                    if ( peggy_process(PEGS,1,&Ptx.funding.src.coinaddr,Ptx.funding.amount,&data[offset+3],(int32_t)len-3,blocknum,Ptx.timestamp,blocknum) < 0 )
                     {
                         printf("error processing blocknum.%u Ptx.blocknum %u\n",blocknum,blocknum);
                     }
