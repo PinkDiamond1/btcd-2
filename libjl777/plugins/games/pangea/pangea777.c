@@ -1284,7 +1284,7 @@ char *pangea_univ(uint8_t *mypriv,cJSON *json)
     jaddstr(item,"pubkey",pubkeystr);
     jadd(retjson,"NXT",item);
     btc_priv2wip(pubkeystr,priv);
-    jaddstr(item,"wip",pubkeystr);
+    jaddstr(retjson,"wip",pubkeystr);
     return(jprint(retjson,1));
 }
 
