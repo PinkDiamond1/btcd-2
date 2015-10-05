@@ -162,7 +162,16 @@ struct pangea_info *pangea_find(uint64_t tableid,int32_t threadid)
 {
     int32_t i;
     for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
-        if ( TABLES[i] != 0 && tableid == TABLES[i]->tableid && TABLES[i]->tp->threadid == threadid )
+        if ( TABLES[i] != 0 && tableid == TABLES[i]->tableid && (threadid < 0 || TABLES[i]->tp->threadid == threadid) )
+            return(TABLES[i]);
+    return(0);
+}
+
+struct pangea_info *pangea_find64(uint64_t tableid,uint64_t nxt64bits)
+{
+    int32_t i;
+    for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
+        if ( TABLES[i] != 0 && tableid == TABLES[i]->tableid && TABLES[i]->tp != 0 && TABLES[i]->tp->nxt64bits == nxt64bits )
             return(TABLES[i]);
     return(0);
 }
@@ -684,6 +693,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     pangea_encoded(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"final") == 0 )
                     pangea_final(hn,json,dp,priv,buf,len);
+                else if ( strcmp(cmdstr,"addfunds") == 0 )
+                    pangea_addfunds(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"preflop") == 0 )
                     pangea_preflop(hn,json,dp,priv,buf,len);
                 else if ( strcmp(cmdstr,"decoded") == 0 )
@@ -1338,8 +1349,15 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     pangea_newdeck(&tp->hn);
 }
 
-char *pangea_buyin(uint8_t *mypriv,uint64_t tableid,cJSON *json)
+char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
+    struct pangea_info *sp; uint32_t buyin; uint64_t amount = 0; char hex[1024];
+    if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 && sp->tp != 0 && (buyin= juint(json,"amount")) != 0 )
+    {
+        amount = (buyin * sp->bigblind);
+        if ( buyin >= sp->dp->minbuyin && buyin <= sp->dp->maxbuyin )
+            pangea_sendcmd(hex,&sp->tp->hn,"addfunds",-1,(void *)&amount,sizeof(amount),sp->myind,-1);
+    }
     return(clonestr("{\"error\":\"cant buyin unless you are part of the table\"}"));
 }
 

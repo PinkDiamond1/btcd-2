@@ -83,7 +83,9 @@ uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,
         {
             // { "success" : true, "message" : "", "result" : { "uuid" : "e606d53c-8d70-11e3-94b5-425861b86ab6"  } }
             if ( dir == 0 )
-                printf("got balances.(%s)\n",data);
+            {
+                //printf("got balances.(%s)\n",data);
+            }
             else if ( is_cJSON_True(cJSON_GetObjectItem(json,"success")) != 0 && (resultobj= cJSON_GetObjectItem(json,"result")) != 0 )
             {
                 copy_cJSON(&uuidstr,cJSON_GetObjectItem(resultobj,"uuid"));
@@ -410,10 +412,10 @@ uint64_t bitfinex_trade(char **retstrp,struct exchange_info *exchange,char *_bas
         sprintf(hdr2,"X-BFX-PAYLOAD:%s",payload);
         sprintf(hdr3,"X-BFX-SIGNATURE:%s",sig);
         sprintf(url,"https://api.bitfinex.com/v1/%s",method);
-        printf("bitfinex req.(%s) -> (%s) [%s %s %s]\n",req,payload,hdr1,hdr2,hdr3);
+        //printf("bitfinex req.(%s) -> (%s) [%s %s %s]\n",req,payload,hdr1,hdr2,hdr3);
         if ( (data= curl_post(&cHandle,url,0,req,hdr1,hdr2,hdr3,0)) != 0 )
         {
-            printf("[%s]\n",data);
+            //printf("[%s]\n",data);
             if ( (json= cJSON_Parse(data)) != 0 )
             {
                 if ( (txid= j64bits(json,"order_id")) == 0 )
@@ -464,6 +466,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
     sprintf(buf,"%s_%s_%s_%llu",exchange->apikey,exchange->userid,exchange->apisecret,(long long)nonce);
     //printf("MD5.(%s)\n",buf);
     calc_md5(digest,buf,(int32_t)strlen(buf));
+    *retstrp = 0;
     if ( dir == 0 )
     {
         path = "getMyBalance.php";
