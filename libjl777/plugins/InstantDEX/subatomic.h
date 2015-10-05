@@ -180,12 +180,15 @@ int32_t btc_getpubkey(char pubkeystr[67],uint8_t pubkeybuf[33],struct bp_key *ke
     bp_pubkey_get(key,&pubkey,&len);
     if ( pubkey != 0 )
     {
-        if ( len < 34 )
+        if ( pubkeystr != 0 )
         {
-            init_hexbytes_noT(pubkeystr,pubkey,(int32_t)len);
-            memcpy(pubkeybuf,pubkey,len);
+            if ( len < 34 )
+            {
+                init_hexbytes_noT(pubkeystr,pubkey,(int32_t)len);
+                memcpy(pubkeybuf,pubkey,len);
+            }
+            else printf("btc_getpubkey error len.%ld\n",len), len = -1;
         }
-        else printf("btc_getpubkey error len.%ld\n",len), len = -1;
         //printf("btc_getpubkey len.%ld (%s).%p\n",len,pubkeystr,pubkeystr);
     } else len = -1;
     return((int32_t)len);
@@ -223,6 +226,17 @@ int32_t btc_convaddr(char *hexaddr,char *addr58)
     return(-1);
 }
 
+int32_t btc_priv2wip(char *wipstr,uint8_t privkey[32])
+{
+    uint8_t tmp[36]; char hexstr[67];
+    memcpy(tmp,privkey,32);
+    tmp[32] = 1;
+    init_hexbytes_noT(hexstr,tmp,33);
+    btc_coinaddr(wipstr,privkey[0],hexstr);
+    printf("-> wip.(%s)\n",wipstr);
+    return(0);
+}
+
 int32_t btc_wip2priv(uint8_t privkey[32],char *wipstr)
 {
     uint8_t addrtype; cstring *cstr; int32_t len = -1;
@@ -233,7 +247,9 @@ int32_t btc_wip2priv(uint8_t privkey[32],char *wipstr)
             cstr->len--;
         memcpy(privkey,cstr->str,cstr->len);
         len = (int32_t)cstr->len;
-        //printf("addrtype.%02x wipstr.(%llx) len.%d\n",addrtype,*(long long *)privkey,len);
+        char tmp[138];
+        btc_priv2wip(tmp,privkey);
+        printf("addrtype.%02x wipstr.(%llx) len.%d\n",addrtype,*(long long *)privkey,len);
         cstr_free(cstr,true);
     }
     return(len);
@@ -258,15 +274,21 @@ void jumblr_freekey(void *key)
 
 int32_t btc_priv2pub(uint8_t pubkey[33],uint8_t privkey[32])
 {
+    size_t len; void *pub = 0; int32_t retval = -1;
     struct bp_key *key = calloc(1,sizeof(*key));
-    if ( key != 0 && bp_key_init(key) != 0 && bp_key_secret_set(key,privkey,32) != 0 && btc_getpubkey(0,pubkey,key) > 0 )
+    if ( key != 0 && bp_key_init(key) != 0 && bp_key_secret_set(key,privkey,32) != 0 )
     {
+        bp_pubkey_get(key,&pub,&len);
         bp_key_free(key);
-        return(0);
+        if ( len == 33 )
+            memcpy(pubkey,pub,33);
+        if ( pub != 0 )
+            free(pub);
+        return(retval);
     }
     if ( key != 0 )
         bp_key_free(key);
-    return(-1);
+    return(retval);
 }
 
 int32_t btc_pub2rmd(uint8_t rmd160[20],uint8_t pubkey[33])
@@ -279,7 +301,7 @@ int32_t btc_pub2rmd(uint8_t rmd160[20],uint8_t pubkey[33])
 
 void *jumblr_bpkey(char *pubP,struct coin777 *coin,char *coinaddr)
 {
-    uint8_t buf[1024]; char *privkey; struct bp_key *key = 0;
+    uint8_t buf[2048]; char *privkey; struct bp_key *key = 0;
     //printf("coin.%s (%s)\n",coin->name,coinaddr);
     if ( (privkey = dumpprivkey(coin->name,coin->serverport,coin->userpass,coinaddr)) != 0 )
     {

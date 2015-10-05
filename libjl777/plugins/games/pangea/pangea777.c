@@ -1249,6 +1249,45 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     pangea_newdeck(&tp->hn);
 }
 
+char *pangea_univ(uint8_t *mypriv,cJSON *json)
+{
+    char *addrtypes[][2] = { {"BTC","0"}, {"LTC","48"}, {"BTCD","60"}, {"DOGE","30"}, {"VRC","70"}, {"OPAL","115"}, {"BITS","25"} };
+    //int32_t getprivkey(uint8_t privkey[32],char *name,char *coinaddr);
+    char *wipstr,*coin,*coinaddr,pubkeystr[67],rsaddr[64],destaddr[64]; uint8_t priv[32],pub[33]; int32_t i; uint64_t nxt64bits; cJSON *retjson,*item;
+    if ( (wipstr= jstr(json,"wip")) != 0 )
+    {
+        printf("got wip.(%s)\n",wipstr);
+        btc_wip2priv(priv,wipstr);
+    }
+    else if ( (coin= jstr(json,"coin")) != 0 && (coinaddr= jstr(json,"addr")) != 0 )
+    {
+        if ( getprivkey(priv,coin,coinaddr) < 0 )
+            return(clonestr("{\"error\":\"cant get privkey\"}"));
+    }
+    else memcpy(priv,mypriv,sizeof(priv));
+    int32_t btc_wip2priv(uint8_t privkey[32],char *wipstr);
+    int32_t btc_priv2pub(uint8_t pubkey[33],uint8_t privkey[32]);
+    int32_t btc_pub2rmd(uint8_t rmd160[20],uint8_t pubkey[33]);
+    btc_priv2pub(pub,priv);
+    init_hexbytes_noT(pubkeystr,pub,33);
+    printf("pubkey.%s\n",pubkeystr);
+    retjson = cJSON_CreateObject();
+    for (i=0; i<sizeof(addrtypes)/sizeof(*addrtypes); i++)
+    {
+        if ( btc_coinaddr(destaddr,atoi(addrtypes[i][1]),pubkeystr) == 0 )
+            jaddstr(retjson,addrtypes[i][0],destaddr);
+    }
+    nxt64bits = nxt_priv2addr(rsaddr,pubkeystr,priv);
+    item = cJSON_CreateObject();
+    jaddstr(item,"addressRS",rsaddr);
+    jadd64bits(item,"address",nxt64bits);
+    jaddstr(item,"pubkey",pubkeystr);
+    jadd(retjson,"NXT",item);
+    btc_priv2wip(pubkeystr,priv);
+    jaddstr(item,"wip",pubkeystr);
+    return(jprint(retjson,1));
+}
+
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
     char *resultstr,*methodstr,*base,*retstr = 0; int32_t maxplayers; cJSON *argjson;

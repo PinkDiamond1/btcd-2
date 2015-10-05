@@ -167,6 +167,7 @@ int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *mypriv
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename);
 char *dumpprivkey(char *coinstr,char *serverport,char *userpass,char *coinaddr);
+int32_t getprivkey(uint8_t privkey[32],char *name,char *coinaddr);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
 uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
@@ -325,6 +326,7 @@ struct subatomic_rawtransaction
 int32_t btc_coinaddr(char *coinaddr,uint8_t addrtype,char *pubkeystr);
 int32_t btc_convaddr(char *hexaddr,char *addr58);
 int32_t btc_convrmd160(char *coinaddr,uint8_t addrtype,uint8_t md160[20]);
+int32_t btc_priv2wip(char *wipstr,uint8_t privkey[32]);
 int32_t btc_wip2priv(uint8_t privkey[32],char *wipstr);
 int32_t btc_priv2pub(uint8_t pubkey[33],uint8_t privkey[32]);
 int32_t btc_pub2rmd(uint8_t rmd160[20],uint8_t pubkey[33]);
