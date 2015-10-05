@@ -514,7 +514,8 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             {
                 printf("send newdeck\n");
                 pangea_newdeck(hn);
-            } else printf("no buyin for %d\n",i);
+            } else if ( (time(NULL) % 60) == 0 )
+                printf("no buyin for %d\n",i);
         }
     }
     else if ( dp->newhand[0] != 0 )
@@ -595,7 +596,8 @@ int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
                 dp->pmworks |= (1 << senderind);
             else dp->pmviaworks |= (1 << senderind);
         }
-        printf("PMworks: %x %x %x\n",dp->pmworks,dp->pmviaworks,dp->broadcastworks);
+        if ( dp->pmworks != ((1 << dp->N) - 1) )
+            printf("PMworks: %x %x %x\n",dp->pmworks,dp->pmviaworks,dp->broadcastworks);
     }
     printf("got pmtest.%d from %d cardi.%d\n",turni,senderind,cardi);
     if ( hn->client->H.slot == 0 )
