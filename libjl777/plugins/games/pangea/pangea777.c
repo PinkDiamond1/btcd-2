@@ -82,7 +82,7 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
 
 void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplayer,uint8_t *data,int32_t datalen,int32_t cardi,int32_t turni)
 {
-    int32_t i,card,n,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json,*array; char hoststr[1024];
+    int32_t i,j,card,n,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json,*array; char hoststr[1024];
     struct cards777_pubdata *dp = hn->client->H.pubdata;
     hoststr[0] = 0;
     if ( hn->client->H.slot == 0 )
@@ -117,6 +117,16 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     //printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
     if ( destplayer < 0 || ((1LL << destplayer) & dp->pmworks) == 0 )
     {
+        if ( destplayer < 0 )
+        {
+            for (j=0; j<dp->N; j++)
+                if ( j != hn->client->H.slot )
+                {
+                    destpub = dp->playerpubs[j];
+                    destbits = acct777_nxt64bits(destpub);
+                    hostnet777_msg(destbits,destpub,hn,blindflag,hex,hexlen);
+                }
+        }
         destbits = 0;
         memset(destpub.bytes,0,sizeof(destpub));
     }
@@ -543,6 +553,7 @@ int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     senderind = juint(json,"myind");
     dp->pmworks |= (1 << senderind);
     pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,-1);
+    printf("got pmtest from %d\n",senderind);
     if ( hn->client->H.slot == 0 )
     {
         if ( dp->pmworks == ((1 << dp->N) - 1) )
@@ -745,7 +756,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     {
                         if ( time(NULL) > hn->client->H.lastping + pinggap )
                         {
-                            if ( (dp= hn->client->H.pubdata) != 0 )
+                            if ( 0 && (dp= hn->client->H.pubdata) != 0 )
                             {
                                 pangea_sendcmd(hex,hn,"ping",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),dp->hand.cardi,dp->hand.undergun);
                                 hn->client->H.lastping = (uint32_t)time(NULL);
@@ -1116,6 +1127,8 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         isbot[i] = isbot[0];
         isbot[0] = tmp;
         i = 0;
+        strcpy(retbuf,"{\"error\":\"host needs to be locally started and the first entry in addrs\"}");
+        return(-1);
     }
     while ( num > maxplayers )
     {
@@ -1389,7 +1402,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                         maxplayers = CARDS777_MAXPLAYERS;
                     if ( jstr(json,"resubmit") == 0 )
                         sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"rakemillis\":\"%u\"}, {\"maxplayers\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers);
-                    else pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,json);
+                    else if ( pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,json) < 0 )
+                        ;
                 } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
             }
             else if ( strcmp(methodstr,"status") == 0 )
