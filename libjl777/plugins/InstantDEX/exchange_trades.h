@@ -78,7 +78,7 @@ uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,
     printf("cmdbuf.(%s) h1.(%s)\n",urlbuf,hdr);
     if ( (data= curl_post(&cHandle,urlbuf,0,0,hdr,0,0,0)) != 0 )
     {
-        printf("cmd.(%s) [%s]\n",urlbuf,data);
+        //printf("cmd.(%s) [%s]\n",urlbuf,data);
         if ( (json= cJSON_Parse(data)) != 0 )
         {
             // { "success" : true, "message" : "", "result" : { "uuid" : "e606d53c-8d70-11e3-94b5-425861b86ab6"  } }
@@ -134,7 +134,7 @@ uint64_t poloniex_trade(char **retstrp,struct exchange_info *exchange,char *base
     //printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",cmdbuf,hdr2,hdr1);
     if ( (data= curl_post(&cHandle,"https://poloniex.com/tradingApi",0,cmdbuf,hdr2,hdr1,0,0)) != 0 )
     {
-        printf("cmd.(%s) [%s]\n",cmdbuf,data);
+        //printf("cmd.(%s) [%s]\n",cmdbuf,data);
         if ( (json= cJSON_Parse(data)) != 0 )
         {
             txid = (get_API_nxt64bits(cJSON_GetObjectItem(json,"orderNumber")) << 32) | get_API_nxt64bits(cJSON_GetObjectItem(json,"tradeID"));
@@ -240,7 +240,7 @@ uint64_t btce_trade(char **retstrp,struct exchange_info *exchange,char *_base,ch
     printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",payload,hdr2,hdr1);
     if ( (data= curl_post(&cHandle,"https://btc-e.com/tapi",0,payload,hdr2,hdr1,0,0)) != 0 )
     {
-        printf("cmd.(%s) [%s]\n",payload,data);
+        //printf("cmd.(%s) [%s]\n",payload,data);
         //{ "success":1, "return":{ "received":0.1, "remains":0, "order_id":0, "funds":{ "usd":325, "btc":2.498,  } } }
         if ( (json= cJSON_Parse(data)) != 0 )
         {
@@ -318,7 +318,7 @@ uint64_t kraken_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",postbuf,hdr2,hdr1);
     if ( (data= curl_post(&cHandle,url,0,postbuf,hdr1,hdr2,0,0)) != 0 )
     {
-        printf("cmd.(%s) [%s]\n",payload,data);
+        //printf("cmd.(%s) [%s]\n",payload,data);
         //{ "success":1, "return":{ "received":0.1, "remains":0, "order_id":0, "funds":{ "usd":325, "btc":2.498,  } } }
         if ( (json= cJSON_Parse(data)) != 0 )
         {
@@ -627,7 +627,7 @@ uint64_t bityes_trade(char **retstrp,struct exchange_info *exchange,char *_base,
     sprintf(url,"https://api.bityes.com/apiv2");
     if ( (data= curl_post(&cHandle,url,0,cmdbuf,"Content-Type:application/x-www-form-urlencoded",0,0,0)) != 0 )
     {
-        printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
+        //printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
         if ( (json= cJSON_Parse(data)) != 0 )
         {
             txid = j64bits(json,"order_id");
@@ -675,7 +675,7 @@ uint64_t okcoin_trade(char **retstrp,struct exchange_info *exchange,char *_base,
         touppercase(digest);
         sprintf(cmdbuf,"amount=%.4f&api_key=%s%s&symbol=%s&type=%s&sign=%s",volume,exchange->apikey,pricestr,pairstr,typestr,digest);
     }
-    printf("MD5.(%s)\n",buf);
+    //printf("MD5.(%s)\n",buf);
     sprintf(url,"https://www.okcoin.com/api/v1/%s",path);
     if ( (data= curl_post(&cHandle,url,0,cmdbuf,0,0,0,0)) != 0 ) // "{\"Content-type\":\"application/x-www-form-urlencoded\"}","{\"User-Agent\":\"OKCoin Javascript API Client\"}"
     {
