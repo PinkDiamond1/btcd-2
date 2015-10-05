@@ -543,7 +543,7 @@ printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
         else if ( strcmp(method.buf,"peggyrates") == 0 )
         {
             if ( SUPERNET.peggy != 0 )
-                retstr = peggyrates(juint(json,"timestamp"));
+                retstr = peggyrates(juint(json,"timestamp"),jstr(json,"name"));
             else retstr = clonestr("{\"error\":\"peggy disabled\"}");
         }
         else if ( strcmp(method.buf,"LSUM") == 0 )

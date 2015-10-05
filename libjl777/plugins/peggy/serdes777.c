@@ -888,7 +888,7 @@ char *peggy_tx(char *jsonstr)
         if ( len+3 < 0xfe )
         {
             retbuf[1] = len+3;
-            strcpy(retbuf+2,"PEG");
+            strcpy(retbuf+2,"PAX");
             memcpy(retbuf+5,Ptx.data,len);
             init_hexbytes_noT(retbufstr,(void *)retbuf,len+5);
         }
@@ -897,7 +897,7 @@ char *peggy_tx(char *jsonstr)
             retbuf[1] = 0xfe;
             retbuf[2] = (len+3) & 0xff;
             retbuf[3] = ((len+3) >> 8) & 0xff;
-            strcpy(retbuf+4,"PEG");
+            strcpy(retbuf+4,"PAX");
             memcpy(retbuf+7,Ptx.data,len);
             init_hexbytes_noT(retbufstr,(void *)retbuf,len+7);
         }

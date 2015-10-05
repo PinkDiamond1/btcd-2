@@ -210,7 +210,7 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
                     else if ( strcmp(methodstr,"rosetta") == 0 )
                         retstr = pangea_univ(SUPERNET.myprivkey,json);
                     else if ( strcmp(methodstr,"rates") == 0 )
-                        retstr = peggyrates(0);
+                        retstr = peggyrates(0,jstr(json,"name"));
                     free_json(json);
                     return(retstr);
                 }

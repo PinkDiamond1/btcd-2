@@ -298,7 +298,7 @@ double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,
 double make_jumpquote(uint64_t baseid,uint64_t relid,uint64_t *baseamountp,uint64_t *relamountp,uint64_t *frombasep,uint64_t *fromrelp,uint64_t *tobasep,uint64_t *torelp);
 
 extern queue_t PendingQ;
-char *peggyrates(uint32_t timestamp);
+char *peggyrates(uint32_t timestamp,char *name);
 #define MAX_SUBATOMIC_OUTPUTS 4
 #define MAX_SUBATOMIC_INPUTS 16
 #define SUBATOMIC_STARTING_SEQUENCEID 1000

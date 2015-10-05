@@ -645,7 +645,7 @@ int64_t peggy_covercost(int32_t *nump,int64_t *posinterests,int64_t *neginterest
     return(covercost);
 }
 
-double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32_t timestamp)
+double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32_t timestamp,char *name)
 {
     int32_t j,rate,num,count,opporate,datenum,seconds,n = 0; struct price_resolution liability,liabilities,price,shortprice;
     int64_t pos,neg,possum,negsum,netbalance;
@@ -656,10 +656,13 @@ double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32
     for (pos=possum=neg=negsum=liabilities.Pval=liability.Pval=covercost=covercosts=depositsum=aprsum=count=0,j=1; j<PEGS->numpegs; j++)
     {
         item = cJSON_CreateObject();
-        PEG = PEGS->contracts[j];
-        PEG = peggy_find(&entry,PEGS,PEG->name.name,1);
+        if ( (PEG= PEGS->contracts[j]) == 0 )
+            continue;
+        if ( (name != 0 && strcmp(PEG->name.name,name) != 0) || (PEG= peggy_find(&entry,PEGS,PEG->name.name,1)) == 0 )
+            continue;
         rate = peggy_aprpercs(peggy_lockrate(&entry,PEGS,PEG,1,1));
-        PEG = peggy_find(&entry,PEGS,PEG->name.name,-1);
+        if ( (PEG= peggy_find(&entry,PEGS,PEG->name.name,-1)) == 0 )
+            continue;
         opporate = peggy_aprpercs(peggy_lockrate(&entry,PEGS,PEG,1,1));
         rates[j*2] = (double)rate / 100.;
         rates[j*2+1] = (double)opporate / 100.;
@@ -704,7 +707,7 @@ double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32
         depositsum += PEG->pool.funds.deposits;
     }
     jadd(json,"rates",array);
-    datenum = OS_conv_unixtime(&seconds,PEG->genesistime);
+    datenum = OS_conv_unixtime(&seconds,PEGS->genesistime);
     jaddnum(json,"start",(uint64_t)datenum*1000000 + (seconds/3600)*10000 + ((seconds%3600)/60)*100 + (seconds%60));
     datenum = OS_conv_unixtime(&seconds,timestamp);
     jaddnum(json,"timestamp",(uint64_t)datenum*1000000 + (seconds/3600)*10000 + ((seconds%3600)/60)*100 + (seconds%60));
@@ -746,13 +749,13 @@ double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32
     return(aprsum/100.);
 }
 
-char *peggyrates(uint32_t timestamp)
+char *peggyrates(uint32_t timestamp,char *name)
 {
     char *jsonstr = 0; double rates[2 * PEGGY_MAXPEGS]; struct peggy_info *PEGS = opreturns_context("peggy",0);
     if ( timestamp == 0 )
         timestamp = (uint32_t)time(NULL);
     if ( PEGS != 0 )
-        peggy_status(&jsonstr,PEGS,rates,timestamp);
+        peggy_status(&jsonstr,PEGS,rates,timestamp,name);
     return(jsonstr);
 }
 

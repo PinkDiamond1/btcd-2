@@ -500,7 +500,7 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
             free_json(json);
         }
     } else fprintf(stderr,"submit err cmd.(%s)\n",cmdbuf);
-    if ( retstrp != 0 )
+    if ( retstrp != 0 && data != 0 )
     {
         if ( (json= cJSON_Parse(data)) == 0 )
         {
