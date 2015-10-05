@@ -501,7 +501,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
             dp->newhand[0] = 0;
         }
-        else if ( 0 && dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
+        else if ( 1 && dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
         {
             pangea_sendnewdeck(hn,dp);
             printf("resend NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
@@ -536,28 +536,54 @@ int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
     printf("player.%d got ready from senderind.%d readymask.%x\n",hn->client->H.slot,senderind,dp->readymask);
     if ( hn->client->H.slot == 0 )
     {
+        if ( (dp->pmworks & (1 << senderind)) == 0 )
+        {
+            printf("send pmtest from %d to %d\n",hn->client->H.slot,senderind);
+            pangea_sendcmd(hex,hn,"pmtest",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,-1);
+            pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,senderind);
+        }
         if ( dp->readymask == ((1 << dp->N) - 1) )
         {
             printf("send newdeck\n");
             pangea_newdeck(hn);
         }
-        if ( (dp->pmworks & (1 << senderind)) == 0 )
-            pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,-1);
     }
     return(0);
 }
 
 int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    int32_t senderind; char hex[2048];
+    int32_t senderind,turni,cardi; char hex[2048];
     senderind = juint(json,"myind");
-    dp->pmworks |= (1 << senderind);
-    pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,-1);
-    printf("got pmtest from %d\n",senderind);
+    cardi = juint(json,"cardi");
+    turni = juint(json,"turni");
+    if ( senderind >= 0 && senderind < dp->N )
+    {
+        if ( cardi < 0 )
+        {
+            if ( turni >= 0 )
+                dp->pmviaworks |= (1 << senderind);
+            else dp->broadcastworks |= (1 << senderind);
+        }
+        else
+        {
+            if ( turni >= 0 )
+                dp->pmworks |= (1 << senderind);
+            else dp->pmviaworks |= (1 << senderind);
+        }
+        printf("PMworks: %x %x %x\n",dp->pmworks,dp->pmviaworks,dp->broadcastworks);
+    }
+    printf("got pmtest.%d from %d cardi.%d\n",turni,senderind,cardi);
     if ( hn->client->H.slot == 0 )
     {
         if ( dp->pmworks == ((1 << dp->N) - 1) )
             printf("all pms work\n");
+    }
+    else
+    {
+        printf("respond pmtest\n");
+        pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),senderind,turni);
+        pangea_sendcmd(hex,hn,"pmtest",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,turni);
     }
     return(0);
 }
