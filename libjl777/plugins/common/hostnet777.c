@@ -28,15 +28,19 @@
 
 #define CARDS777_MAXCARDS 52
 #define CARDS777_MAXPLAYERS 9
-#define CARDS777_ALLIN CARDS777_MAXPLAYERS
 #define CARDS777_FOLD -1
+#define CARDS777_CHECK 1
+#define CARDS777_BET 2
+#define CARDS777_RAISE 3
+#define CARDS777_FULLRAISE 4
+#define CARDS777_ALLIN 9
 
 struct cards777_handinfo
 {
     bits256 checkprod,*cardpubs,*final;
     int64_t havemasks[CARDS777_MAXPLAYERS],betsize,lastraise,bets[CARDS777_MAXPLAYERS];
     uint32_t starttime,handmask,lastbettor,betstarted,cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
-    int8_t betstatus[CARDS777_MAXPLAYERS];
+    int8_t betstatus[CARDS777_MAXPLAYERS],actions[CARDS777_MAXPLAYERS];
     uint8_t numactions,undergun,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
 };
 
@@ -54,7 +58,7 @@ struct cards777_privdata
 {
     bits256 holecards[2],*incards,*outcards,*xoverz;
     //,*reconstructed[CARDS777_MAXPLAYERS],*mofn[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS];
-    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,hole[2]; bits256 data[];
+    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,hole[2],cardis[2],autoshow; bits256 data[];
 };
 
 struct hostnet777_endpoint { char endpoint[128],transport[16],ipaddr[64]; uint16_t port; };
