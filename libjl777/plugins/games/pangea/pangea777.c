@@ -121,12 +121,15 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
         if ( destplayer < 0 )
         {
             for (j=0; j<dp->N; j++)
+            {
                 if ( j != hn->client->H.slot )
                 {
                     destpub = dp->playerpubs[j];
                     destbits = acct777_nxt64bits(destpub);
                     hostnet777_msg(destbits,destpub,hn,blindflag,hex,hexlen);
                 }
+                else queue_enqueue("selfmsg",&hn->client->H.Q,queueitem(hex));
+            }
         }
         destbits = 0;
         memset(destpub.bytes,0,sizeof(destpub));
