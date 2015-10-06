@@ -119,7 +119,7 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     {
         if ( hn->client->H.slot == 0 && destplayer < 0 )
         {
-            for (j=0; j<dp->N; j++)
+            for (j=1; j<dp->N; j++)
                 if ( j != hn->client->H.slot )
                 {
                     destpub = dp->playerpubs[j];
