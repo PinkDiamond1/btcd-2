@@ -61,7 +61,7 @@ struct pangea_info *pangea_usertables(int32_t *nump,uint64_t my64bits,uint64_t t
 void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t cardi)
 {
     uint32_t now; char hex[1024];
-    if ( dp->hand.betstarted == 0 )
+    //if ( dp->hand.betstarted == 0 )
     {
         now = (uint32_t)time(NULL);
         dp->hand.undergun = ((dp->button + 2) % dp->N);

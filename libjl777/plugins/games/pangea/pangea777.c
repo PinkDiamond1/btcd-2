@@ -521,8 +521,8 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
         static uint32_t disptime;
         for (i=n=0; i<dp->N; i++)
         {
-            //if ( Debuglevel > 2 )
-            printf("%llx ",(long long)dp->hand.havemasks[i]);
+            if ( Debuglevel > 2 )
+                printf("%llx ",(long long)dp->hand.havemasks[i]);
             if ( bitweight(dp->hand.havemasks[i]) == 2 )
                 n++;
         }
@@ -553,8 +553,8 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
     {
         for (i=n=0; i<dp->N; i++)
         {
-            //if ( Debuglevel > 2 )
-            printf("%llx ",(long long)dp->hand.havemasks[i]);
+            if ( Debuglevel > 2 )
+                printf("%llx ",(long long)dp->hand.havemasks[i]);
             if ( bitweight(dp->hand.havemasks[i]) == 2 )
                 n++;
         }
@@ -605,7 +605,7 @@ int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
     senderind = juint(json,"myind");
     dp->readymask |= (1 << senderind);
     printf("player.%d got ready from senderind.%d readymask.%x\n",hn->client->H.slot,senderind,dp->readymask);
-    if ( hn->client->H.slot == 0 )
+    if ( 0 && hn->client->H.slot == 0 )
     {
         if ( (dp->pmworks & (1 << senderind)) == 0 )
         {
