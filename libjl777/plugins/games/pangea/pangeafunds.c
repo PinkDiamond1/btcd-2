@@ -571,9 +571,9 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
                 amount = dp->balances[sp->myind], action = CARDS777_ALLIN;
             pangea_sendcmd(hex,&sp->tp->hn,"action",-1,(void *)&amount,sizeof(amount),dp->hand.cardi,action);
             printf("ACTION.(%s)\n",hex);
-            dp->hand.userinput_starttime = 0;
-            dp->hand.cardi = -1;
-            dp->hand.betsize = 0;
+            //dp->hand.userinput_starttime = 0;
+            //dp->hand.cardi = -1;
+            //dp->hand.betsize = 0;
             return(clonestr("{\"result\":\"action submitted\"}"));
         }
         else return(clonestr("{\"error\":\"illegal action specified, must be: check, call, bet, raise, fold or allin\"}"));
