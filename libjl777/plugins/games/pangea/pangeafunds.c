@@ -428,7 +428,7 @@ void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t c
     } else dp->hand.betstarted++;
     dp->hand.numactions = 0;
     dp->hand.cardi = cardi;
-    printf("STARTBETS.%d cardi.%d\n",dp->hand.betstarted,cardi);
+    printf("STARTBETS.%d cardi.%d numactions.%d\n",dp->hand.betstarted,cardi,dp->hand.numactions);
     now = (uint32_t)time(NULL);
     memset(dp->hand.actions,0,sizeof(dp->hand.actions));
     memset(dp->hand.turnis,0xff,sizeof(dp->hand.turnis));
