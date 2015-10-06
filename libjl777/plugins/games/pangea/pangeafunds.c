@@ -489,10 +489,11 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
             dp->hand.numactions++;
             if ( (dp->hand.numactions % dp->N) == 0 )
             {
-                dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
                 dp->hand.cardi = (dp->hand.numactions / dp->N) + dp->N*2;
                 pangea_startbets(hn,dp,dp->hand.cardi);
             }
+            dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
+            printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,dp->hand.undergun);
             pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),dp->hand.cardi,dp->hand.undergun);
         }
     }
@@ -510,6 +511,7 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     {
         dp->hand.betstarted = 1;
         dp->hand.undergun = turni;
+        printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
         pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
     }
     return(0);
