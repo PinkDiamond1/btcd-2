@@ -516,7 +516,7 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
 int32_t pangea_lastman(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
     int32_t activej = -1; uint64_t total,split,rake,pangearake; char hex[1024];
-    if ( pangea_actives(&activej,dp) <= 1 )
+    if ( dp->hand.betstarted != 0 && pangea_actives(&activej,dp) <= 1 )
     {
         total = pangea_totalbet(dp);
         split = pangea_winnings(&pangearake,&rake,total,1,dp->rakemillis);
