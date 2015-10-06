@@ -498,6 +498,7 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     printf("got turn.%d from %d\n",turni,senderind);
     if ( senderind == 0 && sp != 0 && hn->client->H.slot != 0 )
     {
+        dp->hand.betstarted = 1;
         pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
     }
     return(0);
