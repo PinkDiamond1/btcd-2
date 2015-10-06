@@ -507,7 +507,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
     int32_t i,j; struct pangea_info *sp = dp->table;
     if ( time(NULL) > sp->timestamp+20 && time(NULL) < sp->timestamp+22 && dp->pmworks != ((1 << dp->N) - 1) )
     {
-        printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
+        //printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
     }
     if ( dp->newhand[0] == 0 )
     {
@@ -521,8 +521,11 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             }
             if ( i == dp->N )
             {
-                printf("send newdeck\n");
-                pangea_newdeck(hn);
+                if ( time(NULL) > dp->startdecktime+10 )
+                {
+                    printf("send newdeck\n");
+                    pangea_newdeck(hn);
+                }
             } else if ( disptime != time(NULL) && (time(NULL) % 60) == 0 )
             {
                 disptime = (uint32_t)time(NULL);
