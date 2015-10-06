@@ -455,10 +455,13 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
     printf("got confirmturn.%d cardi.%d sender.%d\n",turni,cardi,senderind);
     if ( datalen == sizeof(betsize) )
         memcpy(&betsize,data,sizeof(betsize)), starttime = dp->hand.starttime;
-    if ( senderind == 0 && (sp= dp->table) != 0 )
+    if ( (sp= dp->table) != 0 )
     {
-        dp->hand.undergun = turni;
-        dp->hand.cardi = cardi;
+        if ( senderind == 0 )
+        {
+            dp->hand.undergun = turni;
+            dp->hand.cardi = cardi;
+        }
         dp->turnis[senderind] = turni;
         for (i=0; i<dp->N; i++)
             if ( dp->turnis[i] != turni )
