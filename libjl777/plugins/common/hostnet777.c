@@ -41,7 +41,7 @@ struct cards777_handinfo
     bits256 checkprod,*cardpubs,*final,community256[5],cards[CARDS777_MAXPLAYERS][2];
     int64_t havemasks[CARDS777_MAXPLAYERS],betsize,lastraise,bets[CARDS777_MAXPLAYERS];
     uint32_t starttime,handmask,lastbettor,betstarted,finished,cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
-    int8_t betstatus[CARDS777_MAXPLAYERS],actions[CARDS777_MAXPLAYERS];
+    int8_t betstatus[CARDS777_MAXPLAYERS],actions[CARDS777_MAXPLAYERS],turnis[CARDS777_MAXPLAYERS];
     uint8_t numactions,undergun,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
 };
 
@@ -50,7 +50,7 @@ struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidi
 struct cards777_pubdata
 {
     bits256 *playerpubs; int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS];
-    uint64_t hostrake,bigblind,ante,pangearake,othercardpubs[CARDS777_MAXPLAYERS]; int8_t turnis[CARDS777_MAXPLAYERS];
+    uint64_t hostrake,bigblind,ante,pangearake,othercardpubs[CARDS777_MAXPLAYERS];
     uint32_t button,numhands,rakemillis,startdecktime,readymask,pmworks,pmviaworks,broadcastworks,minbuyin,maxbuyin;
     void *table; struct cards777_handinfo hand; char newhand[32768]; bits256 data[];
 };

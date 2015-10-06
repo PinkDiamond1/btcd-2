@@ -361,7 +361,7 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jadd(json,"addrs",array);
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
-        jaddinum(array,dstr(dp->turnis[i]));
+        jaddinum(array,dp->hand.turnis[i]);
     jadd(json,"turns",array);
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
@@ -430,6 +430,8 @@ void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t c
     } else dp->hand.betstarted++;
     printf("STARTBETS.%d cardi.%d\n",dp->hand.betstarted,cardi);
     now = (uint32_t)time(NULL);
+    memset(dp->hand.actions,0,sizeof(dp->hand.actions));
+    memset(dp->hand.turnis,0xff,sizeof(dp->hand.turnis));
     dp->hand.undergun = ((dp->button + 2) % dp->N);
     pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
 }
@@ -440,7 +442,7 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
     printf("got turn.%d from %d | cardi.%d\n",turni,senderind,cardi);
-    dp->turnis[senderind] = turni;
+    dp->hand.turnis[senderind] = turni;
     if ( senderind == 0 && sp != 0 )
     {
         dp->hand.cardi = cardi;
@@ -476,11 +478,11 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
             dp->hand.cardi = cardi;
             dp->hand.betsize = betsize;
         }
-        dp->turnis[senderind] = turni;
+        dp->hand.turnis[senderind] = turni;
         for (i=0; i<dp->N; i++)
         {
             //printf("[i%d %d] ",i,dp->turnis[i]);
-            if ( dp->turnis[i] != turni )
+            if ( dp->hand.turnis[i] != turni )
                 break;
         }
         //printf("vs turni.%d cardi.%d hand.cardi %d\n",turni,cardi,dp->hand.cardi);
