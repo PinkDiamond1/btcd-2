@@ -527,7 +527,7 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
 
 int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    uint32_t now; int32_t action,cardi,i,j,activej; char hex[1024]; bits256 zero; uint64_t split,rake,pangearake,total,amount = 0;
+    uint32_t now; int32_t action,cardi,i,j,activej,destplayer = 0; char hex[1024]; bits256 zero; uint64_t split,rake,pangearake,total,amount = 0;
     action = juint(json,"turni");
     cardi = juint(json,"cardi");
     if ( cardi < 2*dp->N )
@@ -596,26 +596,31 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
                 if ( dp->hand.cardi != dp->N * 2 )
                     printf("cardi mismatch %d != %d\n",dp->hand.cardi,dp->N * 2);
                 cardi = dp->hand.cardi;
+                printf("decode flop\n");
                 for (i=0; i<3; i++,cardi++)
-                    pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+                    pangea_sendcmd(hex,hn,"decoded",-1,dp->hand.final[cardi*dp->N + destplayer].bytes,sizeof(dp->hand.final[cardi*dp->N + destplayer]),cardi,dp->N-1);
             }
             else if ( i == 3 )
             {
                 if ( dp->hand.cardi != dp->N * 2+3 )
                     printf("cardi mismatch %d != %d\n",dp->hand.cardi,dp->N * 2 + 3);
                 cardi = dp->hand.cardi;
-                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+                printf("decode turn\n");
+                pangea_sendcmd(hex,hn,"decoded",-1,dp->hand.final[cardi*dp->N + destplayer].bytes,sizeof(dp->hand.final[cardi*dp->N + destplayer]),cardi,dp->N-1);
             }
             else if ( i == 4 )
             {
+                printf("decode river\n");
                 if ( dp->hand.cardi != dp->N * 2+4 )
                     printf("cardi mismatch %d != %d\n",dp->hand.cardi,dp->N * 2+4);
                 cardi = dp->hand.cardi;
-                pangea_sendcmd(hex,hn,"decoded",dp->N-1,dp->hand.final[cardi*dp->N].bytes,sizeof(dp->hand.final[cardi*dp->N]),cardi,dp->hand.undergun);
+                pangea_sendcmd(hex,hn,"decoded",-1,dp->hand.final[cardi*dp->N + destplayer].bytes,sizeof(dp->hand.final[cardi*dp->N + destplayer]),cardi,dp->N-1);
             }
             else
             {
                 cardi = dp->N * 2 + 5;
+                if ( dp->hand.cardi != dp->N * 2+5 )
+                    printf("cardi mismatch %d != %d\n",dp->hand.cardi,dp->N * 2+5);
                 pangea_sendcmd(hex,hn,"showdown",-1,priv->holecards[0].bytes,sizeof(priv->holecards),cardi,dp->hand.undergun);
             }
         }

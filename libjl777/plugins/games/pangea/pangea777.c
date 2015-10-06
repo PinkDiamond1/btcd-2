@@ -390,31 +390,44 @@ int32_t pangea_final(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
 
 int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    int32_t cardi,destplayer,card; bits256 cardpriv,decoded; char hex[1024];
+    int32_t cardi,destplayer,card,turni; bits256 cardpriv,decoded; char hex[1024];
     if ( data == 0 || datalen != sizeof(bits256) )
     {
         printf("pangea_decode invalid datalen.%d vs %ld\n",datalen,sizeof(bits256));
         return(-1);
     }
     cardi = juint(json,"cardi");
+    turni = juint(json,"turni");
+    if ( cardi < dp->N*2 || cardi >= dp->N*2 + 5 )
+    {
+        printf("pangea_decode invalid cardi.%d\n",cardi);
+        return(-1);
+    }
     destplayer = 0;
     memcpy(&priv->incards[cardi*dp->N + destplayer],data,sizeof(bits256));
-    if ( hn->client->H.slot == 0 && (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)data)) >= 0 && hn->client->H.slot > 0 )
-        printf("ERROR: unexpected decode player.%d got card.[%d]\n",hn->client->H.slot,card);
-    decoded = cards777_decode(priv->xoverz,destplayer,priv->incards[cardi*dp->N + destplayer],priv->outcards,dp->numcards,dp->N);
-    if ( hn->client->H.slot > 0 )
+    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,hn->client->H.slot,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)data)) >= 0 )
+        printf("player.%d decoded cardi.%d card.[%d]\n",hn->client->H.slot,cardi,card);
+    if ( turni == hn->client->H.slot )
     {
-        pangea_sendcmd(hex,hn,"decoded",hn->client->H.slot-1,decoded.bytes,sizeof(decoded),cardi,-1);
-        //printf("player.%d decoded cardi.%d %llx -> %llx\n",hn->client->H.slot,cardi,(long long)priv->incards[cardi*dp->N + destplayer].txid,(long long)decoded.txid);
-    }
-    else
-    {
-        if ( Debuglevel > 2 )
+        decoded = cards777_decode(priv->xoverz,destplayer,priv->incards[cardi*dp->N + destplayer],priv->outcards,dp->numcards,dp->N);
+        if ( hn->client->H.slot > 0 )
+        {
+            pangea_sendcmd(hex,hn,"decoded",-1,decoded.bytes,sizeof(decoded),cardi,hn->client->H.slot-1);
+            printf("player.%d decoded cardi.%d %llx -> %llx\n",hn->client->H.slot,cardi,(long long)priv->incards[cardi*dp->N + destplayer].txid,(long long)decoded.txid);
+        }
+        else
+        {
+            //if ( Debuglevel > 2 )
             printf("decoded community cardi.%d [%d]\n",cardi,card);
-        pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,-1);
-        //if ( cardi >= 2*dp->N+2 && cardi < 2*dp->N+5 )
-        //    pangea_startbets(hn,dp,++cardi);
+            pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,cardpriv.txid!=0?1:-1);
+        }
     }
+    //decoded = cards777_decode(priv->xoverz,destplayer,priv->incards[cardi*dp->N + destplayer],priv->outcards,dp->numcards,dp->N);
+    //printf("[%llx -> %llx] ",*(long long *)&data[(cardi*dp->N + destplayer) * sizeof(bits256)],(long long)decoded.txid);
+    //if ( destplayer == hn->client->H.slot )
+    //    pangea_card(hn,json,dp,priv,decoded.bytes,sizeof(bits256),cardi,destplayer);
+    //else pangea_sendcmd(hex,hn,"card",destplayer,decoded.bytes,sizeof(bits256),cardi,-1);
+
     return(0);
 }
 
@@ -445,7 +458,7 @@ int32_t pangea_facedown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
 
 int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    int32_t cardi,i; char hexstr[65];
+    int32_t cardi,validcard; char hexstr[65];
     if ( data == 0 || datalen != sizeof(bits256) )
     {
         printf("pangea_faceup invalid datalen.%d vs %ld\n",datalen,(dp->numcards + 1) * sizeof(bits256));
@@ -453,9 +466,10 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     }
     init_hexbytes_noT(hexstr,data,sizeof(bits256));
     cardi = juint(json,"cardi");
+    validcard = juint(json,"turni");
     //if ( Debuglevel > 2 || hn->client->H.slot == 0 )
-        printf("player.%d COMMUNITY.[%d] (%s) cardi.%d\n",hn->client->H.slot,data[1],hexstr,cardi);
-    cardi -= 2*dp->N;
+        printf("player.%d COMMUNITY.[%d] (%s) cardi.%d valid.%d\n",hn->client->H.slot,data[1],hexstr,cardi,validcard);
+    /*cardi -= 2*dp->N;
     for (i=0; i<cardi; i++)
         if ( dp->hand.community[i] >= 52 )
             printf("illegal community card[%d] %d\n",i,dp->hand.community[i]);
@@ -473,10 +487,13 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
                 if ( dp->hand.community[cardi] == 0xff )
                     break;
         }
+    }*/
+    if ( validcard > 1 && cardi >= dp->N*2 && cardi < dp->N*2+5 )
+    {
+        dp->hand.community[cardi] = data[1];
+        if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
+            pangea_startbets(hn,dp,cardi);
     }
-    dp->hand.community[cardi] = data[1];
-    if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
-        pangea_startbets(hn,dp,cardi);
     return(0);
 }
 
