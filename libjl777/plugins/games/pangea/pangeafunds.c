@@ -507,12 +507,15 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
     printf("got turn.%d from %d\n",turni,senderind);
-    if ( senderind == 0 && sp != 0 && hn->client->H.slot != 0 )
+    if ( senderind == 0 && sp != 0 )
     {
         dp->hand.betstarted = 1;
         dp->hand.undergun = turni;
-        printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
-        pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
+        if ( hn->client->H.slot != 0 )
+        {
+            printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
+            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
+        }
     }
     return(0);
 }
