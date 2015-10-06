@@ -33,13 +33,14 @@
 #define CARDS777_BET 2
 #define CARDS777_RAISE 3
 #define CARDS777_FULLRAISE 4
+#define CARDS777_SENTCARDS 5
 #define CARDS777_ALLIN 9
 
 struct cards777_handinfo
 {
-    bits256 checkprod,*cardpubs,*final,community256[5];
+    bits256 checkprod,*cardpubs,*final,community256[5],cards[CARDS777_MAXPLAYERS][2];
     int64_t havemasks[CARDS777_MAXPLAYERS],betsize,lastraise,bets[CARDS777_MAXPLAYERS];
-    uint32_t starttime,handmask,lastbettor,betstarted,cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
+    uint32_t starttime,handmask,lastbettor,betstarted,finished,cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
     int8_t betstatus[CARDS777_MAXPLAYERS],actions[CARDS777_MAXPLAYERS];
     uint8_t numactions,undergun,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
 };
