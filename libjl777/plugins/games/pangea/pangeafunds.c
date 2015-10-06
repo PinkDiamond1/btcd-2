@@ -395,6 +395,7 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     if ( sp->priv != 0 )
     {
         jadd64bits(json,"autoshow",sp->priv->autoshow);
+        jadd64bits(json,"autofold",sp->priv->autofold);
         jadd(json,"hand",pangea_handjson(&dp->hand,sp->priv->hole,dp->isbot[sp->myind]));
     }
     if ( (countdown= pangea_countdown(dp,sp->myind)) >= 0 )
