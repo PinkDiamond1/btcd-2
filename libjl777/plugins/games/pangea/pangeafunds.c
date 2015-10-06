@@ -641,7 +641,7 @@ int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
     int32_t senderind; uint64_t amount;
     senderind = juint(json,"myind");
     memcpy(&amount,data,sizeof(amount));
-    dp->balances[senderind] += amount;
+    dp->balances[senderind] = amount;
     printf("myind.%d: addfunds.%d <- %.8f total %.8f\n",hn->client->H.slot,senderind,dstr(amount),dstr(dp->balances[senderind]));
     return(0);
 }

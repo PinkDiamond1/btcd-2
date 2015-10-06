@@ -522,8 +522,12 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             {
                 printf("send newdeck\n");
                 pangea_newdeck(hn);
-            } else if ( (time(NULL) % 60) == 0 )
-                printf("no buyin for %d\n",i);
+            } else if ( (time(NULL) % 60) == 0 && ((uint64_t)milliseconds() % 10) < 2 )
+            {
+                for (i=0; i<dp->N; i++)
+                    printf("%.8f ",dstr(dp->balances[i]));
+                printf("no buyin for %d (%.8f %.8f)\n",i,dstr(dp->minbuyin*dp->bigblind),dstr(dp->maxbuyin*dp->bigblind));
+            }
         }
     }
     else if ( dp->newhand[0] != 0 )
