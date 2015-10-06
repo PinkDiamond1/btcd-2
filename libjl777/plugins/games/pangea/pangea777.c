@@ -1396,6 +1396,7 @@ char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
         printf("buyin.%u amount %.8f -> %.8f\n",buyin,dstr(amount),dstr(buyin * sp->bigblind));
         if ( buyin >= sp->dp->minbuyin && buyin <= sp->dp->maxbuyin )
         {
+            sp->dp->balances[sp->myind] = amount;
             pangea_sendcmd(hex,&sp->tp->hn,"addfunds",-1,(void *)&amount,sizeof(amount),sp->myind,-1);
             pangea_sendcmd(hex,&sp->tp->hn,"addfunds",0,(void *)&amount,sizeof(amount),sp->myind,-1);
             return(clonestr("{\"result\":\"buyin sent\"}"));
