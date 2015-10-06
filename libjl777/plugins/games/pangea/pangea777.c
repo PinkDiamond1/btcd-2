@@ -407,8 +407,8 @@ int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         if ( Debuglevel > 2 )
             printf("decoded community cardi.%d [%d]\n",cardi,card);
         pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,-1);
-        if ( cardi >= 2*dp->N+2 && cardi < 2*dp->N+5 )
-            pangea_startbets(hn,dp,++cardi);
+        //if ( cardi >= 2*dp->N+2 && cardi < 2*dp->N+5 )
+        //    pangea_startbets(hn,dp,++cardi);
     }
     return(0);
 }
@@ -894,8 +894,8 @@ void pangea_buyins(uint32_t *minbuyinp,uint32_t *maxbuyinp)
             *minbuyinp = 20;
         if ( *maxbuyinp < *minbuyinp )
             *maxbuyinp = (*minbuyinp * 4);
-        if ( *maxbuyinp > 250 )
-            *maxbuyinp = 250;
+        if ( *maxbuyinp > 1000 )
+            *maxbuyinp = 1000;
         if ( *minbuyinp > *maxbuyinp )
             *minbuyinp = *maxbuyinp;
         printf("(%d %d)\n",*minbuyinp,*maxbuyinp);
