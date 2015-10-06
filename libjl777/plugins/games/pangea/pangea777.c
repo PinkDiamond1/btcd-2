@@ -425,7 +425,7 @@ int32_t pangea_facedown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
     dp->hand.havemasks[destplayer] |= (1LL << cardi);
     for (i=0; i<dp->N; i++)
     {
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("%llx ",(long long)dp->hand.havemasks[i]);
         if ( bitweight(dp->hand.havemasks[i]) == 2 )
             n++;
