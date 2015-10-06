@@ -117,7 +117,7 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     //printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
     if ( destplayer < 0 || ((1LL << destplayer) & dp->pmworks) == 0 )
     {
-        if ( 0 && destplayer < 0 )
+        if ( hn->client->H.slot == 0 && destplayer < 0 )
         {
             for (j=0; j<dp->N; j++)
                 if ( j != hn->client->H.slot )
