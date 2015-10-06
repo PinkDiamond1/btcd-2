@@ -856,6 +856,7 @@ void pangea_buyins(uint32_t *minbuyinp,uint32_t *maxbuyinp)
     }
     else
     {
+        printf("minbuyin.%d maxbuyin.%d -> ",*minbuyinp,*maxbuyinp);
         if ( *minbuyinp < 20 )
             *minbuyinp = 20;
         if ( *maxbuyinp < *minbuyinp )
@@ -864,6 +865,7 @@ void pangea_buyins(uint32_t *minbuyinp,uint32_t *maxbuyinp)
             *maxbuyinp = 250;
         if ( *minbuyinp > *maxbuyinp )
             *minbuyinp = *maxbuyinp;
+        printf("(%d %d)\n",*minbuyinp,*maxbuyinp);
     }
 }
 
@@ -1397,7 +1399,11 @@ char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
             pangea_sendcmd(hex,&sp->tp->hn,"addfunds",-1,(void *)&amount,sizeof(amount),sp->myind,-1);
             return(clonestr("{\"result\":\"buyin sent\"}"));
         }
-        else return(clonestr("{\"error\":\"buyin too small or too big\"}"));
+        else
+        {
+            printf("buyin.%d vs (%d %d)\n",buyin,sp->dp->minbuyin,sp->dp->maxbuyin);
+            return(clonestr("{\"error\":\"buyin too small or too big\"}"));
+        }
     }
     return(clonestr("{\"error\":\"cant buyin unless you are part of the table\"}"));
 }
