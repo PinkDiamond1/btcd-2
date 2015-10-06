@@ -504,13 +504,14 @@ int32_t pangea_newdeck(union hostnet777 *src)
 
 void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
-    int32_t i; struct pangea_info *sp = dp->table;
+    int32_t i,j; struct pangea_info *sp = dp->table;
     if ( time(NULL) > sp->timestamp+20 && time(NULL) < sp->timestamp+22 && dp->pmworks != ((1 << dp->N) - 1) )
     {
         printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
     }
     if ( dp->newhand[0] == 0 )
     {
+        static uint32_t disptime;
         if ( dp->readymask == ((1 << dp->N) - 1) )
         {
             for (i=0; i<dp->N; i++)
@@ -522,10 +523,11 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             {
                 printf("send newdeck\n");
                 pangea_newdeck(hn);
-            } else if ( (time(NULL) % 60) == 0 && ((uint64_t)milliseconds() % 10) < 2 )
+            } else if ( disptime != time(NULL) && (time(NULL) % 60) == 0 )
             {
-                for (i=0; i<dp->N; i++)
-                    printf("%.8f ",dstr(dp->balances[i]));
+                disptime = (uint32_t)time(NULL);
+                for (j=0; j<dp->N; j++)
+                    printf("%.8f ",dstr(dp->balances[j]));
                 printf("no buyin for %d (%.8f %.8f)\n",i,dstr(dp->minbuyin*dp->bigblind),dstr(dp->maxbuyin*dp->bigblind));
             }
         }

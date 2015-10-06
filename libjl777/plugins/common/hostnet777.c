@@ -65,7 +65,7 @@ struct hostnet777_client { struct hostnet777_hdr H; int32_t pushsock,subsock; st
 struct hostnet777_server
 {
     struct hostnet777_hdr H;
-    int32_t num,max,pullsock,pubsock; struct hostnet777_endpoint ep;
+    int32_t num,max,pullsock,pubsock; struct hostnet777_endpoint ep; queue_t mailboxQ[CARDS777_MAXPLAYERS];
     struct hostnet777_id clients[];
 };
 union hostnet777 { struct hostnet777_server *server; struct hostnet777_client *client; };
@@ -152,8 +152,8 @@ int32_t hostnet777_send(int32_t sock,void *ptr,int32_t len)
         {
             if ( (sendlen= nn_send(sock,ptr,len,0)) == len )
                 break;
-            if ( numerrs++ < 10 )
-                printf("retry.%d for sock.%d len.%d vs sendlen.%d (%s)\n",j,sock,len,sendlen,len<512?ptr:"");
+            if ( numerrs++ < 100 )
+                printf("numerrs.%d retry.%d for sock.%d len.%d vs sendlen.%d (%s)\n",numerrs,j,sock,len,sendlen,len<512?ptr:"");
             sleep(1);
         }
         //printf("hostnet777_send.%d j.%d len.%d sendlen.%d\n",sock,j,len,sendlen);
@@ -179,7 +179,7 @@ int32_t hostnet777_sendsock(union hostnet777 *ptr,uint64_t destbits)
     if ( (ind= ptr->client->H.slot) != 0 )
     {
         //printf("client.%p ind.%d: %d %d\n",ptr->client,ind,ptr->client->pushsock,ptr->client->my.pmsock);
-        if ( destbits == 0 )
+        if ( 1 || destbits == 0 )
             return(ptr->client->pushsock);
         else return(ptr->client->my.pmsock);
     }
@@ -386,6 +386,15 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bi
     nn_freemsg(msg);
 }
 
+void hostnet777_mailboxQ(queue_t *mailboxQ,void *cipher,int32_t cipherlen)
+{
+    uint16_t *ptr; struct queueitem *item = calloc(1,sizeof(struct queueitem) + cipherlen + sizeof(uint16_t));
+    ptr = (uint16_t *)((long)item + sizeof(struct queueitem));
+    ptr[0] = cipherlen;
+    memcpy(&ptr[1],cipher,cipherlen);
+    queue_enqueue("mailboxQ",mailboxQ,item);
+}
+
 #define hostnet777_broadcast(ptr,mypriv,mypub,msg,len) hostnet777_sendmsg(ptr,zeropoint,mypriv,mypub,msg,len)
 #define hostnet777_blindcast(ptr,msg,len) hostnet777_sendmsg(ptr,zeropoint,zeropoint,zeropoint,msg,len)
 #define hostnet777_signedPM(ptr,destpub,mypriv,mypub,msg,len) hostnet777_sendmsg(ptr,destpub,mypriv,mypub,msg,len)
@@ -427,7 +436,17 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
     if ( (cipher= hostnet777_encode(&cipherlen,data,datalen,destpub,mypriv,mypub,sig.signer64bits,sig.sigbits,sig.timestamp)) != 0 )
     {
         //printf("my.(priv.%llx pub.%llx) -> dest %llu pub.%llx cipherlen.%d %llx sendsock %d linksock.%d\n",(long long)pangea_privkey(player).txid,(long long)pangea_pubkey(player).txid,(long long)destbits,(long long)destpub.txid,cipherlen,*(long long *)cipher,sendsock,linksock);
-        hostnet777_send(sendsock,cipher,cipherlen);
+        if ( destbits != 0 && ptr->server->H.slot == 0 )
+        {
+            for (i=1; i<ptr->server->num; i++)
+            {
+                hostnet777_mailboxQ(&ptr->server->mailboxQ[i],cipher,cipherlen);
+                break;
+            }
+            if ( i == ptr->server->num )
+                printf("hostnet777 warning cant find %llu in addrs[]\n",(long long)destbits);
+        }
+        else hostnet777_send(sendsock,cipher,cipherlen);
         free(cipher);
     }
     if ( data != msg )
@@ -437,7 +456,8 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
 
 int32_t hostnet777_idle(union hostnet777 *hn)
 {
-    int32_t len,ind,j,sock,n = 0; bits256 senderpub,mypriv,mypub; uint64_t destbits; uint8_t *msg; long extra = sizeof(bits256)+sizeof(uint64_t);
+    int32_t len,ind,j,sock,n = 0; bits256 senderpub,mypriv,mypub; uint64_t destbits; uint8_t *msg; struct queueitem *item; uint16_t *ptr;
+    long extra = sizeof(bits256)+sizeof(uint64_t);
     if ( (ind= hn->client->H.slot) != 0 )
     {
         mypriv = hn->client->H.privkey, mypub = hn->client->H.pubkey;
@@ -459,18 +479,18 @@ int32_t hostnet777_idle(union hostnet777 *hn)
             //printf("got pullsock destbits.%llu sender.%llu\n",(long long)destbits,(long long)acct777_nxt64bits(senderpub));
             hostnet777_lastcontact(hn->server,senderpub);
         }
-        for (ind=1; ind<hn->server->max; ind++)
+        for (ind=1; ind<hn->server->num; ind++)
         {
             if ( (sock= hn->server->clients[ind].pmsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
             {
                 hostnet777_copybits(1,msg,(void *)&destbits,sizeof(uint64_t));
-                for (j=0; j<hn->server->max; j++)
+                for (j=0; j<hn->server->num; j++)
                 {
                     if ( hn->server->clients[j].nxt64bits == destbits )
                     {
                         if  ( j == 0 )
                         {
-                            //printf("server got PM sock.%d\n",hn->server->clients[j].pmsock);
+                            printf("server got PM.%d sock.%d\n",j,hn->server->clients[j].pmsock);
                             hostnet777_processmsg(&destbits,&senderpub,&hn->server->H.Q,mypriv,mypub,msg,len,1,&hn->server->H.mT);
                             hostnet777_lastcontact(hn->server,senderpub);
                         }
@@ -484,10 +504,17 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                         break;
                     }
                 }
-                if ( j == hn->server->max )
+                if ( j == hn->server->num )
                 {
                     printf("got msg to %llu not a client\n",(long long)destbits);
                     nn_freemsg(msg);
+                }
+                if ( (item= queue_dequeue(&hn->server->mailboxQ[ind],0)) != 0 )
+                {
+                    ptr = (uint16_t *)((long)item + sizeof(struct queueitem));
+                    hostnet777_send(hn->server->clients[ind].pmsock,&ptr[1],ptr[0]);
+                    printf("send %d from mailbox to %d\n",len,ind);
+                    free(item);
                 }
             }
         }
@@ -531,7 +558,8 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
         return(-1);
     }
     sprintf(endpoint,"%s://%s:%u",srv->ep.transport,srv->ep.ipaddr,srv->ep.port + slot + 2);
-    srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_PAIR",NN_PAIR,srv->ep.port + slot + 2,100,10);
+    //srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_PAIR",NN_PAIR,srv->ep.port + slot + 2,100,10);
+    srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_REP",NN_REP,srv->ep.port + slot + 2,100,10);
     srv->clients[slot].pubkey = clientpub;
     srv->clients[slot].nxt64bits = nxt64bits;
     srv->clients[slot].lastcontact = (uint32_t)time(NULL);
@@ -559,7 +587,8 @@ struct hostnet777_client *hostnet777_client(bits256 privkey,bits256 pubkey,char 
     endbuf[strlen(endbuf)-4] = 0;
     port = atoi(&srvendpoint[strlen(endbuf)]);
     sprintf(endbuf2,"%s%u",endbuf,port + 2 + slot);
-    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PAIR",NN_PAIR,0,100,10);
+    //ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PAIR",NN_PAIR,0,100,10);
+    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_REQ",NN_REQ,0,100,10);
     printf("PAIR %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+2+slot);
     sprintf(endbuf2,"%s%u",endbuf,port + 1);
     ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,100,10);
