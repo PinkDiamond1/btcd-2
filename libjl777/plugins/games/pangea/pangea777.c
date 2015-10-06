@@ -487,6 +487,7 @@ int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
             {
                 printf("player.%d decoded cardi.%d card.[%d]\n",hn->client->H.slot,cardi,card);
                 pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,cardpriv.txid!=0?1:-1);
+                printf("-> FACEUP.(%s)\n",hex);
             }
         }
     }
@@ -527,6 +528,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     validcard = juint(json,"turni");
     //if ( Debuglevel > 2 || hn->client->H.slot == 0 )
         printf("from.%d -> player.%d COMMUNITY.[%d] (%s) cardi.%d valid.%d\n",senderind,hn->client->H.slot,data[1],hexstr,cardi,validcard);
+    printf("got FACEUP.(%s)\n",jprint(json,0));
     if ( validcard > 0 && cardi >= dp->N*2 && cardi < dp->N*2+5 )
     {
         dp->hand.community[cardi - dp->N*2] = data[1];
@@ -1530,6 +1532,7 @@ char *pangea_mode(uint64_t my64bits,uint64_t tableid,cJSON *json)
                 return(clonestr("{\"error\":\"specified pm destination not at table\"}"));
         } else i = -1;
         pangea_sendcmd(hex,&sp->tp->hn,"chat",i,(void *)chatstr,(int32_t)strlen(chatstr)+1,sp->myind,-1);
+        return(clonestr("{\"result\":\"chat message sent\"}"));
     }
     return(clonestr("{\"error\":\"unknown pangea mode\"}"));
 }
