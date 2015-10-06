@@ -511,7 +511,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
 
 void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
-    int32_t i,j; struct pangea_info *sp = dp->table;
+    int32_t i,j,n; struct pangea_info *sp = dp->table;
     if ( time(NULL) > sp->timestamp+20 && time(NULL) < sp->timestamp+22 && dp->pmworks != ((1 << dp->N) - 1) )
     {
         //printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
@@ -544,21 +544,31 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
     }
     else if ( dp->newhand[0] != 0 )
     {
-        for (i=0; i<dp->N; i++)
+        for (i=n=0; i<dp->N; i++)
         {
-            if ( dp->othercardpubs[i] != dp->hand.checkprod.txid )
-                break;
+            //if ( Debuglevel > 2 )
+            printf("%llx ",(long long)dp->hand.havemasks[i]);
+            if ( bitweight(dp->hand.havemasks[i]) == 2 )
+                n++;
         }
-        if ( i == dp->N )
+        if ( n != dp->N )
         {
-            printf("SERVERSTATE issues encoded\n");
-            pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
-            dp->newhand[0] = 0;
-        }
-        else if ( 1 && dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
-        {
-            pangea_sendnewdeck(hn,dp);
-            printf("resend NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
+            for (i=0; i<dp->N; i++)
+            {
+                if ( dp->othercardpubs[i] != dp->hand.checkprod.txid )
+                    break;
+            }
+            if ( i == dp->N )
+            {
+                printf("SERVERSTATE issues encoded\n");
+                pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
+                dp->newhand[0] = 0;
+            }
+            else if ( 1 && dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
+            {
+                pangea_sendnewdeck(hn,dp);
+                printf("resend NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
+            }
         }
     }
     else if ( 0 && dp->hand.final[0].txid == 0 )

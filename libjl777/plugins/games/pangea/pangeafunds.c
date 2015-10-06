@@ -64,6 +64,7 @@ void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t c
     now = (uint32_t)time(NULL);
     dp->hand.undergun = ((dp->button + 2) % dp->N);
     dp->hand.numactions = 0;
+    printf("STARTBETS\n");
     pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
 }
 
