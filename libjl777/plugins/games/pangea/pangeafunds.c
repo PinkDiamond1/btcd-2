@@ -545,14 +545,14 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     uint32_t now; int32_t action,cardi,i,j,destplayer = 0; char hex[1024]; uint64_t amount = 0;
     action = juint(json,"turni");
     cardi = juint(json,"cardi");
+    memcpy(&amount,data,sizeof(amount));
     if ( cardi < 2*dp->N )
         printf("pangea_action: illegal cardi.%d\n",cardi);
-    if ( action == CARDS777_FOLD )
+    if ( action == CARDS777_FOLD || (amount == 0 && dp->hand.bets[senderind] < dp->hand.betsize) )
     {
         pangea_fold(dp,senderind);
         return(0);
     }
-    memcpy(&amount,data,sizeof(amount));
     if ( senderind != dp->hand.undergun )
     {
         printf("out of turn action.%d by player.%d cardi.%d amount %.8f\n",action,senderind,cardi,dstr(amount));
