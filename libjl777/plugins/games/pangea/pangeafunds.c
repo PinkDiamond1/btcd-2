@@ -459,10 +459,23 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
     {
         dp->hand.undergun = turni;
         dp->hand.cardi = cardi;
-        if ( turni == hn->client->H.slot )
+        dp->turnis[senderind] = turni;
+        for (i=0; i<dp->N; i++)
+            if ( dp->turnis[i] != turni )
+                break;
+        if ( hn->client->H.slot == 0 && i == dp->N )
         {
-            printf("%s\n",jprint(pangea_tablestatus(sp),1));
-            pangea_statusprint(dp,priv,hn->client->H.slot);
+            dp->hand.numactions++;
+            if ( (dp->hand.numactions % dp->N) == 0 )
+            {
+                cardi = dp->hand.cardi = (dp->hand.numactions / dp->N) + dp->N*2;
+                pangea_startbets(hn,dp,dp->hand.cardi);
+            }
+            printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,dp->hand.undergun);
+            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),dp->hand.cardi,dp->hand.undergun);
+        }
+        if ( (turni= dp->hand.undergun) == hn->client->H.slot )
+        {
             if ( dp->hand.betsize != betsize )
                 printf("pangea_turn warning hand.betsize %.8f != betsize %.8f\n",dstr(dp->hand.betsize),dstr(betsize));
             if ( dp->isbot[hn->client->H.slot] != 0 )
@@ -477,25 +490,12 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
                 dp->hand.undergun = -1;
                 fprintf(stderr,"Waiting for user input cardi.%d: ",cardi);
             }
+            printf("%s\n",jprint(pangea_tablestatus(sp),1));
+            pangea_statusprint(dp,priv,hn->client->H.slot);
         }
     }
     else if ( sp != 0 )
     {
-        dp->turnis[senderind] = turni;
-        for (i=0; i<dp->N; i++)
-            if ( dp->turnis[i] != turni )
-                break;
-        if ( hn->client->H.slot == 0 && i == dp->N )
-        {
-            dp->hand.numactions++;
-            if ( (dp->hand.numactions % dp->N) == 0 )
-            {
-                dp->hand.cardi = (dp->hand.numactions / dp->N) + dp->N*2;
-                pangea_startbets(hn,dp,dp->hand.cardi);
-            }
-            printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,dp->hand.undergun);
-            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),dp->hand.cardi,dp->hand.undergun);
-        }
     }
     return(0);
 }
