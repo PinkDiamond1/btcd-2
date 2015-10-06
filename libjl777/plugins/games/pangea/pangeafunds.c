@@ -424,10 +424,10 @@ void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t c
     uint32_t now; char hex[1024];
     if ( dp->hand.betstarted == 0 )
     {
-        dp->hand.numactions = 0;
         dp->hand.betstarted = 1;
-        dp->hand.cardi = cardi;
     } else dp->hand.betstarted++;
+    dp->hand.numactions = 0;
+    dp->hand.cardi = cardi;
     printf("STARTBETS.%d cardi.%d\n",dp->hand.betstarted,cardi);
     now = (uint32_t)time(NULL);
     memset(dp->hand.actions,0,sizeof(dp->hand.actions));
