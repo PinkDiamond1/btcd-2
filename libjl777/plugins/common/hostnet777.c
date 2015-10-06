@@ -179,7 +179,7 @@ int32_t hostnet777_sendsock(union hostnet777 *ptr,uint64_t destbits)
     if ( (ind= ptr->client->H.slot) != 0 )
     {
         //printf("client.%p ind.%d: %d %d\n",ptr->client,ind,ptr->client->pushsock,ptr->client->my.pmsock);
-        if ( 1 || destbits == 0 )
+        if ( 0 && destbits == 0 )
             return(ptr->client->pushsock);
         else return(ptr->client->my.pmsock);
     }
