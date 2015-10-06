@@ -119,7 +119,7 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     {
         if ( hn->client->H.slot == 0 && destplayer < 0 )
         {
-            queue_enqueue("host777",&hn->server->H.Q,(void *)hex);
+            //queue_enqueue("host777",&hn->server->H.Q,(void *)hex);
             for (j=1; j<dp->N; j++)
                 if ( j != hn->client->H.slot )
                 {
