@@ -605,13 +605,17 @@ int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
             else dp->pmviaworks |= (1 << senderind);
         }
         if ( dp->pmworks != ((1 << dp->N) - 1) )
-            printf("PMworks: %x %x %x\n",dp->pmworks,dp->pmviaworks,dp->broadcastworks);
+        {
+            //printf("PMworks: %x %x %x\n",dp->pmworks,dp->pmviaworks,dp->broadcastworks);
+        }
     }
     //printf("got pmtest.%d from %d cardi.%d\n",turni,senderind,cardi);
     if ( hn->client->H.slot == 0 )
     {
         if ( dp->pmworks == ((1 << dp->N) - 1) )
-            printf("all pms work\n");
+        {
+            //printf("all pms work\n");
+        }
     }
     else
     {
