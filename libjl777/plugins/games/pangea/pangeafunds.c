@@ -493,7 +493,7 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
                 dp->hand.cardi = (dp->hand.numactions / dp->N) + dp->N*2;
                 pangea_startbets(hn,dp,dp->hand.cardi);
             }
-            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),dp->hand.cardi,turni);
+            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),dp->hand.cardi,dp->hand.undergun);
         }
     }
     return(0);
