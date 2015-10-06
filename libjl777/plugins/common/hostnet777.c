@@ -490,7 +490,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                     {
                         if  ( j == 0 )
                         {
-                            printf("server got PM.%d sock.%d\n",j,hn->server->clients[j].pmsock);
+                            //printf("server got PM.%d sock.%d\n",j,hn->server->clients[j].pmsock);
                             hostnet777_processmsg(&destbits,&senderpub,&hn->server->H.Q,mypriv,mypub,msg,len,1,&hn->server->H.mT);
                             hostnet777_lastcontact(hn->server,senderpub);
                         }

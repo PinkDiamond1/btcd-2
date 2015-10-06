@@ -512,7 +512,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
     if ( dp->newhand[0] == 0 )
     {
         static uint32_t disptime;
-        if ( dp->readymask == ((1 << dp->N) - 1) )
+        //if ( dp->readymask == ((1 << dp->N) - 1) )
         {
             for (i=0; i<dp->N; i++)
             {
