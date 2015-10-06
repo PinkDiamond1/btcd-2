@@ -118,10 +118,9 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     //printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
     if ( destplayer < 0 || ((1LL << destplayer) & dp->pmworks) == 0 )
     {
-        if ( hn->client->H.slot == 0 && destplayer < 0 )
+        if ( destplayer < 0 )
         {
-            //queue_enqueue("host777",&hn->server->H.Q,(void *)hex);
-            for (j=1; j<dp->N; j++)
+            for (j=0; j<dp->N; j++)
                 if ( j != hn->client->H.slot )
                 {
                     destpub = dp->playerpubs[j];
@@ -485,9 +484,9 @@ int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         {
             if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,hn->client->H.slot,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)data)) >= 0 )
             {
-                printf("player.%d decoded cardi.%d card.[%d]\n",hn->client->H.slot,cardi,card);
+                //printf("player.%d decoded cardi.%d card.[%d]\n",hn->client->H.slot,cardi,card);
                 pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,cardpriv.txid!=0?1:-1);
-                printf("-> FACEUP.(%s)\n",hex);
+                //printf("-> FACEUP.(%s)\n",hex);
             }
         }
     }
@@ -528,7 +527,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     validcard = juint(json,"turni");
     //if ( Debuglevel > 2 || hn->client->H.slot == 0 )
         printf("from.%d -> player.%d COMMUNITY.[%d] (%s) cardi.%d valid.%d\n",senderind,hn->client->H.slot,data[1],hexstr,cardi,validcard);
-    printf("got FACEUP.(%s)\n",jprint(json,0));
+    //printf("got FACEUP.(%s)\n",jprint(json,0));
     if ( validcard > 0 && cardi >= dp->N*2 && cardi < dp->N*2+5 )
     {
         dp->hand.community[cardi - dp->N*2] = data[1];
@@ -543,7 +542,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     }
     else
     {
-        printf("valid.%d cardi.%d vs N.%d\n",validcard,cardi,dp->N);
+        //printf("valid.%d cardi.%d vs N.%d\n",validcard,cardi,dp->N);
         if ( cardi < dp->N*2 )
         {
             memcpy(dp->hand.cards[senderind][cardi/dp->N].bytes,data,sizeof(bits256));
