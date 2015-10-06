@@ -419,7 +419,10 @@ uint64_t bitfinex_trade(char **retstrp,struct exchange_info *exchange,char *_bas
             if ( (json= cJSON_Parse(data)) != 0 )
             {
                 if ( (txid= j64bits(json,"order_id")) == 0 )
-                    printf("no txid error\n");
+                {
+                    if ( dir != 0 )
+                        printf("bitfinex: no txid error\n");
+                }
                 free_json(json);
             }
         }

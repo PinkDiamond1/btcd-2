@@ -270,7 +270,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
 
 int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t cardi)
 {
-    int32_t destplayer,card; bits256 cardpriv; char hex[1024],cardAstr[8],cardBstr[8];
+    int32_t destplayer,card,validcard = -1; bits256 cardpriv; char hex[1024],cardAstr[8],cardBstr[8];
     if ( data == 0 || datalen != sizeof(bits256) )
     {
         printf("pangea_card invalid datalen.%d vs %ld\n",datalen,sizeof(bits256));
@@ -283,8 +283,9 @@ int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
         if ( Debuglevel > 2 )
             printf("player.%d got card.[%d]\n",hn->client->H.slot,card);
         memcpy(&priv->incards[cardi*dp->N + destplayer],cardpriv.bytes,sizeof(bits256));
+        priv->holecards[cardi / dp->N] = cardpriv, priv->hole[cardi / dp->N] = cardpriv.bytes[1];
+        validcard = 1;
     } else printf("ERROR player.%d got no card %llx\n",hn->client->H.slot,*(long long *)data);
-    priv->holecards[cardi / dp->N] = cardpriv, priv->hole[cardi / dp->N] = cardpriv.bytes[1];
     cardAstr[0] = cardBstr[0] = 0;
     if ( priv->hole[0] != 0xff )
         cardstr(cardAstr,priv->hole[0]);
@@ -292,7 +293,7 @@ int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
         cardstr(cardBstr,priv->hole[1]);
     printf(">>>>>>>>>> dest.%d priv.%p holecards[%d] cardi.%d / dp->N %d (%d %d) -> (%s %s)\n",destplayer,priv,priv->hole[cardi / dp->N],cardi,dp->N,priv->hole[0],priv->hole[1],cardAstr,cardBstr);
     if ( cardi < dp->N*2 )
-        pangea_sendcmd(hex,hn,"facedown",-1,(void *)&cardi,sizeof(cardi),cardi,-1);
+        pangea_sendcmd(hex,hn,"facedown",-1,(void *)&cardi,sizeof(cardi),cardi,validcard);
     else pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,-1);
     return(0);
 }
@@ -416,14 +417,16 @@ int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
 
 int32_t pangea_facedown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t cardi)
 {
-    int32_t destplayer,i,n = 0;
+    int32_t destplayer,i,validcard,n = 0;
     if ( data == 0 || datalen != sizeof(int32_t) )
     {
         printf("pangea_facedown invalid datalen.%d vs %ld\n",datalen,sizeof(bits256));
         return(-1);
     }
     destplayer = juint(json,"myind");
-    dp->hand.havemasks[destplayer] |= (1LL << cardi);
+    validcard = juint(json,"turni");
+    if ( validcard > 0 )
+        dp->hand.havemasks[destplayer] |= (1LL << cardi);
     for (i=0; i<dp->N; i++)
     {
         if ( Debuglevel > 2 )
@@ -432,7 +435,7 @@ int32_t pangea_facedown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
             n++;
     }
     //if ( Debuglevel > 2 )
-        printf(" | player.%d sees that destplayer.%d got cardi.%d | %llx | n.%d\n",hn->client->H.slot,juint(json,"myind"),cardi,(long long)dp->hand.havemasks[destplayer],n);
+        printf(" | player.%d sees that destplayer.%d got cardi.%d valid.%d | %llx | n.%d\n",hn->client->H.slot,destplayer,cardi,validcard,(long long)dp->hand.havemasks[destplayer],n);
     if ( hn->client->H.slot == 0 && n == dp->N )
         pangea_startbets(hn,dp,dp->N*2);
     return(0);
@@ -538,8 +541,9 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             {
                 if ( time(NULL) > dp->startdecktime+10 )
                 {
-                    printf("send newdeck\n");
+                    printf("send newdeck len.%ld\n",strlen(dp->newhand));
                     pangea_newdeck(hn);
+                    printf("sent newdeck %ld\n",strlen(dp->newhand));
                 }
             } else if ( disptime != time(NULL) && (time(NULL) % 60) == 0 )
             {

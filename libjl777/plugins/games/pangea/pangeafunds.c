@@ -441,6 +441,26 @@ void pangea_statusprint(struct cards777_pubdata *dp,struct cards777_privdata *pr
     printf("%s\n",handstr);
 }
 
+int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
+{
+    int32_t senderind,turni,cardi; char hex[2048]; struct pangea_info *sp = dp->table;
+    senderind = juint(json,"myind");
+    turni = juint(json,"turni");
+    cardi = juint(json,"cardi");
+    printf("got turn.%d from %d | cardi.%d\n",turni,senderind,cardi);
+    if ( senderind == 0 && sp != 0 )
+    {
+        dp->hand.betstarted = 1;
+        dp->hand.undergun = turni;
+        if ( hn->client->H.slot != 0 )
+        {
+            printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
+            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
+        }
+    }
+    return(0);
+}
+
 int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
     uint32_t starttime; int32_t i,turni,cardi,senderind; uint64_t betsize=SATOSHIDEN,amount=0; struct pangea_info *sp=0; char hex[1024];
@@ -502,91 +522,6 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
         }
     }
     return(0);
-}
-
-int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
-{
-    int32_t senderind,turni,cardi; char hex[2048]; struct pangea_info *sp = dp->table;
-    senderind = juint(json,"myind");
-    turni = juint(json,"turni");
-    cardi = juint(json,"cardi");
-    printf("got turn.%d from %d | cardi.%d\n",turni,senderind,cardi);
-    if ( senderind == 0 && sp != 0 )
-    {
-        dp->hand.betstarted = 1;
-        dp->hand.undergun = turni;
-        if ( hn->client->H.slot != 0 )
-        {
-            printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
-            pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
-        }
-    }
-    return(0);
-}
-
-char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
-{
-    char *actionstr; uint64_t sum,amount=0; int32_t action,num; struct pangea_info *sp; struct cards777_pubdata *dp; char hex[4096];
-    if ( (sp= pangea_usertables(&num,my64bits,tableid)) == 0 )
-        return(clonestr("{\"error\":\"you are not playing on any tables\"}"));
-    if ( num != 1 )
-        return(clonestr("{\"error\":\"more than one active table\"}"));
-    else if ( (dp= sp->dp) == 0 )
-        return(clonestr("{\"error\":\"no pubdata ptr for table\"}"));
-    else if ( dp->hand.undergun != sp->myind || dp->hand.betsize == 0 )
-        return(clonestr("{\"error\":\"not your turn\"}"));
-    else if ( (actionstr= jstr(json,"action")) == 0 )
-        return(clonestr("{\"error\":\"on action specified\"}"));
-    else
-    {
-        if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 || strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 || strcmp(actionstr,"allin") == 0 || strcmp(actionstr,"fold") == 0 )
-        {
-            sum = dp->hand.bets[sp->myind];
-            if ( strcmp(actionstr,"allin") == 0 )
-                amount = dp->balances[sp->myind], action = CARDS777_ALLIN;
-            else
-            {
-                if ( dp->hand.betsize == sum )
-                {
-                    if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 )
-                        action = 0;
-                    else if ( strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 )
-                    {
-                        action = 1;
-                        if ( (amount= dp->hand.lastraise) < j64bits(json,"amount") )
-                            amount = j64bits(json,"amount");
-                    }
-                    else printf("unsupported userinput command.(%s)\n",actionstr);
-                }
-                else
-                {
-                    if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 )
-                        action = 1, amount = (dp->hand.betsize - sum);
-                    else if ( strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 )
-                    {
-                        action = 2;
-                        amount = (dp->hand.betsize - sum);
-                        if ( amount < 2*dp->hand.lastraise )
-                            amount = 2*dp->hand.lastraise;
-                        if ( j64bits(json,"amount") > amount )
-                            amount = j64bits(json,"amount");
-                    }
-                    else if ( strcmp(actionstr,"fold") == 0 )
-                        action = 0;
-                    else printf("unsupported userinput command.(%s)\n",actionstr);
-                }
-            }
-            if ( amount > dp->balances[sp->myind] )
-                amount = dp->balances[sp->myind], action = CARDS777_ALLIN;
-            pangea_sendcmd(hex,&sp->tp->hn,"action",-1,(void *)&amount,sizeof(amount),dp->hand.cardi,action);
-            printf("ACTION.(%s)\n",hex);
-            //dp->hand.userinput_starttime = 0;
-            //dp->hand.cardi = -1;
-            //dp->hand.betsize = 0;
-            return(clonestr("{\"result\":\"action submitted\"}"));
-        }
-        else return(clonestr("{\"error\":\"illegal action specified, must be: check, call, bet, raise, fold or allin\"}"));
-    }
 }
 
 int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
@@ -675,6 +610,70 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     return(0);
 }
 
+char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
+{
+    char *actionstr; uint64_t sum,amount=0; int32_t action,num; struct pangea_info *sp; struct cards777_pubdata *dp; char hex[4096];
+    if ( (sp= pangea_usertables(&num,my64bits,tableid)) == 0 )
+        return(clonestr("{\"error\":\"you are not playing on any tables\"}"));
+    if ( num != 1 )
+        return(clonestr("{\"error\":\"more than one active table\"}"));
+    else if ( (dp= sp->dp) == 0 )
+        return(clonestr("{\"error\":\"no pubdata ptr for table\"}"));
+    else if ( dp->hand.undergun != sp->myind || dp->hand.betsize == 0 )
+        return(clonestr("{\"error\":\"not your turn\"}"));
+    else if ( (actionstr= jstr(json,"action")) == 0 )
+        return(clonestr("{\"error\":\"on action specified\"}"));
+    else
+    {
+        if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 || strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 || strcmp(actionstr,"allin") == 0 || strcmp(actionstr,"fold") == 0 )
+        {
+            sum = dp->hand.bets[sp->myind];
+            if ( strcmp(actionstr,"allin") == 0 )
+                amount = dp->balances[sp->myind], action = CARDS777_ALLIN;
+            else
+            {
+                if ( dp->hand.betsize == sum )
+                {
+                    if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 )
+                        action = 0;
+                    else if ( strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 )
+                    {
+                        action = 1;
+                        if ( (amount= dp->hand.lastraise) < j64bits(json,"amount") )
+                            amount = j64bits(json,"amount");
+                    }
+                    else printf("unsupported userinput command.(%s)\n",actionstr);
+                }
+                else
+                {
+                    if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 )
+                        action = 1, amount = (dp->hand.betsize - sum);
+                    else if ( strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 )
+                    {
+                        action = 2;
+                        amount = (dp->hand.betsize - sum);
+                        if ( amount < 2*dp->hand.lastraise )
+                            amount = 2*dp->hand.lastraise;
+                        if ( j64bits(json,"amount") > amount )
+                            amount = j64bits(json,"amount");
+                    }
+                    else if ( strcmp(actionstr,"fold") == 0 )
+                        action = 0;
+                    else printf("unsupported userinput command.(%s)\n",actionstr);
+                }
+            }
+            if ( amount > dp->balances[sp->myind] )
+                amount = dp->balances[sp->myind], action = CARDS777_ALLIN;
+            pangea_sendcmd(hex,&sp->tp->hn,"action",-1,(void *)&amount,sizeof(amount),dp->hand.cardi,action);
+            printf("ACTION.(%s)\n",hex);
+            //dp->hand.userinput_starttime = 0;
+            //dp->hand.cardi = -1;
+            //dp->hand.betsize = 0;
+            return(clonestr("{\"result\":\"action submitted\"}"));
+        }
+        else return(clonestr("{\"error\":\"illegal action specified, must be: check, call, bet, raise, fold or allin\"}"));
+    }
+}
 
 int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
