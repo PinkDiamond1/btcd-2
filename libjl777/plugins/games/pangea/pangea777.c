@@ -83,10 +83,10 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
 
 void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplayer,uint8_t *data,int32_t datalen,int32_t cardi,int32_t turni)
 {
-    int32_t i,j,card,n,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json,*array; char hoststr[1024];
+    int32_t n,j,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json; char hoststr[1024];
     struct cards777_pubdata *dp = hn->client->H.pubdata;
     hoststr[0] = 0;
-    if ( hn->client->H.slot == 0 )
+    /*if ( hn->client->H.slot == 0 )
     {
         array = cJSON_CreateArray();
         for (i=0; i<5; i++)
@@ -100,7 +100,7 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
             sprintf(hoststr,"\"state\":%u,\"community\":%s,",hn->client->H.state,jprint(array,1));
             cardi = dp->N*2 + i;
         }
-    }
+    }*/
     sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"turni\":%d,\"myind\":%d,\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,%s\"data\":\"",cmdstr,(long long)hostnet777_convmT(&hn->client->H.mT,0),turni,hn->client->H.slot,cardi,destplayer,(long long)hn->client->H.nxt64bits,time(NULL),datalen,hoststr);
     if ( data != 0 && datalen != 0 )
     {
@@ -538,8 +538,8 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         //printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
         if ( senderind == hn->client->H.slot )
             pangea_rank(dp,senderind);
-        //if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
-        //    pangea_startbets(hn,dp,cardi+1);
+        if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
+            pangea_startbets(hn,dp,cardi+1);
     }
     else
     {
