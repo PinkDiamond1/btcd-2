@@ -141,6 +141,7 @@ double hostnet777_updatelag(uint64_t senderbits,int64_t millitime,int64_t now)
 
 int32_t hostnet777_send(int32_t sock,void *ptr,int32_t len)
 {
+    static int32_t numerrs;
     int32_t j,sendlen = 0;
     if ( sock >= 0 )
     {
@@ -151,7 +152,8 @@ int32_t hostnet777_send(int32_t sock,void *ptr,int32_t len)
         {
             if ( (sendlen= nn_send(sock,ptr,len,0)) == len )
                 break;
-            printf("retry.%d for sock.%d len.%d vs sendlen.%d (%s)\n",j,sock,len,sendlen,len<512?ptr:"");
+            if ( numerrs++ < 10 )
+                printf("retry.%d for sock.%d len.%d vs sendlen.%d (%s)\n",j,sock,len,sendlen,len<512?ptr:"");
             sleep(1);
         }
         //printf("hostnet777_send.%d j.%d len.%d sendlen.%d\n",sock,j,len,sendlen);

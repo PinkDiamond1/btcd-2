@@ -117,7 +117,7 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     //printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
     if ( destplayer < 0 || ((1LL << destplayer) & dp->pmworks) == 0 )
     {
-        if ( destplayer < 0 )
+        if ( 0 && destplayer < 0 )
         {
             for (j=0; j<dp->N; j++)
                 if ( j != hn->client->H.slot )
@@ -1397,6 +1397,7 @@ char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
         if ( buyin >= sp->dp->minbuyin && buyin <= sp->dp->maxbuyin )
         {
             pangea_sendcmd(hex,&sp->tp->hn,"addfunds",-1,(void *)&amount,sizeof(amount),sp->myind,-1);
+            pangea_sendcmd(hex,&sp->tp->hn,"addfunds",0,(void *)&amount,sizeof(amount),sp->myind,-1);
             return(clonestr("{\"result\":\"buyin sent\"}"));
         }
         else
