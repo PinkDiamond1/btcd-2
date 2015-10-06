@@ -1173,7 +1173,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
             return(-1);
         }
     }
-    printf("mynxt64bits.%llu base.(%s) maxplayers.%d\n",(long long)tp->nxt64bits,base,maxplayers);
+    printf("mynxt64bits.%llu base.(%s) maxplayers.%d minbuyin.%u maxbuyin.%u\n",(long long)tp->nxt64bits,base,maxplayers,minbuyin,maxbuyin);
     if ( base == 0 || base[0] == 0 || maxplayers < 2 || maxplayers > CARDS777_MAXPLAYERS )
     {
         sprintf(retbuf,"{\"error\":\"bad params\"}");
