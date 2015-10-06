@@ -519,7 +519,14 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
     if ( dp->newhand[0] == 0 )
     {
         static uint32_t disptime;
-        //if ( dp->readymask == ((1 << dp->N) - 1) )
+        for (i=n=0; i<dp->N; i++)
+        {
+            //if ( Debuglevel > 2 )
+            printf("%llx ",(long long)dp->hand.havemasks[i]);
+            if ( bitweight(dp->hand.havemasks[i]) == 2 )
+                n++;
+        }
+        if ( n < dp->N )
         {
             for (i=0; i<dp->N; i++)
             {
