@@ -456,7 +456,7 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
         dp->hand.undergun = turni;
         if ( hn->client->H.slot != 0 )
         {
-            printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
+            //printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
             pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
         }
     }
@@ -473,7 +473,7 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
     }
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
-    printf("got confirmturn.%d cardi.%d sender.%d\n",turni,cardi,senderind);
+    //printf("got confirmturn.%d cardi.%d sender.%d\n",turni,cardi,senderind);
     if ( datalen == sizeof(betsize) )
         memcpy(&betsize,data,sizeof(betsize)), starttime = dp->hand.starttime;
     if ( (sp= dp->table) != 0 )
@@ -494,7 +494,7 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
         //printf("vs turni.%d cardi.%d hand.cardi %d\n",turni,cardi,dp->hand.cardi);
         if ( hn->client->H.slot == 0 && i == dp->N && senderind != 0 )
         {
-            printf("player.%d sends confirmturn.%d cardi.%d\n",hn->client->H.slot,dp->hand.undergun,dp->hand.cardi);
+            //printf("player.%d sends confirmturn.%d cardi.%d\n",hn->client->H.slot,dp->hand.undergun,dp->hand.cardi);
             pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),dp->hand.cardi,dp->hand.undergun);
         }
         if ( senderind == 0 && (turni= dp->hand.undergun) == hn->client->H.slot )
@@ -510,7 +510,6 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
                 dp->hand.userinput_starttime = (uint32_t)time(NULL);
                 dp->hand.cardi = cardi;
                 dp->hand.betsize = betsize;
-                dp->hand.undergun = -1;
                 fprintf(stderr,"Waiting for user input cardi.%d: ",cardi);
             }
             printf("%s\n",jprint(pangea_tablestatus(sp),1));
