@@ -1384,7 +1384,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
 char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
     struct pangea_info *sp; uint32_t buyin; uint64_t amount = 0; char hex[1024];
-    if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 && sp->tp != 0 && (amount= juint(json,"amount")) != 0 )
+    if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 && sp->tp != 0 && (amount= j64bits(json,"amount")) != 0 )
     {
         buyin = (uint32_t)(amount / sp->dp->bigblind);
         printf("buyin.%u amount %.8f -> %.8f\n",buyin,dstr(amount),dstr(buyin * sp->bigblind));
