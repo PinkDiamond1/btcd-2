@@ -485,7 +485,7 @@ int32_t pangea_decode(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         {
             if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,hn->client->H.slot,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)data)) >= 0 )
             {
-                //printf("player.%d decoded cardi.%d card.[%d]\n",hn->client->H.slot,cardi,card);
+                printf("player.%d decoded cardi.%d card.[%d]\n",hn->client->H.slot,cardi,card);
                 pangea_sendcmd(hex,hn,"faceup",-1,cardpriv.bytes,sizeof(cardpriv),cardi,cardpriv.txid!=0?1:-1);
             }
         }
@@ -536,8 +536,8 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         //printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
         if ( senderind == hn->client->H.slot )
             pangea_rank(dp,senderind);
-        if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
-            pangea_startbets(hn,dp,cardi+1);
+        //if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
+        //    pangea_startbets(hn,dp,cardi+1);
     }
     else
     {
