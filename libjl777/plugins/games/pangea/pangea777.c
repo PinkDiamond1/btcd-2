@@ -586,7 +586,7 @@ int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     int32_t senderind;
     senderind = juint(json,"myind");
     dp->othercardpubs[senderind] = *(uint64_t *)data;
-    printf("player.%d got pangea_gotdeck from senderind.%d\n",hn->client->H.slot,senderind);
+    printf("player.%d got pangea_gotdeck from senderind.%d otherpubs.%llx\n",hn->client->H.slot,senderind,(long long)dp->othercardpubs[senderind]);
     if ( hn->client->H.slot == 0 )
         pangea_serverstate(hn,dp,priv);
     return(0);

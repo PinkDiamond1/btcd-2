@@ -61,11 +61,15 @@ struct pangea_info *pangea_usertables(int32_t *nump,uint64_t my64bits,uint64_t t
 void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t cardi)
 {
     uint32_t now; char hex[1024];
-    now = (uint32_t)time(NULL);
-    dp->hand.undergun = ((dp->button + 2) % dp->N);
-    dp->hand.numactions = 0;
-    printf("STARTBETS\n");
-    pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
+    if ( dp->hand.betstarted == 0 )
+    {
+        now = (uint32_t)time(NULL);
+        dp->hand.undergun = ((dp->button + 2) % dp->N);
+        dp->hand.numactions = 0;
+        dp->hand.betstarted = 1;
+        printf("STARTBETS\n");
+        pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
+    }
 }
 
 int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t player,int64_t bet)
@@ -491,6 +495,7 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     senderind = juint(json,"myind");
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
+    printf("got turn.%d from %d\n",turni,senderind);
     if ( senderind == 0 && sp != 0 && hn->client->H.slot != 0 )
     {
         pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
