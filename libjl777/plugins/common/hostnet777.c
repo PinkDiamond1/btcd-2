@@ -37,7 +37,7 @@
 
 struct cards777_handinfo
 {
-    bits256 checkprod,*cardpubs,*final;
+    bits256 checkprod,*cardpubs,*final,community256[5];
     int64_t havemasks[CARDS777_MAXPLAYERS],betsize,lastraise,bets[CARDS777_MAXPLAYERS];
     uint32_t starttime,handmask,lastbettor,betstarted,cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
     int8_t betstatus[CARDS777_MAXPLAYERS],actions[CARDS777_MAXPLAYERS];
