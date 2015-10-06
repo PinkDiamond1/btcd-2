@@ -487,12 +487,12 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
         dp->turnis[senderind] = turni;
         for (i=0; i<dp->N; i++)
         {
-            printf("[i%d %d] ",i,dp->turnis[i]);
+            //printf("[i%d %d] ",i,dp->turnis[i]);
             if ( dp->turnis[i] != turni )
                 break;
         }
-        printf("vs turni.%d cardi.%d hand.cardi %d\n",turni,cardi,dp->hand.cardi);
-        if ( hn->client->H.slot == 0 && i == dp->N )
+        //printf("vs turni.%d cardi.%d hand.cardi %d\n",turni,cardi,dp->hand.cardi);
+        if ( hn->client->H.slot == 0 && i == dp->N && senderind != 0 )
         {
             printf("player.%d sends confirmturn.%d cardi.%d\n",hn->client->H.slot,dp->hand.undergun,dp->hand.cardi);
             pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),dp->hand.cardi,dp->hand.undergun);
