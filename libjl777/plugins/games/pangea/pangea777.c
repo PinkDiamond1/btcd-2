@@ -169,10 +169,18 @@ struct pangea_info *pangea_find(uint64_t tableid,int32_t threadid)
 
 struct pangea_info *pangea_find64(uint64_t tableid,uint64_t nxt64bits)
 {
-    int32_t i;
+    int32_t i,j;
     for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
-        if ( TABLES[i] != 0 && tableid == TABLES[i]->tableid && TABLES[i]->tp != 0 && TABLES[i]->tp->nxt64bits == nxt64bits )
-            return(TABLES[i]);
+    {
+        if ( TABLES[i] != 0 && tableid == TABLES[i]->tableid && TABLES[i]->tp != 0  )
+        {
+            for (j=0; j<TABLES[i]->numaddrs; j++)
+            {
+                if ( TABLES[i]->addrs[j] == nxt64bits )
+                    return(TABLES[i]);
+            }
+        }
+    }
     return(0);
 }
 
@@ -1379,6 +1387,7 @@ char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
     if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 && sp->tp != 0 && (amount= juint(json,"amount")) != 0 )
     {
         buyin = (uint32_t)(amount / sp->dp->bigblind);
+        printf("buyin.%u amount %.8f -> %.8f\n",buyin,dstr(amount),dstr(buyin * sp->bigblind));
         if ( buyin >= sp->dp->minbuyin && buyin <= sp->dp->maxbuyin )
             pangea_sendcmd(hex,&sp->tp->hn,"addfunds",-1,(void *)&amount,sizeof(amount),sp->myind,-1);
         else return(clonestr("{\"error\":\"buyin too small or too big\"}"));
