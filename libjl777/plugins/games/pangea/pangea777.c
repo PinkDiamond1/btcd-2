@@ -206,7 +206,9 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
         return(-1);
     }
     printf("NEWHAND\n");
+    final = dp->hand.final, cardpubs = dp->hand.cardpubs;
     memset(&dp->hand,0,sizeof(dp->hand));
+    dp->hand.final = final, dp->hand.cardpubs = cardpubs;
     priv->hole[0] = priv->hole[1] = 0xff;
     memset(priv->holecards,0,sizeof(priv->holecards));
     for (i=0; i<5; i++)
@@ -215,8 +217,6 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     dp->button++;
     if ( dp->button >= dp->N )
         dp->button = 0;
-    final = dp->hand.final, cardpubs = dp->hand.cardpubs;
-    dp->hand.final = final, dp->hand.cardpubs = cardpubs;
     memcpy(dp->hand.cardpubs,data,(dp->numcards + 1) * sizeof(bits256));
     dp->hand.checkprod = cards777_pubkeys(dp->hand.cardpubs,dp->numcards,dp->hand.cardpubs[dp->numcards]);
     //printf("player.%d (%llx vs %llx) got cardpubs.%llx\n",hn->client->H.slot,(long long)hn->client->H.pubkey.txid,(long long)dp->playerpubs[hn->client->H.slot].txid,(long long)dp->checkprod.txid);
