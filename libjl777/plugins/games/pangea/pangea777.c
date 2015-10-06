@@ -522,7 +522,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
     {
         //printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
     }
-    if ( dp->newhand[0] == 0 )
+    if ( dp->hand.betstarted == 0 )
     {
         static uint32_t disptime;
         for (i=n=0; i<dp->N; i++)
