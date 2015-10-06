@@ -862,7 +862,7 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
         *createdflagp = 0;
     for (i=0; i<numaddrs; i++)
         printf("%llu ",(long long)addrs[i]);
-    printf("numaddrs.%d\n",numaddrs);
+    printf("pangea_create numaddrs.%d\n",numaddrs);
     for (i=0; i<numaddrs; i++)
     {
         if ( addrs[i] == tp->nxt64bits )
@@ -886,6 +886,8 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
             printf("pangea_create: unexpected out of memory pub\n");
             return(0);
         }
+        for (j=0; j<5; j++)
+            dp->hand.community[j] = 0xff;
         for (j=0; j<numaddrs; j++)
         {
             //if ( balances != 0 )
@@ -895,6 +897,7 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
                 dp->isbot[j] = isbot[j];
         }
         sp->priv = priv = cards777_allocpriv(numcards,numaddrs);
+        priv->hole[0] = priv->hole[1] = 0xff;
         if ( priv == 0 )
         {
             printf("pangea_create: unexpected out of memory priv\n");

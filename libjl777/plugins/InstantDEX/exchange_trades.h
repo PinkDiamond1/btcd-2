@@ -75,7 +75,7 @@ uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,
     if ( (sig = hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),urlbuf)) != 0 )
         sprintf(hdr,"apisign:%s",sig);
     else hdr[0] = 0;
-    printf("cmdbuf.(%s) h1.(%s)\n",urlbuf,hdr);
+    //printf("cmdbuf.(%s) h1.(%s)\n",urlbuf,hdr);
     if ( (data= curl_post(&cHandle,urlbuf,0,0,hdr,0,0,0)) != 0 )
     {
         //printf("cmd.(%s) [%s]\n",urlbuf,data);
@@ -239,7 +239,7 @@ uint64_t btce_trade(char **retstrp,struct exchange_info *exchange,char *_base,ch
     if ( (sig= hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),payload)) != 0 )
         sprintf(hdr2,"Sign:%s",sig);
     else hdr2[0] = 0;
-    printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",payload,hdr2,hdr1);
+    //printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",payload,hdr2,hdr1);
     if ( (data= curl_post(&cHandle,"https://btc-e.com/tapi",0,payload,hdr2,hdr1,0,0)) != 0 )
     {
         //printf("cmd.(%s) [%s]\n",payload,data);
@@ -317,7 +317,7 @@ uint64_t kraken_trade(char **retstrp,struct exchange_info *exchange,char *_base,
         sprintf(hdr2,"API-Sign:%s",encode64);
     }
     else hdr2[0] = 0;
-    printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",postbuf,hdr2,hdr1);
+    //printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",postbuf,hdr2,hdr1);
     if ( (data= curl_post(&cHandle,url,0,postbuf,hdr1,hdr2,0,0)) != 0 )
     {
         //printf("cmd.(%s) [%s]\n",payload,data);
@@ -1005,7 +1005,7 @@ uint64_t exmo_trade(char **retstrp,struct exchange_info *exchange,char *base,cha
         method = "notyet";
         dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
         sprintf(cmdbuf,"method=Trade&nonce=%ld&pair=%s&type=%s&rate=%.6f&amount=%.6f",time(NULL),pairstr,dir>0?"buy":"sell",price,volume);
-        printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",cmdbuf,hdr2,hdr1);
+        //printf("cmdbuf.(%s) h1.(%s) h2.(%s)\n",cmdbuf,hdr2,hdr1);
     }
     if ( (sig= hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),cmdbuf)) != 0 )
         sprintf(hdr2,"Sign:%s",sig);

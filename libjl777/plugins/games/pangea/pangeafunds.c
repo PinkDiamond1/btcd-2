@@ -322,12 +322,16 @@ cJSON *pangea_handjson(struct cards777_handinfo *hand,uint8_t *holecards,int32_t
     }
     jaddstr(json,"community",cstr);
     jadd(json,"cards",array);
-    cardstr(cardAstr,holecards[0]);
-    cardstr(cardBstr,holecards[1]);
     if ( (card= holecards[0]) != 0xff )
+    {
         jaddnum(json,"cardA",card);
+        cardstr(cardAstr,holecards[0]);
+    } else cardAstr[0] = 0;
     if ( (card= holecards[1]) != 0xff )
+    {
         jaddnum(json,"cardB",card);
+        cardstr(cardBstr,holecards[1]);
+    } else cardBstr[0] = 0;
     sprintf(pairstr,"%s %s",cardAstr,cardBstr);
     jaddstr(json,"holecards",pairstr);
     jaddnum(json,"betsize",dstr(hand->betsize));
@@ -373,6 +377,10 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jaddnum(json,"pangearake",dstr(dp->pangearake));
     jaddnum(json,"bigblind",dstr(dp->bigblind));
     jaddnum(json,"ante",dstr(dp->ante));
+    array = cJSON_CreateArray();
+    for (i=0; i<dp->N; i++)
+        jaddi64bits(array,sp->addrs[i]);
+    jadd(json,"addrs",array);
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
         jaddinum(array,dstr(dp->turnis[i]));
