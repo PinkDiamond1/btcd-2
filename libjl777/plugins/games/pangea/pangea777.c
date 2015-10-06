@@ -47,6 +47,7 @@ struct pangea_thread
 } *THREADS[_PANGEA_MAXTHREADS];
 
 int32_t PANGEA_MAXTHREADS = _PANGEA_MAXTHREADS;
+int32_t Showmode,Autofold;
 //uint64_t Pangea_waiting,Pangea_userinput_betsize; uint32_t Pangea_userinput_starttime; int32_t Pangea_userinput_cardi; char Pangea_userinput[128];
 
 char *clonestr(char *);
@@ -957,6 +958,8 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
             printf("pangea_create: unexpected out of memory priv\n");
             return(0);
         }
+        priv->autoshow = Showmode;
+        priv->autofold = Autofold;
         strcpy(sp->base,base);
         if ( (sp->timestamp= timestamp) == 0 )
             sp->timestamp = (uint32_t)time(NULL);
@@ -1364,7 +1367,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
             printf("pangea_test: unexpected out of mem\n");
             return;
         }
-       tp->threadid = threadid;
+        tp->threadid = threadid;
         tp->nxt64bits = conv_NXTpassword(privkey.bytes,pubkey.bytes,(void *)&threadid,sizeof(threadid));
         if ( threadid == 0 )
         {
@@ -1448,6 +1451,30 @@ char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json)
         }
     }
     return(clonestr("{\"error\":\"cant buyin unless you are part of the table\"}"));
+}
+
+char *pangea_mode(uint64_t my64bits,uint64_t tableid,cJSON *json)
+{
+    struct pangea_info *sp;
+    if ( jobj(json,"autoshow") != 0 )
+    {
+        if ( tableid == 0 )
+            Showmode = juint(json,"autoshow");
+        else if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->priv != 0 )
+            sp->priv->autoshow = juint(json,"autoshow");
+        else return(clonestr("{\"error\":\"autoshow not tableid or sp->priv\"}"));
+        return(clonestr("{\"result\":\"set autoshow mode\"}"));
+    }
+    else if ( jobj(json,"autofold") != 0 )
+    {
+        if ( tableid == 0 )
+            Autofold = juint(json,"autofold");
+        else if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->priv != 0 )
+            sp->priv->autofold = juint(json,"autofold");
+        else return(clonestr("{\"error\":\"autofold not tableid or sp->priv\"}"));
+        return(clonestr("{\"result\":\"set autofold mode\"}"));
+    }
+    return(clonestr("{\"error\":\"unknown pangea mode\"}"));
 }
 
 char *pangea_univ(uint8_t *mypriv,cJSON *json)
@@ -1569,6 +1596,27 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         //    retstr = pangea_input(plugin->nxt64bits,j64bits(json,"tableid"),json);
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
+}
+
+char *Pangea_bypass(uint64_t my64bits,uint8_t myprivkey[32],cJSON *json)
+{
+    char *methodstr,*retstr = 0;
+    if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"turn") == 0 || strcmp(methodstr,"status") == 0 || strcmp(methodstr,"rosetta") == 0 || strcmp(methodstr,"rates") == 0 || strcmp(methodstr,"buyin") == 0|| strcmp(methodstr,"mode") == 0) )
+    {
+        if ( strcmp(methodstr,"turn") == 0 )
+            retstr = pangea_input(my64bits,j64bits(json,"tableid"),json);
+        else if ( strcmp(methodstr,"status") == 0 )
+            retstr = pangea_status(my64bits,j64bits(json,"tableid"),json);
+        else if ( strcmp(methodstr,"mode") == 0 )
+            retstr = pangea_mode(my64bits,j64bits(json,"tableid"),json);
+        else if ( strcmp(methodstr,"rosetta") == 0 )
+            retstr = pangea_univ(myprivkey,json);
+        else if ( strcmp(methodstr,"buyin") == 0 )
+            retstr = pangea_buyin(my64bits,j64bits(json,"tableid"),json);
+        else if ( strcmp(methodstr,"rates") == 0 )
+            retstr = peggyrates(0,jstr(json,"name"));
+    }
+    return(retstr);
 }
 
 #include "../agents/plugin777.c"

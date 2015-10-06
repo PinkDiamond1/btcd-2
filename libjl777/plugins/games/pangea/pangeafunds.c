@@ -392,7 +392,11 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     }
     jadd(json,"bets",bets);
     jaddnum(json,"totalbets",dstr(total));
-    jadd(json,"hand",pangea_handjson(&dp->hand,sp->priv->hole,dp->isbot[sp->myind]));
+    if ( sp->priv != 0 )
+    {
+        jadd64bits(json,"autoshow",sp->priv->autoshow);
+        jadd(json,"hand",pangea_handjson(&dp->hand,sp->priv->hole,dp->isbot[sp->myind]));
+    }
     if ( (countdown= pangea_countdown(dp,sp->myind)) >= 0 )
         jaddnum(json,"timeleft",countdown);
     return(json);
@@ -504,6 +508,8 @@ int32_t pangea_confirmturn(union hostnet777 *hn,cJSON *json,struct cards777_pubd
             if ( dp->isbot[hn->client->H.slot] != 0 )
                 pangea_bot(hn,dp,turni,cardi,betsize);
             else if ( dp->hand.betstatus[hn->client->H.slot] == CARDS777_FOLD || dp->hand.betstatus[hn->client->H.slot] == CARDS777_ALLIN )
+                pangea_sendcmd(hex,hn,"action",-1,(void *)&amount,sizeof(amount),cardi,0);
+            else if ( priv->autofold != 0 )
                 pangea_sendcmd(hex,hn,"action",-1,(void *)&amount,sizeof(amount),cardi,0);
             else
             {

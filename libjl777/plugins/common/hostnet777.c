@@ -58,7 +58,7 @@ struct cards777_privdata
 {
     bits256 holecards[2],*incards,*outcards,*xoverz;
     //,*reconstructed[CARDS777_MAXPLAYERS],*mofn[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS];
-    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,hole[2],cardis[2],autoshow; bits256 data[];
+    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,hole[2],cardis[2],autoshow,autofold; bits256 data[];
 };
 
 struct hostnet777_endpoint { char endpoint[128],transport[16],ipaddr[64]; uint16_t port; };

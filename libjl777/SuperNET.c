@@ -179,8 +179,9 @@ char *process_nn_message(int32_t sock,char *jsonstr)
 
 char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr,int32_t duration)
 {
+    char *Pangea_bypass(uint64_t my64bits,uint8_t myprivkey[32],cJSON *json);
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
-    struct destbuf plugin,method,request; char *bstr,*retstr=0,*methodstr;
+    struct destbuf plugin,method,request; char *bstr,*retstr=0;
     uint64_t daemonid,instanceid,tag;
     int32_t override=0,broadcastflag = 0;
     cJSON *json;
@@ -198,23 +199,9 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
         {
             if ( strcmp(plugin.buf,"pangea") == 0 )
             {
-                if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"turn") == 0 || strcmp(methodstr,"status") == 0 || strcmp(methodstr,"rosetta") == 0 || strcmp(methodstr,"rates") == 0 || strcmp(methodstr,"buyin") == 0) )
+                if ( (retstr= Pangea_bypass(SUPERNET.my64bits,SUPERNET.myprivkey,json)) != 0 )
                 {
-                    char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json);
-                    char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json);
-                    char *pangea_buyin(uint64_t my64bits,uint64_t tableid,cJSON *json);
-                    char *pangea_univ(uint8_t *mypriv,cJSON *json);
-                    if ( strcmp(methodstr,"turn") == 0 )
-                        retstr = pangea_input(SUPERNET.my64bits,j64bits(json,"tableid"),json);
-                    else if ( strcmp(methodstr,"status") == 0 )
-                        retstr = pangea_status(SUPERNET.my64bits,j64bits(json,"tableid"),json);
-                    else if ( strcmp(methodstr,"rosetta") == 0 )
-                        retstr = pangea_univ(SUPERNET.myprivkey,json);
-                    else if ( strcmp(methodstr,"buyin") == 0 )
-                        retstr = pangea_buyin(SUPERNET.my64bits,j64bits(json,"tableid"),json);
-                    else if ( strcmp(methodstr,"rates") == 0 )
-                        retstr = peggyrates(0,jstr(json,"name"));
-                    free_json(json);
+                    free(json);
                     return(retstr);
                 }
             }
