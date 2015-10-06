@@ -830,7 +830,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                     {
                         if ( time(NULL) > hn->client->H.lastping + pinggap )
                         {
-                            if ( 0 && (dp= hn->client->H.pubdata) != 0 )
+                            if ( 1 && (dp= hn->client->H.pubdata) != 0 )
                             {
                                 pangea_sendcmd(hex,hn,"ping",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),dp->hand.cardi,dp->hand.undergun);
                                 hn->client->H.lastping = (uint32_t)time(NULL);
