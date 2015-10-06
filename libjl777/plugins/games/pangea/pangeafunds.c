@@ -590,7 +590,7 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
 
 int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen)
 {
-    uint32_t now; int32_t action,cardi,i,senderind,activej; char hex[1024]; bits256 zero; uint64_t split,rake,pangearake,total,amount = 0;
+    uint32_t now; int32_t action,cardi,i,j,senderind,activej; char hex[1024]; bits256 zero; uint64_t split,rake,pangearake,total,amount = 0;
     action = juint(json,"turni");
     cardi = juint(json,"cardi");
     senderind = juint(json,"myind");
@@ -617,7 +617,8 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         now = (uint32_t)time(NULL);
         for (i=0; i<dp->N; i++)
         {
-            if ( dp->hand.betstatus[i] != CARDS777_FOLD && dp->hand.betstatus[i] != CARDS777_ALLIN )
+            j = (dp->hand.undergun + i) % dp->N;
+            if ( dp->hand.betstatus[j] != CARDS777_FOLD && dp->hand.betstatus[j] != CARDS777_ALLIN )
                 break;
         }
         if ( i < dp->N )
