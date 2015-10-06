@@ -486,7 +486,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                 hostnet777_copybits(1,msg,(void *)&destbits,sizeof(uint64_t));
                 for (j=0; j<hn->server->num; j++)
                 {
-                    if ( hn->server->clients[j].nxt64bits == destbits )
+                    if ( destbits == 0 || hn->server->clients[j].nxt64bits == destbits )
                     {
                         if  ( j == 0 )
                         {
@@ -506,14 +506,14 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                 }
                 if ( j == hn->server->num )
                 {
-                    printf("got msg to %llu not a client\n",(long long)destbits);
+                    //printf("got msg to %llu not a client\n",(long long)destbits);
                     nn_freemsg(msg);
                 }
                 if ( (item= queue_dequeue(&hn->server->mailboxQ[ind],0)) != 0 )
                 {
                     ptr = (uint16_t *)((long)item + sizeof(struct queueitem));
                     hostnet777_send(hn->server->clients[ind].pmsock,&ptr[1],ptr[0]);
-                    printf("send %d from mailbox to %d\n",len,ind);
+                    //printf("send %d from mailbox to %d\n",len,ind);
                     free(item);
                 }
             }
