@@ -351,7 +351,7 @@ int32_t pangea_encoded(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     //int32_t i; for (i=0; i<dp->numcards*dp->N; i++)
     //    printf("%llx ",(long long)priv->outcards[i].txid);
     printf("player.%d encodes into %p %llx -> %llx\n",hn->client->H.slot,priv->outcards,*(uint64_t *)data,(long long)priv->outcards[0].txid);
-    if ( (hex= malloc(65536)) != 0 )
+    if ( hn->client->H.slot != 0 && (hex= malloc(65536)) != 0 )
     {
         if ( hn->client->H.slot < dp->N-1 )
         {
