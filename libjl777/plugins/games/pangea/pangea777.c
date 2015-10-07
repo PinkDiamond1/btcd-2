@@ -255,6 +255,20 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
     }
 }
 
+int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
+{
+    uint64_t amount; int32_t i;
+    memcpy(&amount,data,sizeof(amount));
+    dp->balances[senderind] = amount;
+    printf("myind.%d: addfunds.%d <- %.8f total %.8f\n",hn->client->H.slot,senderind,dstr(amount),dstr(dp->balances[senderind]));
+    for (i=0; i<dp->N; i++)
+        if ( dp->balances[i] == 0 )
+            break;
+    if ( i == dp->N )
+        pangea_antes(hn,dp);
+    return(0);
+}
+
 void pangea_sendnewdeck(union hostnet777 *hn,struct cards777_pubdata *dp)
 {
     int32_t hexlen; bits256 destpub;
@@ -308,7 +322,6 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     //printf("player.%d (%llx vs %llx) got cardpubs.%llx\n",hn->client->H.slot,(long long)hn->client->H.pubkey.txid,(long long)dp->playerpubs[hn->client->H.slot].txid,(long long)dp->checkprod.txid);
     if ( (nrs= jstr(json,"sharenrs")) != 0 )
         decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
-    pangea_antes(hn,dp);
     pangea_sendcmd(hex,hn,"gotdeck",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),dp->hand.cardi,dp->hand.userinput_starttime);
     return(0);
 }
