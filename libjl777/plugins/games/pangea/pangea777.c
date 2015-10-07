@@ -138,8 +138,8 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     {
         destpub = dp->playerpubs[destplayer];
         destbits = acct777_nxt64bits(destpub);
+        hostnet777_msg(destbits,destpub,hn,blindflag,hex,hexlen);
     }
-    hostnet777_msg(destbits,destpub,hn,blindflag,hex,hexlen);
 }
 
 #include "pangeafunds.c"

@@ -630,6 +630,7 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
                         break;
                 }
                 dp->hand.undergun = j;
+                printf("sent showdown request for undergun.%d\n",j);
                 pangea_sendcmd(hex,hn,"showdown",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
             }
         }
@@ -688,6 +689,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
             if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD )
                 break;
         }
+        printf("host sends showdown for undergun.%d\n",dp->hand.undergun);
         pangea_sendcmd(hex,hn,"showdown",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
     }
     return(0);
