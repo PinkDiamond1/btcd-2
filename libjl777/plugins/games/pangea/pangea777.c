@@ -365,7 +365,7 @@ void pangea_checkstart(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
         {
             dp->hand.encodestarted = (uint32_t)time(NULL);
             printf("SERVERSTATE issues encoded %u\n",dp->hand.encodestarted);
-            if ( dp->N == 2 )
+            if ( 0 && dp->N == 2 )
                 pangea_sendcmd(dp->newhand,hn,"encoded",-1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
             else pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
         }
@@ -622,7 +622,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         for (i=0; i<dp->N; i++)
             dp->hand.hands[i][cardi - dp->N*2] = data[1];
         memcpy(dp->hand.community256[cardi - dp->N*2].bytes,data,sizeof(bits256));
-        //printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
+        printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
         if ( senderind == hn->client->H.slot )
             pangea_rank(dp,senderind);
         if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
