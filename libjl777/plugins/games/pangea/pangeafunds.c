@@ -15,7 +15,7 @@
 
 void pangea_fold(struct cards777_pubdata *dp,int32_t player)
 {
-    printf("player.%d folded\n",player);
+    printf("player.%d folded\n",player); //getchar();
     dp->hand.handmask |= (1 << player);
     dp->hand.betstatus[player] = CARDS777_FOLD;
     dp->hand.actions[player] = CARDS777_FOLD;
@@ -551,11 +551,11 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     memcpy(&amount,data,sizeof(amount));
     if ( cardi < 2*dp->N )
         printf("pangea_action: illegal cardi.%d\n",cardi);
-    if ( action == CARDS777_FOLD || (amount == 0 && dp->hand.bets[senderind] < dp->hand.betsize) )
+    /*if ( action == CARDS777_FOLD )//|| (amount == 0 && dp->hand.bets[senderind] < dp->hand.betsize) )
     {
         pangea_fold(dp,senderind);
         return(0);
-    }
+    }*/
     if ( senderind != dp->hand.undergun )
     {
         printf("out of turn action.%d by player.%d cardi.%d amount %.8f\n",action,senderind,cardi,dstr(amount));
