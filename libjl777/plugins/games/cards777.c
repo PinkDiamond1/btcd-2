@@ -81,7 +81,7 @@ int32_t cards777_checkcard(bits256 *cardprivp,int32_t cardi,int32_t slot,int32_t
     cardpriv = cards777_cardpriv(playerpriv,cardpubs,numcards,card);
     if ( cardpriv.txid != 0 )
     {
-        if ( destplayer != slot )
+        if ( slot >= 0 && destplayer != slot )
             printf(">>>>>>>>>>>> ERROR ");
         if ( Debuglevel > 2 )
             printf("slot.%d B DECODED cardi.%d destplayer.%d cardpriv.[%d]\n",slot,cardi,destplayer,cardpriv.bytes[1]);
