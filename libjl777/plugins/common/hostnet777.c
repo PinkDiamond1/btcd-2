@@ -408,7 +408,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recv
                     printf("msg.(%ld) sender.%llu mismatch vs json.%llu\n",strlen(jsonstr),(long long)senderbits,(long long)j64bits(json,"sender")), free(ptr);
                 else
                 {
-                    //printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
+                    printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
                     //if ( hostnet777_hashes(recvhashes,64,msg,origlen) >= 0 )
                         queue_enqueue("host777",Q,(void *)ptr);
                 }
