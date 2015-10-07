@@ -34,6 +34,7 @@
 #define PANGEA_MINRAKE_MILLIS 5
 #define PANGEA_USERTIMEOUT 60
 #define PANGEA_MAX_HOSTRAKE 10
+#define PANGEA_HANDGAP 30
 
 struct pangea_info
 {
@@ -87,21 +88,6 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     int32_t n,j,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json; char hoststr[1024];
     struct cards777_pubdata *dp = hn->client->H.pubdata;
     hoststr[0] = 0;
-    /*if ( hn->client->H.slot == 0 )
-    {
-        array = cJSON_CreateArray();
-        for (i=0; i<5; i++)
-        {
-            if ( (card= dp->hand.community[i]) != 0xff )
-                jaddinum(array,card);
-            else break;
-        }
-        if ( i > 0 )
-        {
-            sprintf(hoststr,"\"state\":%u,\"community\":%s,",hn->client->H.state,jprint(array,1));
-            cardi = dp->N*2 + i;
-        }
-    }*/
     sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"turni\":%d,\"myind\":%d,\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,%s\"data\":\"",cmdstr,(long long)hostnet777_convmT(&hn->client->H.mT,0),turni,hn->client->H.slot,cardi,destplayer,(long long)hn->client->H.nxt64bits,time(NULL),datalen,hoststr);
     if ( data != 0 && datalen != 0 )
     {
@@ -287,7 +273,8 @@ int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
 {
     uint64_t amount;
     memcpy(&amount,data,sizeof(amount));
-    dp->balances[senderind] = amount;
+    if ( dp->balances[senderind] == 0 )
+        dp->balances[senderind] = amount;
     pangea_checkantes(hn,dp,senderind);
     printf("myind.%d: addfunds.%d <- %.8f total %.8f\n",hn->client->H.slot,senderind,dstr(amount),dstr(dp->balances[senderind]));
     return(0);
@@ -642,7 +629,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
 void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
     int32_t i,j,n; //struct pangea_info *sp = dp->table;
-    if ( dp->hand.finished != 0 && time(NULL) > dp->hand.finished+5 )
+    if ( dp->hand.finished != 0 && time(NULL) > dp->hand.finished+PANGEA_HANDGAP )
         pangea_anotherhand(hn,dp,0);
     if ( dp->hand.betstarted == 0 && dp->newhand[0] == 0 )
     {
