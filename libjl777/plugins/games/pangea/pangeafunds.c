@@ -109,6 +109,7 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
         else retval = CARDS777_BET;
     }
     dp->balances[player] -= bet, dp->hand.bets[player] += bet;
+    printf("player.%d BET %f -> balances %f bets %f\n",player,dstr(bet),dstr(dp->balances[player]),dstr(dp->hand.bets[player]));
     return(retval);
 }
 
@@ -675,6 +676,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
         n = pangea_sidepots(sidepots,hn,dp);
         for (j=0; j<n; j++)
             dp->hostrake += pangea_splitpot(sidepots[j],hn,dp->rakemillis);
+        pangea_clearhand(&dp->hand,priv);
     }
     else if ( hn->client->H.slot == 0 && senderind != 0 )
     {

@@ -59,6 +59,7 @@ int32_t init_hexbytes_noT(char *hexbytes,uint8_t *message,long len);
 bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
 uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass);
 int32_t pangea_anotherhand(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t sleepflag);
+void pangea_clearhand(struct cards777_handinfo *hand,struct cards777_privdata *priv);
 
 
 #define PANGEA_COMMANDS "start", "newtable", "status", "turn"
@@ -116,7 +117,7 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     free_json(json);
     hexlen = (int32_t)strlen(hex)+1;
     //printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
-    if ( destplayer < 0 || ((1LL << destplayer) & dp->pmworks) == 0 )
+    if ( destplayer < 0 )//|| ((1LL << destplayer) & dp->pmworks) == 0 )
     {
         if ( destplayer < 0 )
         {
@@ -201,7 +202,7 @@ void pangea_free(struct pangea_info *sp)
     free(sp);
 }
 
-void pangea_clearhand(struct cards777_handinfo *hand)
+void pangea_clearhand(struct cards777_handinfo *hand,struct cards777_privdata *priv)
 {
     bits256 *final,*cardpubs; int32_t i;
     final = hand->final, cardpubs = hand->cardpubs;
@@ -210,6 +211,8 @@ void pangea_clearhand(struct cards777_handinfo *hand)
     for (i=0; i<5; i++)
         hand->community[i] = 0xff;
     memset(hand->hands,0xff,sizeof(hand->hands));
+    priv->hole[0] = priv->hole[1] = priv->cardis[0] = priv->cardis[1] = 0xff;
+    memset(priv->holecards,0,sizeof(priv->holecards));
 }
 
 void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
@@ -296,7 +299,7 @@ void pangea_sendnewdeck(union hostnet777 *hn,struct cards777_pubdata *dp)
     hexlen = (int32_t)strlen(dp->newhand)+1;
     memset(destpub.bytes,0,sizeof(destpub));
     hostnet777_msg(0,destpub,hn,0,dp->newhand,hexlen);
-    dp->startdecktime = (uint32_t)time(NULL);
+    dp->hand.startdecktime = (uint32_t)time(NULL);
 }
 
 int32_t pangea_newdeck(union hostnet777 *src)
@@ -304,9 +307,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
     uint8_t data[(CARDS777_MAXCARDS + 1) * sizeof(bits256)]; struct cards777_pubdata *dp; char nrs[512]; struct cards777_privdata *priv; int32_t n,len;
     dp = src->client->H.pubdata;
     priv = src->client->H.privdata;
-    pangea_clearhand(&dp->hand);
-    priv->hole[0] = priv->hole[1] = 0xff;
-    memset(priv->holecards,0,sizeof(priv->holecards));
+    pangea_clearhand(&dp->hand,priv);
     init_sharenrs(dp->hand.sharenrs,0,dp->N,dp->N);
     dp->hand.checkprod = dp->hand.cardpubs[dp->numcards] = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
     init_hexbytes_noT(nrs,dp->hand.sharenrs,dp->N);
@@ -331,13 +332,9 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     }
     printf("NEWHAND received\n");
     if ( hn->server->H.slot != 0 )
-        pangea_clearhand(&dp->hand);
-    priv->hole[0] = priv->hole[1] = 0xff;
-    memset(priv->holecards,0,sizeof(priv->holecards));
+        pangea_clearhand(&dp->hand,priv);
     dp->numhands++;
-    dp->button++;
-    if ( dp->button >= dp->N )
-        dp->button = 0;
+    dp->button = (dp->button + 1) % dp->N;
     memcpy(dp->hand.cardpubs,data,(dp->numcards + 1) * sizeof(bits256));
     dp->hand.checkprod = cards777_pubkeys(dp->hand.cardpubs,dp->numcards,dp->hand.cardpubs[dp->numcards]);
     //printf("player.%d (%llx vs %llx) got cardpubs.%llx\n",hn->client->H.slot,(long long)hn->client->H.pubkey.txid,(long long)dp->playerpubs[hn->client->H.slot].txid,(long long)dp->checkprod.txid);
@@ -593,13 +590,9 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
 
 void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
-    int32_t i,j,n; struct pangea_info *sp = dp->table;
+    int32_t i,j,n; //struct pangea_info *sp = dp->table;
     if ( dp->hand.finished != 0 && time(NULL) > dp->hand.finished+5 )
         pangea_anotherhand(hn,dp,0);
-    if ( time(NULL) > sp->timestamp+20 && time(NULL) < sp->timestamp+22 && dp->pmworks != ((1 << dp->N) - 1) )
-    {
-        //printf("PMs are only partially working: %llx vs %x, activate selective PUB\n",(long long)dp->pmworks,((1 << dp->N) - 1));
-    }
     if ( dp->hand.betstarted == 0 && dp->newhand[0] == 0 )
     {
         static uint32_t disptime;
@@ -619,7 +612,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             }
             if ( i == dp->N )
             {
-                if ( time(NULL) > dp->startdecktime+10 )
+                if ( time(NULL) > dp->hand.startdecktime+10 )
                 {
                     printf("send newdeck len.%ld\n",strlen(dp->newhand));
                     pangea_newdeck(hn);
@@ -634,7 +627,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             }
         }
     }
-    else if ( dp->newhand[0] != 0 && dp->encodestarted == 0 )
+    else if ( dp->newhand[0] != 0 && dp->hand.encodestarted == 0 )
     {
         for (i=n=0; i<dp->N; i++)
         {
@@ -647,16 +640,16 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
         {
             for (i=0; i<dp->N; i++)
             {
-                if ( dp->othercardpubs[i] != dp->hand.checkprod.txid )
+                if ( dp->hand.othercardpubs[i] != dp->hand.checkprod.txid )
                     break;
             }
             if ( i == dp->N )
             {
-                dp->encodestarted = (uint32_t)time(NULL);
+                dp->hand.encodestarted = (uint32_t)time(NULL);
                 printf("SERVERSTATE issues encoded\n");
                 pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
             }
-            else if ( 0 && dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
+            else if ( 0 && dp->hand.startdecktime != 0 && time(NULL) > dp->hand.startdecktime+10 )
             {
                 pangea_sendnewdeck(hn,dp);
                 printf("resend NEWDECK encode.%llx numhands.%d\n",(long long)priv->outcards[0].txid,dp->numhands);
@@ -665,9 +658,9 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
     }
     else if ( 0 && dp->hand.final[0].txid == 0 )
     {
-        if ( dp->startdecktime != 0 && time(NULL) > dp->startdecktime+20 )
+        if ( dp->hand.startdecktime != 0 && time(NULL) > dp->hand.startdecktime+20 )
         {
-            printf("startdecktim.%u host didnt get final in time, restarting hand\n",dp->startdecktime);
+            printf("startdecktim.%u host didnt get final in time, restarting hand\n",dp->hand.startdecktime);
             pangea_sendnewdeck(hn,dp);
         }
     }
@@ -675,8 +668,8 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
 
 int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    dp->othercardpubs[senderind] = *(uint64_t *)data;
-    printf("player.%d got pangea_gotdeck from senderind.%d otherpubs.%llx\n",hn->client->H.slot,senderind,(long long)dp->othercardpubs[senderind]);
+    dp->hand.othercardpubs[senderind] = *(uint64_t *)data;
+    printf("player.%d got pangea_gotdeck from senderind.%d otherpubs.%llx\n",hn->client->H.slot,senderind,(long long)dp->hand.othercardpubs[senderind]);
     if ( hn->client->H.slot == 0 )
         pangea_serverstate(hn,dp,priv);
     return(0);
@@ -684,10 +677,10 @@ int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
 
 int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    char hex[2048];
-    dp->readymask |= (1 << senderind);
-    printf("player.%d got ready from senderind.%d readymask.%x\n",hn->client->H.slot,senderind,dp->readymask);
-    if ( 0 && hn->client->H.slot == 0 )
+    //char hex[2048];
+    dp->hand.readymask |= (1 << senderind);
+    printf("player.%d got ready from senderind.%d readymask.%x\n",hn->client->H.slot,senderind,dp->hand.readymask);
+    /*if ( 0 && hn->client->H.slot == 0 )
     {
         if ( (dp->pmworks & (1 << senderind)) == 0 )
         {
@@ -695,11 +688,11 @@ int32_t pangea_ready(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *d
             pangea_sendcmd(hex,hn,"pmtest",-1,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,-1);
             pangea_sendcmd(hex,hn,"pmtest",senderind,dp->hand.checkprod.bytes,sizeof(uint64_t),-1,senderind);
         }
-    }
+    }*/
     return(0);
 }
 
-int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
+/*int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
     int32_t turni,cardi; char hex[2048];
     cardi = juint(json,"cardi");
@@ -740,11 +733,11 @@ int32_t pangea_pmtest(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         }
     }
     return(0);
-}
+}*/
 
 int32_t pangea_ping(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    dp->othercardpubs[senderind] = *(uint64_t *)data;
+    dp->hand.othercardpubs[senderind] = *(uint64_t *)data;
     if ( senderind == 0 )
     {
         /*dp->hand.undergun = juint(json,"turni");
@@ -836,8 +829,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     pangea_newhand(hn,json,dp,priv,buf,len,senderind);
                 else if ( strcmp(cmdstr,"ping") == 0 )
                     pangea_ping(hn,json,dp,priv,buf,len,senderind);
-                else if ( strcmp(cmdstr,"pmtest") == 0 )
-                    pangea_pmtest(hn,json,dp,priv,buf,len,senderind);
+                //else if ( strcmp(cmdstr,"pmtest") == 0 )
+                //    pangea_pmtest(hn,json,dp,priv,buf,len,senderind);
                 else if ( strcmp(cmdstr,"gotdeck") == 0 )
                     pangea_gotdeck(hn,json,dp,priv,buf,len,senderind);
                 else if ( strcmp(cmdstr,"ready") == 0 )
@@ -1240,7 +1233,7 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
         if ( myind >= 0 && createdflag != 0 && addrs[myind] == tp->nxt64bits )
         {
             memcpy(sp->addrs,addrs,sizeof(*addrs) * dp->N);
-            dp->readymask |= (1 << sp->myind);
+            dp->hand.readymask |= (1 << sp->myind);
             pangea_sendcmd(hex,&tp->hn,"ready",-1,0,0,0,0);
             return(clonestr("{\"result\":\"newtable created\"}"));
         }
@@ -1403,7 +1396,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         addrstr = jprint(addrs_jsonarray(addrs,num),1);
         ciphers = jprint(pangea_ciphersjson(dp,sp->priv),1);
         playerpubs = jprint(pangea_playerpubs(dp->playerpubs,num),1);
-        dp->readymask |= (1 << sp->myind);
+        dp->hand.readymask |= (1 << sp->myind);
         sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"minbuyin\":\"%d\",\"maxbuyin\":\"%u\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"isbot\":%s,\"millitime\":\"%lld\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->minbuyin,dp->maxbuyin,dp->rakemillis,(long long)ante,playerpubs,addrstr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->H.mT,0)); //\"pluginrequest\":\"SuperNET\",
 #ifdef BUNDLED
         {
@@ -1414,7 +1407,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         }
 #endif
         printf("START.(%s)\n",retbuf);
-        dp->pmworks |= (1 << sp->myind);
+        //dp->pmworks |= (1 << sp->myind);
         free(addrstr), free(ciphers), free(playerpubs), free(isbotstr);// free(balancestr);
     }
     return(0);
