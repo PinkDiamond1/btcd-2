@@ -362,6 +362,7 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
 int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
 {
     int32_t i,firsti = -1; bits256 hash;
+    return(-1);
     calc_sha256(0,hash.bytes,msg,len);
     for (i=0; i<n; i++)
     {
@@ -369,7 +370,7 @@ int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
             firsti = i;
         if ( hash.txid == hashes[i] )
         {
-            printf("filter duplicate msg %llx\n",(long long)hash.txid);
+            //printf("filter duplicate msg %llx\n",(long long)hash.txid);
             return(-1);
         }
     }
