@@ -623,10 +623,10 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         for (i=0; i<dp->N; i++)
             dp->hand.hands[i][cardi - dp->N*2] = data[1];
         memcpy(dp->hand.community256[cardi - dp->N*2].bytes,data,sizeof(bits256));
-        printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
+        //printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
         if ( senderind == hn->client->H.slot )
             pangea_rank(dp,senderind);
-        printf("calc rank\n");
+        //printf("calc rank\n");
         if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
             pangea_startbets(hn,dp,cardi+1);
         else printf("dont start bets %d\n",cardi+1);
