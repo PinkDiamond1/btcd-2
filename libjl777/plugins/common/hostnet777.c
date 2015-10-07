@@ -477,7 +477,7 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
                 hostnet777_mailboxQ(&ptr->server->mailboxQ[i],cipher,cipherlen);
             else printf("cant find destbits.%llu\n",(long long)destbits);
         }
-        else hostnet777_send(sendsock,cipher,cipherlen);
+        hostnet777_send(sendsock,cipher,cipherlen);
         free(cipher);
     }
     if ( data != msg )
