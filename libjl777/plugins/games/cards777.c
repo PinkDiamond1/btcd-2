@@ -403,5 +403,25 @@ int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_
     return(0);
 }
 
+void cards777_test()
+{
+    int32_t i,j,vals[52][52]; bits256 keypairs[52][2],otherpairs[52][2],matrix[52][52];
+    for (i=0; i<52; i++)
+        keypairs[i][0] = curve25519_keypair(&keypairs[i][1]);
+    for (j=0; j<52; j++)
+        otherpairs[j][0] = curve25519_keypair(&otherpairs[j][1]);
+    while ( 1 )
+    {
+        for (i=0; i<52; i++)
+        {
+            for (j=0; j<52; j++)
+            {
+                matrix[i][j] = fcontract(fmul(fexpand(keypairs[j][1]),fexpand(otherpairs[j][0])));
+                vals[i][j] = matrix[i][j].bytes[1] % 52;
+            }
+        }
+    }
+}
+
 #endif
 #endif

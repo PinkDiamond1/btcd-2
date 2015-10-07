@@ -797,7 +797,7 @@ int main(int argc,const char *argv[])
         void portable_OS_init();
         //raft777_test();
         int numplayers = 9;
-        portable_OS_init(), hostnet777_test(numplayers,1000 * (numplayers + numplayers * (numplayers*2 + 5 + 1)),1), getchar();
+        portable_OS_init(), hostnet777_test(numplayers,10 * (numplayers + numplayers * (numplayers*2 + 5 + 1)),0), getchar();
     }
 #endif
     if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) == 0 )
