@@ -494,12 +494,12 @@ int32_t hostnet777_idle(union hostnet777 *hn)
         mypriv = hn->client->H.privkey, mypub = hn->client->H.pubkey;
         if ( (sock= hn->client->subsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
         {
-            printf("client got pub len.%d\n",len);
+            //printf("client got pub len.%d\n",len);
             hostnet777_processmsg(&destbits,&senderpub,hn->client->H.recvhashes,&hn->client->H.Q,mypriv,mypub,msg,len,0,&hn->client->H.mT), n++;
         }
         if ( (sock= hn->client->my.pmsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
         {
-            printf("client got pmsock.%d\n",len);
+            //printf("client got pmsock.%d\n",len);
             hostnet777_processmsg(&destbits,&senderpub,hn->client->H.recvhashes,&hn->client->H.Q,mypriv,mypub,msg,len,1,&hn->client->H.mT), n++;
         }
     }
@@ -547,7 +547,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                 {
                     ptr = (uint16_t *)((long)item + sizeof(struct queueitem));
                     hostnet777_send(hn->server->clients[ind].pmsock,&ptr[1],ptr[0]);
-                    printf("send %d from mailbox to %d\n",len,ind);
+                    //printf("send %d from mailbox to %d\n",len,ind);
                     free(item);
                 }
             }
