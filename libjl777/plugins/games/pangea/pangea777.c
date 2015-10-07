@@ -254,7 +254,7 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
         }
     }
     for (i=0; i<dp->N; i++)
-        printf("%.8f ",dstr(dp->balances[i]));
+        printf("%.8f ",dstr(dp->hand.bets[i]));
     printf("antes\n");
 }
 
@@ -276,7 +276,10 @@ int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
             if ( dp->hand.bets[i] != 0 )
                 break;
         if ( i != dp->N )
+        {
+            printf("i.%d vs N.%d call antes\n",i,dp->N);
             pangea_antes(hn,dp);
+        }
     }
     return(0);
 }
