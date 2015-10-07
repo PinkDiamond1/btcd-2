@@ -525,14 +525,14 @@ static void DisplayHand5 (const CardPileType * h) {
 
 static void set_cardstr(char *cardstr,uint32_t c)
 {
-    static char suitdisp[9] = { 0, 'c', 'd', 0, 'h', 0, 0, 0, 's' };
-	cardstr[0] = "        1    "[CardValue[c]];
-	cardstr[1] = "234567890JQKA"[CardValue[c]];
+    /*static char suitdisp[9] = { 0, 'c', 'd', 0, 'h', 0, 0, 0, 's' };
+	cardstr[0] = "        1    "[CardValue[c % 13]];
+	cardstr[1] = "234567890JQKA"[CardValue[c % 13]];
 	cardstr[2] = suitdisp[CardSuit[c]];
-	cardstr[3] = '\0';
+	cardstr[3] = '\0';*/
 
-    /*j = 0;
-     int32_t i,j;
+     int32_t i,j=0;
+    c >>= 1;
      for (i=12; i>=0; i--)
         if ( ((1 << i) & c) != 0 )
         {
@@ -540,7 +540,7 @@ static void set_cardstr(char *cardstr,uint32_t c)
             cardstr[j++] = "234567890JQKA"[i];
             cardstr[j++] = ' ';
         }
-    cardstr[j++] = 0;*/
+    cardstr[j++] = 0;
 }
 
 uint32_t set_handstr(char *handstr,uint8_t cards[7],int32_t verbose)

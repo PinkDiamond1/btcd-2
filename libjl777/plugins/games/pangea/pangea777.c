@@ -407,6 +407,7 @@ int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     }
     //printf("pangea_card priv.%llx\n",(long long)hn->client->H.privkey.txid);
     destplayer = juint(json,"dest");
+    printf("card.%d destplayer.%d\n",cardi,destplayer);
     if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)data)) >= 0 )
     {
         destplayer = hn->client->H.slot;
@@ -625,8 +626,10 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
         if ( senderind == hn->client->H.slot )
             pangea_rank(dp,senderind);
+        printf("calc rank\n");
         if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
             pangea_startbets(hn,dp,cardi+1);
+        else printf("dont start bets %d\n",cardi+1);
     }
     else
     {
