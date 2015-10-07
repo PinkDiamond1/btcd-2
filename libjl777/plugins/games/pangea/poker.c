@@ -57,7 +57,7 @@ int32_t cardstr(char *cardstr,uint8_t card)
     int32_t suit; char *cardc = "A234567890JQK",suitc[4] = { 'c', 'd', 'h', 's' };
     suit = card / 13;
     card %= 13;
-    if ( card == 10 )
+    if ( card == 9 )
         sprintf(cardstr,"10%c",suitc[suit]);
     else sprintf(cardstr,"%c%c",cardc[card],suitc[suit]);
     return(card);
@@ -525,17 +525,22 @@ static void DisplayHand5 (const CardPileType * h) {
 
 static void set_cardstr(char *cardstr,uint32_t c)
 {
-    int32_t i,j;
-    cardstr[0] = 0;
-    j = 0;
-    for (i=12; i>=0; i--)
+    static char suitdisp[9] = { 0, 'c', 'd', 0, 'h', 0, 0, 0, 's' };
+	cardstr[0] = "        1    "[CardValue[c]];
+	cardstr[1] = "234567890JQKA"[CardValue[c]];
+	cardstr[2] = suitdisp[CardSuit[c]];
+	cardstr[3] = '\0';
+
+    /*j = 0;
+     int32_t i,j;
+     for (i=12; i>=0; i--)
         if ( ((1 << i) & c) != 0 )
         {
             cardstr[j++] = "        1    "[i];
             cardstr[j++] = "234567890JQKA"[i];
             cardstr[j++] = ' ';
         }
-    cardstr[j++] = 0;
+    cardstr[j++] = 0;*/
 }
 
 uint32_t set_handstr(char *handstr,uint8_t cards[7],int32_t verbose)
