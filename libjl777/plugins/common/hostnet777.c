@@ -368,7 +368,10 @@ int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
         if ( hashes[i] == 0 && firsti < 0 )
             firsti = i;
         if ( hash.txid == hashes[i] )
+        {
+            printf("filter duplicate msg %llx\n",(long long)hash.txid);
             return(-1);
+        }
     }
     if ( firsti >= 0 )
         hashes[firsti] = hash.txid;
@@ -405,7 +408,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recv
                 else
                 {
                     //printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
-                    if ( hostnet777_hashes(recvhashes,64,msg,origlen) < 0 )
+                    if ( hostnet777_hashes(recvhashes,64,msg,origlen) >= 0 )
                         queue_enqueue("host777",Q,(void *)ptr);
                 }
                 free_json(json);
