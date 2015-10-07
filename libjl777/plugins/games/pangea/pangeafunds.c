@@ -685,7 +685,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
                 printf("all players queried with showdown\n");
                 return(0);
             }
-            if ( dp->hand.betstatus[hn->client->H.slot] != CARDS777_FOLD )
+            if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD )
                 break;
         }
         pangea_sendcmd(hex,hn,"showdown",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
