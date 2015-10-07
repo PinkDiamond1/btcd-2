@@ -639,8 +639,8 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
         printf("hostnet777_register: cant register slot.%d vs num.%d vs max.%d\n",slot,srv->num,srv->max);
         return(-1);
     }
-    sprintf(endpoint,"%s://%s:%u",srv->ep.transport,"127.0.0.1",srv->ep.port + slot + 1); //srv->ep.ipaddr
-    srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_PULL",NN_PULL,srv->ep.port + slot + 1,10,10);
+    sprintf(endpoint,"%s://%s:%u",srv->ep.transport,srv->ep.ipaddr,srv->ep.port + slot + 1);
+    srv->clients[slot].pmsock = nn_createsocket("tcp://127.0.0.1:7899",1,"NN_PULL",NN_PULL,srv->ep.port + slot + 1,10,10);
     printf("NN_PULL.%d for slot.%d\n",srv->clients[slot].pmsock,slot);
     srv->clients[slot].pubkey = clientpub;
     srv->clients[slot].nxt64bits = nxt64bits;
@@ -724,8 +724,8 @@ struct hostnet777_server *hostnet777_server(bits256 srvprivkey,bits256 srvpubkey
     srv->H.privkey = srvprivkey;
     srv->H.pubkey = srv->clients[0].pubkey = srvpubkey;
     srv->H.nxt64bits = srv->clients[0].nxt64bits = acct777_nxt64bits(srvpubkey);
-    sprintf(ep->endpoint,"%s://%s:%u",transport,"127.0.0.1",port);
-    srv->pubsock = nn_createsocket(ep->endpoint,1,"NN_PUB",NN_PUB,port,10,10);
+    sprintf(ep->endpoint,"%s://%s:%u",transport,ipaddr,port);
+    srv->pubsock = nn_createsocket("tcp://127.0.0.1:7897",1,"NN_PUB",NN_PUB,port,10,10);
     printf("PUB.%d to (%s) pangeaport.%d\n",srv->pubsock,ep->endpoint,port);
     srv->num = 1;
     return(srv);
