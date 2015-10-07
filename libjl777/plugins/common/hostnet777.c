@@ -640,8 +640,8 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
         return(-1);
     }
     sprintf(endpoint,"%s://%s:%u",srv->ep.transport,srv->ep.ipaddr,srv->ep.port + slot + 1);
-    srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_PAIR",NN_PAIR,srv->ep.port + slot + 1,10,10);
-    printf("NN_PAIR.%d for slot.%d\n",srv->clients[slot].pmsock,slot);
+    srv->clients[slot].pmsock = nn_createsocket(endpoint,1,"NN_PULL",NN_PULL,srv->ep.port + slot + 1,10,10);
+    printf("NN_PULL.%d for slot.%d\n",srv->clients[slot].pmsock,slot);
     srv->clients[slot].pubkey = clientpub;
     srv->clients[slot].nxt64bits = nxt64bits;
     srv->clients[slot].lastcontact = (uint32_t)time(NULL);
@@ -669,8 +669,8 @@ struct hostnet777_client *hostnet777_client(bits256 privkey,bits256 pubkey,char 
     endbuf[strlen(endbuf)-4] = 0;
     port = atoi(&srvendpoint[strlen(endbuf)]);
     sprintf(endbuf2,"%s%u",endbuf,port + 1 + slot);
-    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PAIR",NN_PAIR,0,10,10);
-    printf("NN_PAIR %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+1+slot);
+    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,10,10);
+    printf("NN_PUSH %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+1+slot);
     sprintf(endbuf2,"%s%u",endbuf,port);
     ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,10,10);
     printf("SUB %d from (%s) port.%d\n",ptr->subsock,endbuf2,port);
