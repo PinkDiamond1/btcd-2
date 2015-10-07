@@ -267,6 +267,7 @@ uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t tur
             amount = (betsize - sum);
             total = pangea_totalbet(dp);
             threshold = (100 * amount)/total;
+            n++;
             if ( r/n > threshold )
             {
                 action = 1;
