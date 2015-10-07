@@ -269,17 +269,17 @@ int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
         if ( dp->balances[i] == 0 )
             break;
     }
-    printf("myind.%d: addfunds.%d <- %.8f total %.8f\n",hn->client->H.slot,senderind,dstr(amount),dstr(dp->balances[senderind]));
+    printf("myind.%d: addfunds.%d <- %.8f total %.8f i%d\n",hn->client->H.slot,senderind,dstr(amount),dstr(dp->balances[senderind]),i);
     if ( i == dp->N )
     {
         for (i=0; i<dp->N; i++)
             if ( dp->hand.bets[i] != 0 )
                 break;
-        if ( i != dp->N )
+        if ( i == dp->N )
         {
             printf("i.%d vs N.%d call antes\n",i,dp->N);
             pangea_antes(hn,dp);
-        }
+        } else printf("bets i.%d\n",i);
     }
     return(0);
 }
