@@ -408,7 +408,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recv
                     printf("msg.(%ld) sender.%llu mismatch vs json.%llu\n",strlen(jsonstr),(long long)senderbits,(long long)j64bits(json,"sender")), free(ptr);
                 else
                 {
-                    printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
+                    //printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
                     //if ( hostnet777_hashes(recvhashes,64,msg,origlen) >= 0 )
                         queue_enqueue("host777",Q,(void *)ptr);
                 }
@@ -496,7 +496,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
             hostnet777_processmsg(&destbits,&senderpub,hn->client->H.recvhashes,&hn->client->H.Q,mypriv,mypub,msg,len,0,&hn->client->H.mT), n++;
         if ( (sock= hn->client->my.pmsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
         {
-            //printf("client got pmsock.%d\n",len);
+            printf("client got pmsock.%d\n",len);
             hostnet777_processmsg(&destbits,&senderpub,hn->client->H.recvhashes,&hn->client->H.Q,mypriv,mypub,msg,len,1,&hn->client->H.mT), n++;
         }
     }
@@ -544,7 +544,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                 {
                     ptr = (uint16_t *)((long)item + sizeof(struct queueitem));
                     hostnet777_send(hn->server->clients[ind].pmsock,&ptr[1],ptr[0]);
-                    //printf("send %d from mailbox to %d\n",len,ind);
+                    printf("send %d from mailbox to %d\n",len,ind);
                     free(item);
                 }
             }
