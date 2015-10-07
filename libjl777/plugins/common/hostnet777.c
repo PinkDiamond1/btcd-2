@@ -362,7 +362,6 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
 int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
 {
     int32_t i,firsti = -1; bits256 hash;
-    return(-1);
     calc_sha256(0,hash.bytes,msg,len);
     for (i=0; i<n; i++)
     {
@@ -409,7 +408,7 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recv
                 else
                 {
                     //printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
-                    if ( hostnet777_hashes(recvhashes,64,msg,origlen) >= 0 )
+                    //if ( hostnet777_hashes(recvhashes,64,msg,origlen) >= 0 )
                         queue_enqueue("host777",Q,(void *)ptr);
                 }
                 free_json(json);
