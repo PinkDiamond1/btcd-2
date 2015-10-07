@@ -253,6 +253,9 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
             break;
         }
     }
+    for (i=0; i<dp->N; i++)
+        printf("%.8f ",dstr(dp->balances[i]));
+    printf("antes\n");
 }
 
 int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
@@ -260,12 +263,21 @@ int32_t pangea_addfunds(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
     uint64_t amount; int32_t i;
     memcpy(&amount,data,sizeof(amount));
     dp->balances[senderind] = amount;
-    printf("myind.%d: addfunds.%d <- %.8f total %.8f\n",hn->client->H.slot,senderind,dstr(amount),dstr(dp->balances[senderind]));
     for (i=0; i<dp->N; i++)
+    {
+        printf("%.8f ",dstr(dp->balances[i]));
         if ( dp->balances[i] == 0 )
             break;
+    }
+    printf("myind.%d: addfunds.%d <- %.8f total %.8f\n",hn->client->H.slot,senderind,dstr(amount),dstr(dp->balances[senderind]));
     if ( i == dp->N )
-        pangea_antes(hn,dp);
+    {
+        for (i=0; i<dp->N; i++)
+            if ( dp->hand.bets[i] != 0 )
+                break;
+        if ( i != dp->N )
+            pangea_antes(hn,dp);
+    }
     return(0);
 }
 
