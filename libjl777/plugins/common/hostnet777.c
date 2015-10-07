@@ -371,7 +371,7 @@ int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
         if ( hash.txid == hashes[i] )
         {
             //printf("filter duplicate msg %llx\n",(long long)hash.txid);
-            return(-1);
+            return(i);
         }
     }
     if ( firsti >= 0 )
@@ -381,9 +381,8 @@ int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
         for (i=n-1; i>0; i--)
             hashes[i] = hashes[i-1];
         hashes[0] = hash.txid;
-        return(0);
     }
-    return(firsti);
+    return(-1);
 }
 
 void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recvhashes[64],queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag,struct hostnet777_mtime *mT)
