@@ -676,7 +676,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
         for (j=0; j<n; j++)
             dp->hostrake += pangea_splitpot(sidepots[j],hn,dp->rakemillis);
     }
-    else if ( hn->client->H.slot == 0 )
+    else if ( hn->client->H.slot == 0 && senderind != 0 )
     {
         for (i=0; i<dp->N; i++)
         {
