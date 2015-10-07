@@ -679,7 +679,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
         for (j=0; j<n; j++)
             dp->hostrake += pangea_splitpot(sidepots[j],hn,dp->rakemillis);
         sleep(5);
-        pangea_clearhand(&dp->hand,priv);
+        pangea_clearhand(dp,&dp->hand,priv);
         pangea_anotherhand(hn,dp,3);
     }
     else if ( hn->client->H.slot == 0 && senderind != 0 )

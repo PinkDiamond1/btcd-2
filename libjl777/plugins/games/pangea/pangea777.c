@@ -60,7 +60,7 @@ int32_t init_hexbytes_noT(char *hexbytes,uint8_t *message,long len);
 bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
 uint64_t set_account_NXTSECRET(void *myprivkey,void *mypubkey,char *NXTacct,char *NXTaddr,char *secret,int32_t max,cJSON *argjson,char *coinstr,char *serverport,char *userpass);
 int32_t pangea_anotherhand(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t sleepflag);
-void pangea_clearhand(struct cards777_handinfo *hand,struct cards777_privdata *priv);
+void pangea_clearhand(struct cards777_pubdata *dp,struct cards777_handinfo *hand,struct cards777_privdata *priv);
 
 
 #define PANGEA_COMMANDS "start", "newtable", "status", "turn"
@@ -200,12 +200,14 @@ void pangea_free(struct pangea_info *sp)
     free(sp);
 }
 
-void pangea_clearhand(struct cards777_handinfo *hand,struct cards777_privdata *priv)
+void pangea_clearhand(struct cards777_pubdata *dp,struct cards777_handinfo *hand,struct cards777_privdata *priv)
 {
     bits256 *final,*cardpubs; int32_t i;
     final = hand->final, cardpubs = hand->cardpubs;
     memset(hand,0,sizeof(*hand));
     hand->final = final, hand->cardpubs = cardpubs;
+    memset(final,0,sizeof(*final) * dp->N * dp->numcards);
+    memset(cardpubs,0,sizeof(*cardpubs) * (1 + dp->numcards));
     for (i=0; i<5; i++)
         hand->community[i] = 0xff;
     memset(hand->hands,0xff,sizeof(hand->hands));
@@ -306,7 +308,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
     uint8_t data[(CARDS777_MAXCARDS + 1) * sizeof(bits256)]; struct cards777_pubdata *dp; char nrs[512]; struct cards777_privdata *priv; int32_t n,len;
     dp = src->client->H.pubdata;
     priv = src->client->H.privdata;
-    pangea_clearhand(&dp->hand,priv);
+    pangea_clearhand(dp,&dp->hand,priv);
     init_sharenrs(dp->hand.sharenrs,0,dp->N,dp->N);
     dp->hand.checkprod = dp->hand.cardpubs[dp->numcards] = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
     init_hexbytes_noT(nrs,dp->hand.sharenrs,dp->N);
@@ -330,7 +332,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
         return(-1);
     }
     if ( hn->server->H.slot != 0 )
-        pangea_clearhand(&dp->hand,priv);
+        pangea_clearhand(dp,&dp->hand,priv);
     dp->numhands++;
     dp->button = (dp->button + 1) % dp->N;
     printf("NEWHAND received numhands.%d button.%d cardi.%d\n",dp->numhands,dp->button,dp->hand.cardi);
