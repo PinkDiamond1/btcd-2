@@ -689,7 +689,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
             if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD )
                 break;
         }
-        printf("host sends showdown for undergun.%d\n",dp->hand.undergun);
+        printf("senderind.%d host sends showdown for undergun.%d\n",senderind,dp->hand.undergun);
         pangea_sendcmd(hex,hn,"showdown",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
     }
     return(0);
