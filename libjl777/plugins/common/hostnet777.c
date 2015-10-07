@@ -477,7 +477,7 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
                 hostnet777_mailboxQ(&ptr->server->mailboxQ[i],cipher,cipherlen);
             else printf("cant find destbits.%llu\n",(long long)destbits);
         }
-        hostnet777_send(sendsock,cipher,cipherlen);
+        else hostnet777_send(sendsock,cipher,cipherlen);
         free(cipher);
     }
     if ( data != msg )
@@ -493,7 +493,10 @@ int32_t hostnet777_idle(union hostnet777 *hn)
     {
         mypriv = hn->client->H.privkey, mypub = hn->client->H.pubkey;
         if ( (sock= hn->client->subsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
+        {
+            printf("client got pub len.%d\n",len);
             hostnet777_processmsg(&destbits,&senderpub,hn->client->H.recvhashes,&hn->client->H.Q,mypriv,mypub,msg,len,0,&hn->client->H.mT), n++;
+        }
         if ( (sock= hn->client->my.pmsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
         {
             printf("client got pmsock.%d\n",len);
