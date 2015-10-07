@@ -584,7 +584,8 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         if ( dp->hand.numactions < dp->N )
         {
             printf("undergun.%d cardi.%d\n",dp->hand.undergun,dp->hand.cardi);
-            pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),dp->hand.cardi,dp->hand.undergun);
+            if ( senderind != 0 )
+                pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),dp->hand.cardi,dp->hand.undergun);
         }
         else
         {
