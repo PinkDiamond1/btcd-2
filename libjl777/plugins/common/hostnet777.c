@@ -96,6 +96,7 @@ int32_t hostnet777_init(union hostnet777 *hn,bits256 *privkeys,int32_t num,int32
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len);
 int64_t hostnet777_convmT(struct hostnet777_mtime *mT,int64_t othermillitime);
 bits256 cards777_pubkeys(bits256 *pubkeys,int32_t numcards,bits256 cmppubkey);
+int32_t pangea_tableaddr(struct cards777_pubdata *dp,uint64_t destbits);
 
 extern int32_t Debuglevel;
 
@@ -434,7 +435,8 @@ void hostnet777_mailboxQ(queue_t *mailboxQ,void *cipher,int32_t cipherlen)
 
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len)
 {
-    int32_t cipherlen,datalen,sendsock,i; bits256 seed; uint8_t *data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
+    int32_t cipherlen,datalen,sendsock,i; bits256 seed; uint8_t *data=0,*cipher; uint64_t destbits;
+    struct cards777_pubdata *dp; struct acct777_sig sig; HUFF H,*hp = &H;
     if ( destpub.txid != 0 )
         destbits = acct777_nxt64bits(destpub);
     else
@@ -470,13 +472,10 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
         //printf("my.(priv.%llx pub.%llx) -> dest %llu pub.%llx cipherlen.%d %llx sendsock %d linksock.%d\n",(long long)pangea_privkey(player).txid,(long long)pangea_pubkey(player).txid,(long long)destbits,(long long)destpub.txid,cipherlen,*(long long *)cipher,sendsock,linksock);
         if ( destbits != 0 && ptr->server->H.slot == 0 )
         {
-            for (i=1; i<ptr->server->num; i++)
-            {
+            dp = ptr->server->H.pubdata;
+            if ( (i= pangea_tableaddr(dp,destbits)) >= 0 )
                 hostnet777_mailboxQ(&ptr->server->mailboxQ[i],cipher,cipherlen);
-                break;
-            }
-            if ( i == ptr->server->num )
-                printf("hostnet777 warning cant find %llu in addrs[]\n",(long long)destbits);
+            else printf("cant find destbits.%llu\n",(long long)destbits);
         }
         else hostnet777_send(sendsock,cipher,cipherlen);
         free(cipher);

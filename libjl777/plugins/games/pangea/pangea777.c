@@ -131,6 +131,18 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
 
 #include "pangeafunds.c"
 
+int32_t pangea_tableaddr(struct cards777_pubdata *dp,uint64_t destbits)
+{
+    int32_t i; struct pangea_info *sp;
+    if ( (sp= dp->table) != 0 )
+    {
+        for (i=0; i<dp->N; i++)
+            if ( sp->addrs[i] == destbits )
+                return(i);
+    }
+    return(-1);
+}
+
 bits256 pangea_destpub(uint64_t destbits)
 {
     int32_t i,haspubkey; bits256 destpub; char destNXT[64];
