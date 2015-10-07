@@ -50,9 +50,9 @@ struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidi
 
 struct cards777_pubdata
 {
-    bits256 *playerpubs; int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS];
+    int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS];
     uint64_t hostrake,bigblind,ante,pangearake; uint32_t button,numhands,rakemillis,minbuyin,maxbuyin;
-    void *table; struct cards777_handinfo hand; char newhand[32768]; bits256 data[];
+    bits256 *playerpubs; void *table; struct cards777_handinfo hand; char newhand[32768]; bits256 data[];
 };
 
 struct cards777_privdata
