@@ -51,7 +51,7 @@ struct cards777_pubdata
 {
     bits256 *playerpubs; int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS];
     uint64_t hostrake,bigblind,ante,pangearake,othercardpubs[CARDS777_MAXPLAYERS];
-    uint32_t button,numhands,rakemillis,startdecktime,readymask,pmworks,pmviaworks,broadcastworks,minbuyin,maxbuyin;
+    uint32_t button,numhands,rakemillis,startdecktime,readymask,pmworks,pmviaworks,broadcastworks,minbuyin,maxbuyin,encodestarted;
     void *table; struct cards777_handinfo hand; char newhand[32768]; bits256 data[];
 };
 

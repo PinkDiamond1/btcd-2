@@ -599,7 +599,7 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             }
         }
     }
-    else if ( dp->newhand[0] != 0 )
+    else if ( dp->newhand[0] != 0 && dp->encodestarted == 0 )
     {
         for (i=n=0; i<dp->N; i++)
         {
@@ -617,9 +617,9 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
             }
             if ( i == dp->N )
             {
+                dp->encodestarted = (uint32_t)time(NULL);
                 printf("SERVERSTATE issues encoded\n");
                 pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
-                dp->newhand[0] = 0;
             }
             else if ( 0 && dp->startdecktime != 0 && time(NULL) > dp->startdecktime+10 )
             {
