@@ -409,6 +409,7 @@ int32_t pangea_card(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
     destplayer = juint(json,"dest");
     if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)data)) >= 0 )
     {
+        destplayer = hn->client->H.slot;
         if ( Debuglevel > 2 )
             printf("player.%d got card.[%d]\n",hn->client->H.slot,card);
         memcpy(&priv->incards[cardi*dp->N + destplayer],cardpriv.bytes,sizeof(bits256));
@@ -1027,6 +1028,7 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
         }
         priv->autoshow = Showmode;
         priv->autofold = Autofold;
+        printf("Autoshow.%d Autofold.%d\n",priv->autoshow,priv->autofold);
         strcpy(sp->base,base);
         if ( (sp->timestamp= timestamp) == 0 )
             sp->timestamp = (uint32_t)time(NULL);
