@@ -1451,7 +1451,14 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
             return;
         }
         tp->threadid = threadid;
-        tp->nxt64bits = conv_NXTpassword(privkey.bytes,pubkey.bytes,(void *)&threadid,sizeof(threadid));
+        if ( threadid != 0 )
+            tp->nxt64bits = conv_NXTpassword(privkey.bytes,pubkey.bytes,(void *)&threadid,sizeof(threadid));
+        else
+        {
+            tp->nxt64bits = plugin->nxt64bits;
+            memcpy(privkey.bytes,plugin->mypriv,32);
+            memcpy(pubkey.bytes,plugin->mypub,32);
+        }
         if ( threadid == 0 )
         {
             if ( (srv= hostnet777_server(privkey,pubkey,0,0,0,numthreads)) == 0 )
