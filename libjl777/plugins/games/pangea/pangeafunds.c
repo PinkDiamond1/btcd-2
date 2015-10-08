@@ -20,6 +20,9 @@ char *pangea_typestr(uint8_t type)
     {
         case 0xff: return("fold");
         case CARDS777_START: return("start");
+        case CARDS777_ANTE: return("ante");
+        case CARDS777_SMALLBLIND: return("smallblind");
+        case CARDS777_BIGBLIND: return("bigblind");
         case CARDS777_CHECK: return("check");
         case CARDS777_BET: return("bet");
         case CARDS777_RAISE: return("raise");

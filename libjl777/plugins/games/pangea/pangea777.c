@@ -1511,7 +1511,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     {
         item = cJSON_CreateObject();
         walletitem = cJSON_CreateObject();
-        if ( 1 || i != 0 )
+        if ( 0 || i != 0 )
             jaddnum(walletitem,"isbot",1);
         jadd64bits(walletitem,"bigblind",bigblind);
         jadd64bits(walletitem,"ante",ante);
