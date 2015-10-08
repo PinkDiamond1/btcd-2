@@ -705,11 +705,14 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
         memset(sidepots,0,sizeof(sidepots));
         n = pangea_sidepots(1,sidepots,dp,dp->hand.bets);
         for (pangearake=rake=j=0; j<n; j++)
-            rake += pangea_splitpot(&pangearake,sidepots[j],hn,dp->rakemillis);
+            rake += pangea_splitpot(dp->hand.won,&pangearake,sidepots[j],hn,dp->rakemillis);
         dp->hostrake += rake;
         dp->pangearake += pangearake;
+        dp->hand.hostrake = rake;
+        dp->hand.pangearake = pangearake;
         pangea_summary(dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
         pangea_sendsummary(hn,dp,priv);
+        printf("%s\n",jprint(pangea_tablestatus(dp->table),1));
         return;
     }
     if ( dp->hand.finished != 0 && time(NULL) > dp->hand.finished+PANGEA_HANDGAP )
@@ -940,7 +943,7 @@ cleanup:
 
 char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
-    int32_t i,j,threadid = 0; struct pangea_info *sp; cJSON *item,*array=0,*retjson = 0;
+    int32_t i,j,threadid = juint(json,"threadid"); struct pangea_info *sp; cJSON *item,*array=0,*retjson = 0;
     if ( tableid != 0 )
     {
         if ( (sp= pangea_find(tableid,threadid)) != 0 )
