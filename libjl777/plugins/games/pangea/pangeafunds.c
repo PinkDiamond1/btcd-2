@@ -638,7 +638,7 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
             dp->summaries |= (1LL << senderind);
         else dp->mismatches |= (1LL << senderind);
     } else dp->mismatches |= (1LL << senderind);
-    if ( senderind != 0 )
+    if ( senderind == 0 )
         pangea_sendsummary(hn,dp,priv);
     if ( (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
     {
