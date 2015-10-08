@@ -131,14 +131,10 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
 
 void pangea_summary(struct cards777_pubdata *dp,uint8_t type,void *arg0,int32_t size0,void *arg1,int32_t size1)
 {
-    if ( 0 && type == 0 )
-    {
-        printf("pangea_summary.%d %d\n",type,*(uint8_t *)arg0);
-        getchar();
-    }
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],(void *)&type,sizeof(type));
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],arg0,size0);
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],arg1,size1);
+    printf("pangea_summary.%d %d | summarysize.%d\n",type,*(uint8_t *)arg0,dp->summarysize);
 }
 
 #include "pangeafunds.c"

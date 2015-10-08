@@ -24,6 +24,7 @@ char *pangea_typestr(uint8_t type)
         case CARDS777_SMALLBLIND: return("smallblind");
         case CARDS777_BIGBLIND: return("bigblind");
         case CARDS777_CHECK: return("check");
+        case CARDS777_CALL: return("call");
         case CARDS777_BET: return("bet");
         case CARDS777_RAISE: return("raise");
         case CARDS777_FULLRAISE: return("fullraise");
@@ -168,15 +169,23 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
         return(action);
     }
     else if ( bet >= 2*dp->hand.lastraise )
-        dp->hand.lastraise = bet, dp->hand.numactions = 1, action = CARDS777_FULLRAISE; // allows all players to check/bet again
+    {
+        dp->hand.lastraise = bet;
+        dp->hand.numactions = 1;
+        if ( action == CARDS777_CHECK )
+            action = CARDS777_FULLRAISE; // allows all players to check/bet again
+    }
     sum += bet;
     if ( sum > dp->hand.betsize )
     {
         dp->hand.betsize = sum, dp->hand.lastbettor = player;
         if ( sum > dp->hand.lastraise && action == CARDS777_ALLIN )
             dp->hand.lastraise = sum;
-        else action = CARDS777_BET;
+        else if ( action == CARDS777_CHECK )
+            action = CARDS777_BET;
     }
+    if ( bet > 0 && action == CARDS777_CHECK )
+        action = CARDS777_CALL;
     tmp = player;
     pangea_summary(dp,action,&tmp,sizeof(tmp),(void *)&bet,sizeof(bet));
     dp->balances[player] -= bet, dp->hand.bets[player] += bet;
@@ -638,7 +647,7 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
             dp->summaries |= (1LL << senderind);
         else dp->mismatches |= (1LL << senderind);
     } else dp->mismatches |= (1LL << senderind);
-    if ( senderind == 0 )
+    if ( senderind == 0 && hn->client->H.slot != 0 )
         pangea_sendsummary(hn,dp,priv);
     if ( (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
     {
