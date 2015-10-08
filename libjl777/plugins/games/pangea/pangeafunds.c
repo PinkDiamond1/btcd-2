@@ -73,17 +73,6 @@ void pangea_dispsummary(uint8_t *summary,int32_t summarysize)
         jaddi(array,item);
     }
     printf("HAND.(%s)\n",jprint(array,1));
-    /*pangea_summary(dp,CARDS777_START,&dp->numhands,sizeof(dp->numhands),&dp->hand.checkprod.txid,sizeof(dp->hand.checkprod.txid));
-    pangea_summary(dp,CARDS777_WINNINGS,&tmp,sizeof(tmp),(void *)&split,sizeof(split));
-    pangea_summary(dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
-    pangea_summary(dp,CARDS777_FOLD,&tmp,sizeof(tmp),(void *)&dp->bets[player],sizeof(dp->bets[player]));
-#define CARDS777_CHECK 2
-#define CARDS777_BET 3
-#define CARDS777_RAISE 4
-#define CARDS777_FULLRAISE 5
-#define CARDS777_ALLIN 7
-    pangea_summary(dp,retval,&tmp,sizeof(tmp),(void *)&bet,sizeof(bet));
-    pangea_summary(dp,CARDS777_FACEUP,&tmp,sizeof(tmp),data,sizeof(bits256));*/
 }
 
 void pangea_fold(struct cards777_pubdata *dp,int32_t player)

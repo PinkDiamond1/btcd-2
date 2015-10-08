@@ -626,31 +626,34 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     //if ( Debuglevel > 2 || hn->client->H.slot == 0 )
         printf("from.%d -> player.%d COMMUNITY.[%d] (%s) cardi.%d valid.%d (%s)\n",senderind,hn->client->H.slot,data[1],hexstr,cardi,validcard,jprint(json,0));
     //printf("got FACEUP.(%s)\n",jprint(json,0));
-    if ( validcard > 0 && cardi >= dp->N*2 && cardi < dp->N*2+5 )
+    if ( validcard > 0 )
     {
-        dp->hand.community[cardi - dp->N*2] = data[1];
-        for (i=0; i<dp->N; i++)
-            dp->hand.hands[i][cardi - dp->N*2] = data[1];
-        memcpy(dp->hand.community256[cardi - dp->N*2].bytes,data,sizeof(bits256));
         tmp = cardi;
         pangea_summary(dp,CARDS777_FACEUP,&tmp,sizeof(tmp),data,sizeof(bits256));
-
-        //printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
-        if ( senderind == hn->client->H.slot )
-            pangea_rank(dp,senderind);
-        //printf("calc rank\n");
-        if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
-            pangea_startbets(hn,dp,cardi+1);
-        else printf("dont start bets %d\n",cardi+1);
-    }
-    else
-    {
-        //printf("valid.%d cardi.%d vs N.%d\n",validcard,cardi,dp->N);
-        if ( cardi < dp->N*2 )
+        if ( cardi >= dp->N*2 && cardi < dp->N*2+5 )
         {
-            memcpy(dp->hand.cards[senderind][cardi/dp->N].bytes,data,sizeof(bits256));
-            dp->hand.hands[senderind][5 + cardi/dp->N] = data[1];
-            pangea_rank(dp,senderind);
+            dp->hand.community[cardi - dp->N*2] = data[1];
+            for (i=0; i<dp->N; i++)
+                dp->hand.hands[i][cardi - dp->N*2] = data[1];
+            memcpy(dp->hand.community256[cardi - dp->N*2].bytes,data,sizeof(bits256));
+            
+            //printf("set community[%d] <- %d\n",cardi - dp->N*2,data[1]);
+            if ( senderind == hn->client->H.slot )
+                pangea_rank(dp,senderind);
+            //printf("calc rank\n");
+            if ( hn->client->H.slot == 0 && cardi >= dp->N*2+2 && cardi < dp->N*2+5 )
+                pangea_startbets(hn,dp,cardi+1);
+            else printf("dont start bets %d\n",cardi+1);
+        }
+        else
+        {
+            //printf("valid.%d cardi.%d vs N.%d\n",validcard,cardi,dp->N);
+            if ( cardi < dp->N*2 )
+            {
+                memcpy(dp->hand.cards[senderind][cardi/dp->N].bytes,data,sizeof(bits256));
+                dp->hand.hands[senderind][5 + cardi/dp->N] = data[1];
+                pangea_rank(dp,senderind);
+            }
         }
     }
     return(0);
@@ -1511,7 +1514,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     {
         item = cJSON_CreateObject();
         walletitem = cJSON_CreateObject();
-        if ( 0 || i != 0 )
+        if ( i != plugin->notabot )
             jaddnum(walletitem,"isbot",1);
         jadd64bits(walletitem,"bigblind",bigblind);
         jadd64bits(walletitem,"ante",ante);
@@ -1669,7 +1672,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         free_json(argjson);
         printf("my64bits %llu ipaddr.%s mypriv.%02x mypub.%02x\n",(long long)plugin->nxt64bits,plugin->ipaddr,plugin->mypriv[0],plugin->mypub[0]);
         if ( (PANGEA_MAXTHREADS= juint(json,"pangeatest")) != 0 )
+        {
+            plugin->notabot = juint(json,"notabot");
+            printf("notabot.%d\n",plugin->notabot);
             portable_thread_create((void *)pangea_test,plugin);//,9,SATOSHIDEN,SATOSHIDEN/10,10);
+        }
         printf("initialized PANGEA\n");
         if ( 0 )
         {
