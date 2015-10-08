@@ -54,7 +54,7 @@ static u32 CardSuit[52] = {
 
 int32_t cardstr(char *cardstr,uint8_t card)
 {
-    int32_t suit; char *cardc = "A234567890JQK",suitc[4] = { 'c', 'd', 'h', 's' };
+    int32_t suit; char *cardc = "A234567890JQK",suitc[4] = { 'C', 'D', 'H', 'S' };
     suit = card / 13;
     card %= 13;
     if ( card == 9 )

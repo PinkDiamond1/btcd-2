@@ -646,16 +646,15 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
             dp->summaries |= (1LL << senderind);
         else dp->mismatches |= (1LL << senderind);
     } else dp->mismatches |= (1LL << senderind);
-    if ( hn->server->H.slot == 0 )
-    {
-        if ( (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
-        {
-            printf("hand summary matches.%llx errors.%llx\n",(long long)dp->summaries,(long long)dp->mismatches);
-            pangea_dispsummary(dp->summary,dp->summarysize);
-            pangea_anotherhand(hn,dp,2);
-        }
-    } else if ( senderind == 0 )
+    if ( senderind != 0 )
         pangea_sendsummary(hn,dp,priv);
+    if ( (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
+    {
+        printf("P%d: hand summary matches.%llx errors.%llx\n",hn->client->H.slot,(long long)dp->summaries,(long long)dp->mismatches);
+        pangea_dispsummary(dp->summary,dp->summarysize);
+        if ( hn->server->H.slot == 0 )
+            pangea_anotherhand(hn,dp,2);
+    }
     return(0);
 }
 
