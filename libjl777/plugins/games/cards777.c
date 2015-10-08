@@ -92,6 +92,33 @@ int32_t cards777_checkcard(bits256 *cardprivp,int32_t cardi,int32_t slot,int32_t
     return(-1);
 }
 
+int32_t cards777_validate(bits256 cardpriv,bits256 final,bits256 *cardpubs,int32_t numcards,bits256 *audit,int32_t numplayers,bits256 playerpub)
+{
+    int32_t i; bits320 val; bits256 checkcard,ver,tmp;
+    val = fexpand(final);
+    for (i=numplayers-1; i>0; i--)
+    {
+        val = fmul(fexpand(audit[i]),val);
+        tmp = fcontract(val);
+        if ( memcmp(tmp.bytes,audit[i-1].bytes,sizeof(tmp)) != 0 )
+            printf("cards777_validate: mismatched audit[%d] %llx vs %llx\n",i-1,(long long)tmp.txid,(long long)audit[i-1].txid);
+    }
+    checkcard = fcontract(val);
+    if ( memcmp(checkcard.bytes,audit[0].bytes,sizeof(checkcard)) != 0 )
+    {
+        printf("cards777_validate: checkcard not validated %llx vs %llx\n",(long long)checkcard.txid,(long long)audit[0].txid);
+        return(-1);
+    }
+    ver = cards777_initcrypt(cardpriv,cardpriv,playerpub,0);
+    if ( memcmp(checkcard.bytes,ver.bytes,sizeof(checkcard)) != 0 )
+    {
+        printf("cards777_validate: ver not validated %llx vs %llx\n",(long long)checkcard.txid,(long long)ver.txid);
+        return(-1);
+    }
+    printf("cardi.%d VERIFIED\n",cardpriv.bytes[1]);
+    return(cardpriv.bytes[1]);
+}
+
 int32_t cards777_shuffle(bits256 *shuffled,bits256 *cards,int32_t numcards,int32_t N)
 {
     int32_t i,j,pos,nonz,permi[CARDS777_MAXCARDS],desti[CARDS777_MAXCARDS]; uint8_t x; uint64_t mask;
@@ -277,15 +304,17 @@ uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uin
     return(allshares);
 }
 
-bits256 cards777_decode(bits256 *xoverz,int32_t destplayer,bits256 cipher,bits256 *outcards,int32_t numcards,int32_t N)
+bits256 cards777_decode(bits256 *seedp,bits256 *xoverz,int32_t destplayer,bits256 cipher,bits256 *outcards,int32_t numcards,int32_t N)
 {
     int32_t i,ind;
+    memset(seedp->bytes,0,sizeof(*seedp));
     for (i=0; i<numcards; i++)
     {
         ind = i*N + destplayer;
         //printf("[%llx] ",(long long)outcards[ind].txid);
         if ( memcmp(outcards[ind].bytes,cipher.bytes,32) == 0 )
         {
+            *seedp = xoverz[ind];
             cipher = fcontract(fmul(fexpand(xoverz[ind]),fexpand(cipher)));
             //printf("matched %d -> %llx\n",i,(long long)cipher.txid);
             return(cipher);
@@ -303,15 +332,15 @@ bits256 cards777_decode(bits256 *xoverz,int32_t destplayer,bits256 cipher,bits25
 struct cards777_privdata *cards777_allocpriv(int32_t numcards,int32_t N)
 {
     struct cards777_privdata *priv;
-    if ( (priv= calloc(1,sizeof(*priv) + sizeof(bits256) * ((N+3) * N * numcards))) == 0 )
+    if ( (priv= calloc(1,sizeof(*priv) + sizeof(bits256) * (2*((N * numcards * N) + (N * numcards))))) == 0 )
     {
         printf("cards777_allocpriv: unexpected out of memory error\n");
         return(0);
     }
-    priv->incards = &priv->data[0];
-    priv->outcards = &priv->incards[N * numcards];
+    priv->audits = &priv->data[0];
+    priv->outcards = &priv->audits[N * numcards * N];
     priv->xoverz = &priv->outcards[N * numcards];
-    priv->allshares = (void *)&priv->xoverz[N * numcards];
+    priv->allshares = (void *)&priv->xoverz[N * numcards]; // N*numcards*N
     return(priv);
 }
 
