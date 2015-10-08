@@ -546,7 +546,7 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
         item = cJSON_CreateArray();
         for (sum=i=0; i<n; i++)
             jaddinum(item,dstr(totals[i])), sum += totals[i];
-        jadd(json,"totals",item);
+        jadd(json,"potTotals",item);
         jaddnum(json,"sum",dstr(sum));
     }
     if ( sp->priv != 0 )
