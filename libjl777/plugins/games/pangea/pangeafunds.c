@@ -312,7 +312,7 @@ uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t tur
             total = pangea_totalbet(dp);
             threshold = (100 * amount)/total;
             n++;
-            if ( r/n > threshold )
+            if ( 1 || r/n > threshold )
             {
                 action = 1;
                 if ( r/n > 3*threshold && amount < dp->hand.lastraise*2 )
