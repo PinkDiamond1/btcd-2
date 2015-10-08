@@ -143,7 +143,7 @@ struct pangea_info *pangea_usertables(int32_t *nump,uint64_t my64bits,uint64_t t
 
 int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t player,int64_t bet)
 {
-    int32_t retval = 0; uint64_t sum; uint8_t tmp;
+    int32_t retval = CARDS777_CHECK; uint64_t sum; uint8_t tmp;
     player %= dp->N;
     //if ( Debuglevel > 2 )
         printf("player.%d PANGEA_BET[%d] <- %.8f\n",hn->client->H.slot,player,dstr(bet));
