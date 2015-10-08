@@ -134,7 +134,7 @@ void pangea_summary(struct cards777_pubdata *dp,uint8_t type,void *arg0,int32_t 
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],(void *)&type,sizeof(type));
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],arg0,size0);
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],arg1,size1);
-    printf("pangea_summary.%d %d | summarysize.%d\n",type,*(uint8_t *)arg0,dp->summarysize);
+    printf("pangea_summary.%d %d | summarysize.%d crc.%u\n",type,*(uint8_t *)arg0,dp->summarysize,_crc32(0,dp->summary,dp->summarysize));
 }
 
 #include "pangeafunds.c"
@@ -537,10 +537,10 @@ int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
                 destplayer = (dp->button + i) % dp->N;
                 //decoded = cards777_decode(&audit[hn->client->H.slot],priv->xoverz,destplayer,priv->incards[cardi*dp->N + destplayer],priv->outcards,dp->numcards,dp->N);
                 pangea_rwaudit(0,audit,priv->audits,cardi,destplayer,dp->N);
-                printf("audit[0] %llx -> ",(long long)audit[0].txid);
+                //printf("audit[0] %llx -> ",(long long)audit[0].txid);
                 audit[0] = cards777_decode(&audit[hn->client->H.slot],priv->xoverz,destplayer,audit[0],priv->outcards,dp->numcards,dp->N);
                 pangea_rwaudit(1,audit,priv->audits,cardi,destplayer,dp->N);
-                printf("[%llx + %llx] ",*(long long *)&audit[0],(long long)&audit[hn->client->H.slot]);
+                //printf("[%llx + %llx] ",*(long long *)&audit[0],(long long)&audit[hn->client->H.slot]);
                 if ( destplayer == hn->client->H.slot )
                     pangea_card(hn,json,dp,priv,audit[0].bytes,sizeof(bits256)*dp->N,cardi,destplayer);
                 else pangea_sendcmd(hex,hn,"card",destplayer,audit[0].bytes,sizeof(bits256)*dp->N,cardi,-1);
@@ -620,8 +620,8 @@ int32_t pangea_facedown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
         if ( bitweight(dp->hand.havemasks[i]) == 2 )
             n++;
     }
-    //if ( Debuglevel > 2 )
-    printf(" | player.%d sees that destplayer.%d got cardi.%d valid.%d | %llx | n.%d\n",hn->client->H.slot,senderind,cardi,validcard,(long long)dp->hand.havemasks[senderind],n);
+    if ( Debuglevel > 2 )
+        printf(" | player.%d sees that destplayer.%d got cardi.%d valid.%d | %llx | n.%d\n",hn->client->H.slot,senderind,cardi,validcard,(long long)dp->hand.havemasks[senderind],n);
     if ( hn->client->H.slot == 0 && n == dp->N )
         pangea_startbets(hn,dp,dp->N*2);
     return(0);
@@ -859,7 +859,8 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
     priv = hn->client->H.privdata;
     if ( hn == 0 || hn->client == 0 || dp == 0 || priv == 0 )
     {
-        printf("pangea_poll: null hn.%p %p dp.%p priv.%p\n",hn,hn!=0?hn->client:0,dp,priv);
+        if ( Debuglevel > 2 )
+            printf("pangea_poll: null hn.%p %p dp.%p priv.%p\n",hn,hn!=0?hn->client:0,dp,priv);
         return(-1);
     }
     maxlen = (int32_t)(sizeof(bits256) * dp->N*dp->N*dp->numcards);

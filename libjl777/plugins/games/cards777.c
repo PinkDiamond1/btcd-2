@@ -100,8 +100,8 @@ int32_t cards777_validate(bits256 cardpriv,bits256 final,bits256 *cardpubs,int32
     {
         val = fmul(fexpand(audit[i]),val);
         tmp = fcontract(val);
-        if ( memcmp(tmp.bytes,audit[i-1].bytes,sizeof(tmp)) != 0 )
-            printf("cards777_validate: mismatched audit[%d] %llx vs %llx\n",i-1,(long long)tmp.txid,(long long)audit[i-1].txid);
+        //if ( memcmp(tmp.bytes,audit[i-1].bytes,sizeof(tmp)) != 0 )
+        //    printf("cards777_validate: mismatched audit[%d] %llx vs %llx %llx\n",i-1,(long long)tmp.txid,(long long)audit[i-1].txid,(long long)audit[i].txid);
     }
     checkcard = fcontract(val);
     if ( memcmp(checkcard.bytes,audit[0].bytes,sizeof(checkcard)) != 0 )
