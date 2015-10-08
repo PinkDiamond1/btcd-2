@@ -612,7 +612,7 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
     {
         printf("hand summary matches.%llx errors.%llx\n",(long long)dp->summaries,(long long)dp->mismatches);
         //pangea_dispsummary(dp->summary,dp->summarysize);
-        pangea_anotherhand(hn,dp,10);
+        pangea_anotherhand(hn,dp,2);
     }
     return(0);
 }
@@ -787,7 +787,7 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
     char *actionstr; uint64_t sum,amount=0; int32_t action,num; struct pangea_info *sp; struct cards777_pubdata *dp; char hex[4096];
     if ( (sp= pangea_usertables(&num,my64bits,tableid)) == 0 )
         return(clonestr("{\"error\":\"you are not playing on any tables\"}"));
-    if ( num != 1 )
+    if ( 0 && num != 1 )
         return(clonestr("{\"error\":\"more than one active table\"}"));
     else if ( (dp= sp->dp) == 0 )
         return(clonestr("{\"error\":\"no pubdata ptr for table\"}"));
