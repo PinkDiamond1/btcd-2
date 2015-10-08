@@ -1423,7 +1423,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
 {
     char retbuf[65536]; bits256 privkey,pubkey; int32_t i,slot,threadid; struct pangea_thread *tp; struct hostnet777_client **clients;
     struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
-    sleep(13);
+    sleep(7);
     int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
     numthreads = 9; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
     //plugin->sleepmillis = 1;
@@ -1434,7 +1434,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
         strcpy(plugin->transport,"tcp");
     if ( plugin->ipaddr[0] == 0 )
         strcpy(plugin->ipaddr,"127.0.0.1");
-    //if ( plugin->pangeaport == 0 )
+    if ( plugin->pangeaport == 0 )
         plugin->pangeaport = 7899;
     //if ( portable_thread_create((void *)hostnet777_idler,hn) == 0 )
     //    printf("error launching server thread\n");
@@ -1487,7 +1487,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     {
         item = cJSON_CreateObject();
         walletitem = cJSON_CreateObject();
-        //if ( i != 0 )
+        if ( i != 0 )
             jaddnum(walletitem,"isbot",1);
         jadd64bits(walletitem,"bigblind",bigblind);
         jadd64bits(walletitem,"ante",ante);
