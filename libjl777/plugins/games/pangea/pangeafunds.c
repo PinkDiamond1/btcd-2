@@ -133,9 +133,9 @@ struct pangea_info *pangea_usertables(int32_t *nump,uint64_t my64bits,uint64_t t
     return(retsp);
 }
 
-int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t player,int64_t bet)
+int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t player,int64_t bet,int32_t action)
 {
-    int32_t retval = CARDS777_CHECK; uint64_t sum; uint8_t tmp;
+    uint64_t sum; uint8_t tmp;
     player %= dp->N;
     //if ( Debuglevel > 2 )
         printf("player.%d PANGEA_BET[%d] <- %.8f\n",hn->client->H.slot,player,dstr(bet));
@@ -146,7 +146,7 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
     if ( bet > 0 && bet >= dp->balances[player] )
     {
         bet = dp->balances[player];
-        dp->hand.betstatus[player] = retval = CARDS777_ALLIN;
+        dp->hand.betstatus[player] = action = CARDS777_ALLIN;
     }
     else
     {
@@ -154,34 +154,34 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
         {
             printf("pangea_bet %.8f not double %.8f, clip to lastraise\n",dstr(bet),dstr(dp->hand.lastraise));
             bet = dp->hand.lastraise;
-            retval = CARDS777_RAISE;
+            action = CARDS777_RAISE;
         }
     }
     sum = dp->hand.bets[player];
-    if ( sum+bet < dp->hand.betsize && retval != CARDS777_ALLIN )
+    if ( sum+bet < dp->hand.betsize && action != CARDS777_ALLIN )
     {
         pangea_fold(dp,player);
-        retval = CARDS777_FOLD;
+        action = CARDS777_FOLD;
         tmp = player;
         if ( Debuglevel > 2 )
             printf("player.%d betsize %.8f < hand.betsize %.8f FOLD\n",player,dstr(bet),dstr(dp->hand.betsize));
-        return(retval);
+        return(action);
     }
     else if ( bet >= 2*dp->hand.lastraise )
-        dp->hand.lastraise = bet, dp->hand.numactions = 1, retval = CARDS777_FULLRAISE; // allows all players to check/bet again
+        dp->hand.lastraise = bet, dp->hand.numactions = 1, action = CARDS777_FULLRAISE; // allows all players to check/bet again
     sum += bet;
     if ( sum > dp->hand.betsize )
     {
         dp->hand.betsize = sum, dp->hand.lastbettor = player;
-        if ( sum > dp->hand.lastraise && retval == CARDS777_ALLIN )
+        if ( sum > dp->hand.lastraise && action == CARDS777_ALLIN )
             dp->hand.lastraise = sum;
-        else retval = CARDS777_BET;
+        else action = CARDS777_BET;
     }
     tmp = player;
-    pangea_summary(dp,retval,&tmp,sizeof(tmp),(void *)&bet,sizeof(bet));
+    pangea_summary(dp,action,&tmp,sizeof(tmp),(void *)&bet,sizeof(bet));
     dp->balances[player] -= bet, dp->hand.bets[player] += bet;
     printf("player.%d: player.%d BET %f -> balances %f bets %f\n",hn->client->H.slot,player,dstr(bet),dstr(dp->balances[player]),dstr(dp->hand.bets[player]));
-    return(retval);
+    return(action);
 }
 
 uint64_t pangea_winnings(uint64_t *pangearakep,uint64_t *hostrakep,uint64_t total,int32_t numwinners,int32_t rakemillis)
@@ -342,7 +342,7 @@ uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t tur
             total = pangea_totalbet(dp);
             threshold = (100 * amount)/(1 + total);
             n++;
-            if ( r/n > threshold )
+            if ( 1 || r/n > threshold )
             {
                 action = 1;
                 if ( r/n > 3*threshold && amount < dp->hand.lastraise*2 )
@@ -664,7 +664,7 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         return(-1);
     }
     tmp = senderind;
-    pangea_bet(hn,dp,senderind,amount);
+    pangea_bet(hn,dp,senderind,amount,CARDS777_CHECK);
     dp->hand.actions[senderind] = action;
     dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
     dp->hand.numactions++;

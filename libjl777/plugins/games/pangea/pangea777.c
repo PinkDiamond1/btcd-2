@@ -241,7 +241,7 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
             {
                 if ( dp->balances[i] < dp->ante )
                     pangea_fold(dp,i);
-                else pangea_bet(hn,dp,i,dp->ante);
+                else pangea_bet(hn,dp,i,dp->ante,CARDS777_ANTE);
             }
         }
     }
@@ -253,7 +253,7 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
         else
         {
             dp->button = j;
-            pangea_bet(hn,dp,dp->button,(dp->bigblind>>1));
+            pangea_bet(hn,dp,dp->button,(dp->bigblind>>1),CARDS777_SMALLBLIND);
             break;
         }
     }
@@ -264,7 +264,7 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
             pangea_fold(dp,j);
         else
         {
-            pangea_bet(hn,dp,j,dp->bigblind);
+            pangea_bet(hn,dp,j,dp->bigblind,CARDS777_BIGBLIND);
             break;
         }
     }
