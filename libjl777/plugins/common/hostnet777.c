@@ -606,7 +606,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
 
 int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int32_t slot)
 {
-    int32_t i,n; struct hostnet777_id *ptr; char endpoint[128]; uint64_t nxt64bits = acct777_nxt64bits(clientpub);
+    int32_t i,n; struct hostnet777_id *ptr; char endpoint[128],buf[128]; uint64_t nxt64bits = acct777_nxt64bits(clientpub);
     if ( slot < 0 )
     {
         if ( (ptr= hostnet777_find(srv,clientpub)) != 0 )
@@ -640,8 +640,9 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
         return(-1);
     }
     sprintf(endpoint,"%s://%s:%u",srv->ep.transport,srv->ep.ipaddr,srv->ep.port + slot + 1);
-    srv->clients[slot].pmsock = nn_createsocket("tcp://127.0.0.1:7901",1,"NN_PULL",NN_PULL,srv->ep.port + slot + 1,10,10);
-    printf("NN_PULL.%d for slot.%d\n",srv->clients[slot].pmsock,slot);
+    sprintf(buf,"%s://127.0.0.1:%u",srv->ep.transport,srv->ep.port + slot + 1);
+    srv->clients[slot].pmsock = nn_createsocket(buf,1,"NN_PAIR",NN_PAIR,srv->ep.port + slot + 1,10,10);
+    printf("NN_PAIR.%d for slot.%d\n",srv->clients[slot].pmsock,slot);
     srv->clients[slot].pubkey = clientpub;
     srv->clients[slot].nxt64bits = nxt64bits;
     srv->clients[slot].lastcontact = (uint32_t)time(NULL);
@@ -669,10 +670,10 @@ struct hostnet777_client *hostnet777_client(bits256 privkey,bits256 pubkey,char 
     endbuf[strlen(endbuf)-4] = 0;
     port = atoi(&srvendpoint[strlen(endbuf)]);
     sprintf(endbuf2,"%s%u",endbuf,port + 1 + slot);
-    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,100,100);
-    printf("NN_PUSH %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+1+slot);
+    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PAIR",NN_PAIR,0,10,10);
+    printf("NN_PAIR %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+1+slot);
     sprintf(endbuf2,"%s%u",endbuf,port);
-    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,100,100);
+    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,10,10);
     printf("SUB %d from (%s) port.%d\n",ptr->subsock,endbuf2,port);
     nn_setsockopt(ptr->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
     //sprintf(endbuf2,"%s%u",endbuf,port);
@@ -709,7 +710,7 @@ void hostnet777_freeserver(struct hostnet777_server *srv)
 
 struct hostnet777_server *hostnet777_server(bits256 srvprivkey,bits256 srvpubkey,char *transport,char *ipaddr,uint16_t port,int32_t maxclients)
 {
-    struct hostnet777_server *srv; struct hostnet777_endpoint *ep;
+    struct hostnet777_server *srv; struct hostnet777_endpoint *ep; char buf[128];
     srv = calloc(1,sizeof(*srv) + maxclients*sizeof(struct hostnet777_id));
     srv->max = maxclients;
     ep = &srv->ep;
@@ -725,7 +726,8 @@ struct hostnet777_server *hostnet777_server(bits256 srvprivkey,bits256 srvpubkey
     srv->H.pubkey = srv->clients[0].pubkey = srvpubkey;
     srv->H.nxt64bits = srv->clients[0].nxt64bits = acct777_nxt64bits(srvpubkey);
     sprintf(ep->endpoint,"%s://%s:%u",transport,ipaddr,port);
-    srv->pubsock = nn_createsocket("tcp://127.0.0.1:7899",1,"NN_PUB",NN_PUB,port,10,10);
+    sprintf(buf,"%s://127.0.0.1:%u",transport,port);
+    srv->pubsock = nn_createsocket(buf,1,"NN_PUB",NN_PUB,port,10,10);
     printf("PUB.%d to (%s) pangeaport.%d\n",srv->pubsock,ep->endpoint,port);
     srv->num = 1;
     return(srv);

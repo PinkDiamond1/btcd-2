@@ -1434,8 +1434,8 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
         strcpy(plugin->transport,"tcp");
     if ( plugin->ipaddr[0] == 0 )
         strcpy(plugin->ipaddr,"127.0.0.1");
-    if ( plugin->pangeaport == 0 )
-        plugin->pangeaport = 8888;
+    //if ( plugin->pangeaport == 0 )
+        plugin->pangeaport = 7899;
     //if ( portable_thread_create((void *)hostnet777_idler,hn) == 0 )
     //    printf("error launching server thread\n");
     if ( (clients= calloc(numthreads,sizeof(*clients))) == 0 )
@@ -1644,7 +1644,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);
         free_json(argjson);
         printf("my64bits %llu ipaddr.%s mypriv.%02x mypub.%02x\n",(long long)plugin->nxt64bits,plugin->ipaddr,plugin->mypriv[0],plugin->mypub[0]);
-        if ( (PANGEA_MAXTHREADS= juint(json,"pangea_loopback")) != 0 )
+        if ( (PANGEA_MAXTHREADS= juint(json,"pangeatest")) != 0 )
             portable_thread_create((void *)pangea_test,plugin);//,9,SATOSHIDEN,SATOSHIDEN/10,10);
         printf("initialized PANGEA\n");
         if ( 0 )
