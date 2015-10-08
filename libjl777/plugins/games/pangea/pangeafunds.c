@@ -40,8 +40,8 @@ char *pangea_typestr(uint8_t type)
 
 char *pangea_dispsummary(int32_t verbose,uint8_t *summary,int32_t summarysize,uint64_t tableid,int32_t handid,int32_t numplayers)
 {
-    int32_t i,numhands = 0,len = 0; uint8_t type,player = 0; uint64_t bits64 = 0,rake = 0; bits256 card; char hexstr[65];
-    cJSON *item,*json,*all,*players[CARDS777_MAXPLAYERS],*array = cJSON_CreateArray();
+    int32_t i,n = 0,numhands = 0,len = 0; uint8_t type,player = 0; uint64_t bits64 = 0,rake = 0; bits256 card; char hexstr[65];
+    cJSON *item,*json,*all,*players[CARDS777_MAXPLAYERS],*pitem,*array = cJSON_CreateArray();
     all = cJSON_CreateArray();
     for (i=0; i<numplayers; i++)
         players[i] = cJSON_CreateArray();
@@ -61,7 +61,13 @@ char *pangea_dispsummary(int32_t verbose,uint8_t *summary,int32_t summarysize,ui
         {
             case CARDS777_START: jaddnum(item,"hand",numhands); jadd64bits(item,"checkprod",bits64); break;
             case CARDS777_RAKES: jaddnum(item,"hostrake",dstr(rake)); jaddnum(item,"pangearake",dstr(bits64)); break;
-            case CARDS777_WINNINGS: jaddnum(item,"player",player); jaddnum(item,"won",dstr(bits64)); break;
+            case CARDS777_WINNINGS:
+                jaddnum(item,"player",player);
+                jaddnum(item,"won",dstr(bits64));
+                if ( pitem == 0 )
+                    pitem = cJSON_CreateObject();
+                jaddnum(pitem,"won",dstr(bits64));
+                break;
             case CARDS777_FACEUP:
                 jaddnum(item,"cardi",player);
                 init_hexbytes_noT(hexstr,card.bytes,sizeof(card));
@@ -70,18 +76,40 @@ char *pangea_dispsummary(int32_t verbose,uint8_t *summary,int32_t summarysize,ui
             default:
                 jaddstr(item,"action",pangea_typestr(type));
                 jaddnum(item,"player",player);
+                if ( pitem == 0 )
+                    pitem = cJSON_CreateObject();
                 if ( bits64 != 0 )
+                {
                     jaddnum(item,"bet",dstr(bits64));
+                    jaddnum(pitem,pangea_typestr(type),dstr(bits64));
+                }
+                else jaddstr(pitem,"action",pangea_typestr(type));
                 break;
+        }
+        if ( pitem != 0 )
+        {
+            jaddnum(pitem,"n",n), n++;
+            jaddi(players[player],pitem), pitem = 0;
         }
         jaddi(array,item);
     }
-    json = cJSON_CreateObject();
-    jadd64bits(json,"tableid",tableid);
-    jaddnum(json,"handid",handid);
-    jaddnum(json,"handid",_crc32(0,summary,summarysize));
-    jadd(json,"hand",array);
-    return(jprint(json,1));
+    for (i=0; i<numplayers; i++)
+        jaddi(all,players[i]);
+    if ( verbose == 0 )
+    {
+        free_json(array);
+        return(jprint(all,1));
+    }
+    else
+    {
+        json = cJSON_CreateObject();
+        jadd64bits(json,"tableid",tableid);
+        jaddnum(json,"handid",handid);
+        jaddnum(json,"crc",_crc32(0,summary,summarysize));
+        jadd(json,"hand",array);
+        //jadd(json,"players",all);
+        return(jprint(json,1));
+    }
 }
 
 void pangea_fold(struct cards777_pubdata *dp,int32_t player)
@@ -458,7 +486,7 @@ int32_t pangea_countdown(struct cards777_pubdata *dp,int32_t player)
 
 cJSON *pangea_tablestatus(struct pangea_info *sp)
 {
-    uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS],totals[CARDS777_MAXPLAYERS],sum;
+    uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS],totals[CARDS777_MAXPLAYERS],sum; char *handhist;
     int32_t i,n,j,countdown; int64_t total; struct cards777_pubdata *dp; cJSON *bets,*item,*array,*json = cJSON_CreateObject();
     jadd64bits(json,"tableid",sp->tableid);
     jadd64bits(json,"myind",sp->myind);
@@ -503,7 +531,7 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     }
     jadd(json,"bets",bets);
     jaddnum(json,"totalbets",dstr(total));
-    if ( (n= pangea_sidepots(1,sidepots,dp,dp->hand.snapshot)) > 0 && n < dp->N )
+    if ( (n= pangea_sidepots(0,sidepots,dp,dp->hand.snapshot)) > 0 && n < dp->N )
     {
         array = cJSON_CreateArray();
         for (i=0; i<n; i++)
@@ -512,8 +540,8 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
             for (sum=j=0; j<dp->N; j++)
                 jaddinum(item,dstr(sidepots[i][j])), sum += sidepots[i][j];
             totals[i] = sum;
+            jaddi(array,item);
         }
-        jaddi(array,item);
         jadd(json,"pots",array);
         item = cJSON_CreateArray();
         for (sum=i=0; i<n; i++)
@@ -526,6 +554,11 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
         jadd64bits(json,"autoshow",sp->priv->autoshow);
         jadd64bits(json,"autofold",sp->priv->autofold);
         jadd(json,"hand",pangea_handjson(&dp->hand,sp->priv->hole,dp->isbot[sp->myind]));
+    }
+    if ( (handhist= pangea_dispsummary(0,dp->summary,dp->summarysize,sp->tableid,dp->numhands-1,dp->N)) != 0 )
+    {
+        if ( (item= cJSON_Parse(handhist)) != 0 )
+            jadd(json,"actions",item);
     }
     if ( (countdown= pangea_countdown(dp,sp->myind)) >= 0 )
         jaddnum(json,"timeleft",countdown);
