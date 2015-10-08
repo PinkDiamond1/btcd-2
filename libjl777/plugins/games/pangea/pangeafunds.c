@@ -214,6 +214,7 @@ uint64_t pangea_winnings(uint64_t *pangearakep,uint64_t *hostrakep,uint64_t tota
     else rake = 0;
     *hostrakep = rake;
     *pangearakep = pangearake;
+    printf("rakemillis.%d total %.8f split %.8f rake %.8f pangearake %.8f\n",rakemillis,dstr(total),dstr(split),dstr(rake),dstr(pangearake));
     return(split);
 }
 
@@ -635,7 +636,6 @@ void pangea_sendsummary(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
 {
     char hex[4096];
     pangea_sendcmd(hex,hn,"summary",-1,dp->summary,dp->summarysize,0,0);
-    pangea_clearhand(dp,&dp->hand,priv);
 }
 
 int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)

@@ -819,7 +819,7 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
     }
     dp = hn->client->H.pubdata;
     priv = hn->client->H.privdata;
-    if ( (jsonstr= queue_dequeue(&hn->client->H.Q,1)) != 0 )
+    if ( dp != 0 && priv != 0 && (jsonstr= queue_dequeue(&hn->client->H.Q,1)) != 0 )
     {
         //printf("player.%d GOT.(%s)\n",hn->client->H.slot,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
