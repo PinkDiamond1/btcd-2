@@ -91,7 +91,10 @@ struct pangea_info *pangea_usertables(int32_t *nump,uint64_t my64bits,uint64_t t
                 if ( sp->addrs[j] == my64bits && (tableid == 0 || sp->tableid == tableid) )
                 {
                     if ( num++ == 0 )
+                    {
                         retsp = sp;
+                        break;
+                    }
                 }
         }
     }
