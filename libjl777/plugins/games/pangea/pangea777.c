@@ -131,6 +131,9 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
 
 void pangea_summary(struct cards777_pubdata *dp,uint8_t type,void *arg0,int32_t size0,void *arg1,int32_t size1)
 {
+    //printf("pangea_summary.%d %d\n",type,*(uint8_t *)arg0);
+    //if ( type == 0xff )
+    //    getchar();
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],(void *)&type,sizeof(type));
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],arg0,size0);
     dp->summarysize += hostnet777_copybits(0,&dp->summary[dp->summarysize],arg1,size1);
@@ -1506,7 +1509,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     {
         item = cJSON_CreateObject();
         walletitem = cJSON_CreateObject();
-        if ( i != 0 )
+        if ( 1 || i != 0 )
             jaddnum(walletitem,"isbot",1);
         jadd64bits(walletitem,"bigblind",bigblind);
         jadd64bits(walletitem,"ante",ante);

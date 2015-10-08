@@ -13,9 +13,31 @@
  *                                                                            *
  ******************************************************************************/
 
+char *pangea_typestr(uint8_t type)
+{
+    static char err[64];
+    switch ( type )
+    {
+        case 0xff: return("fold");
+        case CARDS777_START: return("start");
+        case CARDS777_CHECK: return("check");
+        case CARDS777_BET: return("bet");
+        case CARDS777_RAISE: return("raise");
+        case CARDS777_FULLRAISE: return("fullraise");
+        case CARDS777_SENTCARDS: return("sentcards");
+        case CARDS777_ALLIN: return("allin");
+        case CARDS777_FACEUP: return("faceup");
+        case CARDS777_WINNINGS: return("won");
+        case CARDS777_RAKES: return("rakes");
+    }
+    sprintf(err,"unknown type.%d",type);
+    return(err);
+}
+
 void pangea_dispsummary(uint8_t *summary,int32_t summarysize)
 {
-    int32_t numhands = 0,len = 0; uint8_t type,player = 0; uint64_t bits64 = 0,rake = 0; bits256 card;
+    int32_t numhands = 0,len = 0; uint8_t type,player = 0; uint64_t bits64 = 0,rake = 0; bits256 card; char hexstr[65];
+    cJSON *item,*array = cJSON_CreateArray();
     while ( len < summarysize )
     {
         len += hostnet777_copybits(1,&summary[len],(void *)&type,sizeof(type));
@@ -24,18 +46,30 @@ void pangea_dispsummary(uint8_t *summary,int32_t summarysize)
         else if ( type == CARDS777_RAKES )
             len += hostnet777_copybits(1,&summary[len],(void *)&rake,sizeof(rake));
         else len += hostnet777_copybits(1,&summary[len],(void *)&player,sizeof(player));
-        if ( type != CARDS777_FACEUP )
+        if ( type == CARDS777_FACEUP )
             len += hostnet777_copybits(1,&summary[len],card.bytes,sizeof(card));
-        else len += hostnet777_copybits(1,&summary[len],(void *)bits64,sizeof(bits64));
+        else len += hostnet777_copybits(1,&summary[len],(void *)&bits64,sizeof(bits64));
+        item = cJSON_CreateObject();
         switch ( type )
         {
-            case CARDS777_START: break;
-            case CARDS777_RAKES: break;
-            case CARDS777_WINNINGS: break;
-            case CARDS777_FACEUP: break;
-            default: break;
+            case CARDS777_START: jaddnum(item,"hand",numhands); jadd64bits(item,"checkprod",bits64); break;
+            case CARDS777_RAKES: jaddnum(item,"hostrake",dstr(rake)); jaddnum(item,"pangearake",dstr(bits64)); break;
+            case CARDS777_WINNINGS: jaddnum(item,"player",player); jaddnum(item,"won",dstr(bits64)); break;
+            case CARDS777_FACEUP:
+                jaddnum(item,"cardi",player);
+                init_hexbytes_noT(hexstr,card.bytes,sizeof(card));
+                jaddstr(item,"privkey",hexstr);
+                break;
+            default:
+                jaddstr(item,"action",pangea_typestr(type));
+                jaddnum(item,"player",player);
+                if ( bits64 != 0 )
+                    jaddnum(item,"bet",dstr(bits64));
+                break;
         }
+        jaddi(array,item);
     }
+    printf("HAND.(%s)\n",jprint(array,1));
     /*pangea_summary(dp,CARDS777_START,&dp->numhands,sizeof(dp->numhands),&dp->hand.checkprod.txid,sizeof(dp->hand.checkprod.txid));
     pangea_summary(dp,CARDS777_WINNINGS,&tmp,sizeof(tmp),(void *)&split,sizeof(split));
     pangea_summary(dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
@@ -137,7 +171,6 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
         pangea_fold(dp,player);
         retval = CARDS777_FOLD;
         tmp = player;
-        pangea_summary(dp,CARDS777_FOLD,&tmp,sizeof(tmp),(void *)&dp->hand.bets[player],sizeof(dp->hand.bets[player]));
         if ( Debuglevel > 2 )
             printf("player.%d betsize %.8f < hand.betsize %.8f FOLD\n",player,dstr(bet),dstr(dp->hand.betsize));
         return(retval);
@@ -295,7 +328,7 @@ int64_t pangea_splitpot(uint64_t *pangearakep,uint64_t sidepot[CARDS777_MAXPLAYE
 
 uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t turni,int32_t cardi,uint64_t betsize)
 {
-    int32_t r,action=0,n,activej; char hex[1024]; uint64_t threshold,total,sum,amount = 0;
+    int32_t r,action=CARDS777_CHECK,n,activej; char hex[1024]; uint64_t threshold,total,sum,amount = 0;
     sum = dp->hand.bets[hn->client->H.slot];
     action = 0;
     n = pangea_actives(&activej,dp);
@@ -317,7 +350,7 @@ uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t tur
             total = pangea_totalbet(dp);
             threshold = (100 * amount)/(1 + total);
             n++;
-            if ( 1 || r/n > threshold )
+            if ( r/n > threshold )
             {
                 action = 1;
                 if ( r/n > 3*threshold && amount < dp->hand.lastraise*2 )
