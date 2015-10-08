@@ -566,11 +566,11 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     if ( dp->hand.pangearake != 0 )
     {
         item = cJSON_CreateObject();
-        jaddnum(item,"hostrake",dp->hand.hostrake);
-        jaddnum(item,"pangearake",dp->hand.pangearake);
+        jaddnum(item,"hostrake",dstr(dp->hand.hostrake));
+        jaddnum(item,"pangearake",dstr(dp->hand.pangearake));
         array = cJSON_CreateArray();
         for (i=0; i<dp->N; i++)
-            jaddinum(array,dp->hand.won[i]);
+            jaddinum(array,dstr(dp->hand.won[i]));
         jadd(item,"won",array);
         jadd(json,"summary",item);
     }
