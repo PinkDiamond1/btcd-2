@@ -38,10 +38,13 @@ char *pangea_typestr(uint8_t type)
     return(err);
 }
 
-char *pangea_dispsummary(uint8_t *summary,int32_t summarysize,uint64_t tableid,int32_t handid)
+char *pangea_dispsummary(int32_t verbose,uint8_t *summary,int32_t summarysize,uint64_t tableid,int32_t handid,int32_t numplayers)
 {
-    int32_t numhands = 0,len = 0; uint8_t type,player = 0; uint64_t bits64 = 0,rake = 0; bits256 card; char hexstr[65];
-    cJSON *item,*json,*array = cJSON_CreateArray();
+    int32_t i,numhands = 0,len = 0; uint8_t type,player = 0; uint64_t bits64 = 0,rake = 0; bits256 card; char hexstr[65];
+    cJSON *item,*json,*all,*players[CARDS777_MAXPLAYERS],*array = cJSON_CreateArray();
+    all = cJSON_CreateArray();
+    for (i=0; i<numplayers; i++)
+        players[i] = cJSON_CreateArray();
     while ( len < summarysize )
     {
         len += hostnet777_copybits(1,&summary[len],(void *)&type,sizeof(type));
@@ -126,6 +129,29 @@ struct pangea_info *pangea_usertables(int32_t *nump,uint64_t my64bits,uint64_t t
         {
             for (j=0; j<sp->numaddrs; j++)
                 if ( sp->addrs[j] == my64bits && (tableid == 0 || sp->tableid == tableid) )
+                {
+                    if ( num++ == 0 )
+                    {
+                        retsp = sp;
+                        break;
+                    }
+                }
+        }
+    }
+    *nump = num;
+    return(retsp);
+}
+
+struct pangea_info *pangea_threadtables(int32_t *nump,int32_t threadid,uint64_t tableid)
+{
+    int32_t i,j,num = 0; struct pangea_info *sp,*retsp = 0;
+    *nump = 0;
+    for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
+    {
+        if ( (sp= TABLES[i]) != 0 )
+        {
+            for (j=0; j<sp->numaddrs; j++)
+                if ( sp->tp != 0 && sp->tp->threadid == threadid && (tableid == 0 || sp->tableid == tableid) )
                 {
                     if ( num++ == 0 )
                     {
@@ -685,7 +711,7 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
     if ( (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
     {
         printf("P%d: hand summary matches.%llx errors.%llx\n",hn->client->H.slot,(long long)dp->summaries,(long long)dp->mismatches);
-        if ( (handhist= pangea_dispsummary(dp->summary,dp->summarysize,sp->tableid,dp->numhands-1)) != 0 )
+        if ( (handhist= pangea_dispsummary(1,dp->summary,dp->summarysize,sp->tableid,dp->numhands-1,dp->N)) != 0 )
             printf("HAND.(%s)\n",handhist), free(handhist);
         if ( hn->server->H.slot == 0 )
             pangea_anotherhand(hn,dp,2);
@@ -857,15 +883,19 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
 
 char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
-    char *actionstr; uint64_t sum,amount=0; int32_t action,num; struct pangea_info *sp; struct cards777_pubdata *dp; char hex[4096];
-    if ( (sp= pangea_usertables(&num,my64bits,tableid)) == 0 )
+    char *actionstr; uint64_t sum,amount=0; int32_t action,num,threadid; struct pangea_info *sp; struct cards777_pubdata *dp; char hex[4096];
+    threadid = juint(json,"threadid");
+    if ( (sp= pangea_threadtables(&num,threadid,tableid)) == 0 )
         return(clonestr("{\"error\":\"you are not playing on any tables\"}"));
     if ( 0 && num != 1 )
         return(clonestr("{\"error\":\"more than one active table\"}"));
     else if ( (dp= sp->dp) == 0 )
         return(clonestr("{\"error\":\"no pubdata ptr for table\"}"));
     else if ( dp->hand.undergun != sp->myind || dp->hand.betsize == 0 )
+    {
+        printf("undergun.%d threadid.%d myind.%d\n",dp->hand.undergun,sp->tp->threadid,sp->myind);
         return(clonestr("{\"error\":\"not your turn\"}"));
+    }
     else if ( (actionstr= jstr(json,"action")) == 0 )
         return(clonestr("{\"error\":\"on action specified\"}"));
     else

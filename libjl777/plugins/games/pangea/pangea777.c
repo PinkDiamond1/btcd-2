@@ -659,7 +659,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     init_hexbytes_noT(hexstr,data,sizeof(bits256));
     cardi = juint(json,"cardi");
     validcard = juint(json,"turni");
-    //if ( Debuglevel > 2 || hn->client->H.slot == 0 )
+    if ( Debuglevel > 2 || hn->client->H.slot == 0 )
         printf("from.%d -> player.%d COMMUNITY.[%d] (%s) cardi.%d valid.%d (%s)\n",senderind,hn->client->H.slot,data[1],hexstr,cardi,validcard,jprint(json,0));
     //printf("got FACEUP.(%s)\n",jprint(json,0));
     if ( validcard > 0 )
@@ -1601,8 +1601,8 @@ char *pangea_history(uint64_t my64bits,uint64_t tableid,cJSON *json)
     if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 )
     {
         if ( jobj(json,"handid") == 0 )
-            return(pangea_dispsummary(sp->dp->summary,sp->dp->summarysize,tableid,sp->dp->numhands));
-        else return(pangea_dispsummary(sp->dp->summary,sp->dp->summarysize,tableid,juint(json,"handid")));
+            return(pangea_dispsummary(juint(json,"verbose"),sp->dp->summary,sp->dp->summarysize,tableid,sp->dp->numhands,sp->dp->N));
+        else return(pangea_dispsummary(juint(json,"verbose"),sp->dp->summary,sp->dp->summarysize,tableid,juint(json,"handid"),sp->dp->N));
     }
     return(clonestr("{\"error\":\"cant find tableid\"}"));
 }

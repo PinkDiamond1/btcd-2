@@ -115,7 +115,6 @@ int32_t cards777_validate(bits256 cardpriv,bits256 final,bits256 *cardpubs,int32
         printf("cards777_validate: ver not validated %llx vs %llx\n",(long long)checkcard.txid,(long long)ver.txid);
         return(-1);
     }
-    printf("cardi.%d VERIFIED\n",cardpriv.bytes[1]);
     return(cardpriv.bytes[1]);
 }
 
