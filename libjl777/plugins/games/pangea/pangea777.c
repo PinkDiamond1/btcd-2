@@ -360,7 +360,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
 void pangea_checkstart(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
     int32_t i;
-    if ( dp->newhand[0] != 0 && dp->hand.encodestarted == 0 )
+    if ( dp->hand.checkprod.txid != 0 && dp->newhand[0] != 0 && dp->hand.encodestarted == 0 )
     {
         for (i=0; i<dp->N; i++)
         {
@@ -371,9 +371,7 @@ void pangea_checkstart(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
         {
             dp->hand.encodestarted = (uint32_t)time(NULL);
             printf("SERVERSTATE issues encoded %llx\n",(long long)dp->hand.checkprod.txid);
-            if ( 0 && dp->N == 2 )
-                pangea_sendcmd(dp->newhand,hn,"encoded",-1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
-            else pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
+            pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
         }
     }
 }
@@ -621,7 +619,7 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
     cardi = juint(json,"cardi");
     validcard = juint(json,"turni");
     //if ( Debuglevel > 2 || hn->client->H.slot == 0 )
-        printf("from.%d -> player.%d COMMUNITY.[%d] (%s) cardi.%d valid.%d\n",senderind,hn->client->H.slot,data[1],hexstr,cardi,validcard);
+        printf("from.%d -> player.%d COMMUNITY.[%d] (%s) cardi.%d valid.%d (%s)\n",senderind,hn->client->H.slot,data[1],hexstr,cardi,validcard,jprint(json,0));
     //printf("got FACEUP.(%s)\n",jprint(json,0));
     if ( validcard > 0 && cardi >= dp->N*2 && cardi < dp->N*2+5 )
     {
@@ -655,7 +653,21 @@ int32_t pangea_faceup(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
 
 void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct cards777_privdata *priv)
 {
-    int32_t i,j,n; //struct pangea_info *sp = dp->table;
+    int32_t i,j,n; uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS],rake,pangearake;
+    if ( dp->hand.handmask == ((1 << dp->N) - 1) && dp->hand.finished == 0 )
+    {
+        printf("all players folded or showed cards at %ld\n",time(NULL));
+        dp->hand.finished = (uint32_t)time(NULL);
+        memset(sidepots,0,sizeof(sidepots));
+        n = pangea_sidepots(sidepots,hn,dp);
+        for (pangearake=rake=j=0; j<n; j++)
+            rake += pangea_splitpot(&pangearake,sidepots[j],hn,dp->rakemillis);
+        dp->hostrake += rake;
+        dp->pangearake += pangearake;
+        pangea_summary(dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
+        pangea_sendsummary(hn,dp,priv);
+        return;
+    }
     if ( dp->hand.finished != 0 && time(NULL) > dp->hand.finished+PANGEA_HANDGAP )
         pangea_anotherhand(hn,dp,0);
     if ( dp->hand.betstarted == 0 && dp->newhand[0] == 0 )
@@ -1423,7 +1435,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
 {
     char retbuf[65536]; bits256 privkey,pubkey; int32_t i,slot,threadid; struct pangea_thread *tp; struct hostnet777_client **clients;
     struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
-    sleep(7);
+    sleep(11);
     int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
     numthreads = 9; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
     //plugin->sleepmillis = 1;
@@ -1645,7 +1657,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     {
         uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
         //PANGEA.readyflag = 1;
-        plugin->sleepmillis = 100;
+        plugin->sleepmillis = 1;
         plugin->allowremote = 1;
         argjson = cJSON_Parse(jsonstr);
         plugin->nxt64bits = set_account_NXTSECRET(plugin->mypriv,plugin->mypub,plugin->NXTACCT,plugin->NXTADDR,plugin->NXTACCTSECRET,sizeof(plugin->NXTACCTSECRET),argjson,0,0,0);

@@ -24,11 +24,16 @@ void pangea_dispsummary(uint8_t *summary,int32_t summarysize)
         else if ( type == CARDS777_RAKES )
             len += hostnet777_copybits(1,&summary[len],(void *)&rake,sizeof(rake));
         else len += hostnet777_copybits(1,&summary[len],(void *)&player,sizeof(player));
-        if ( type == CARDS777_FACEUP )
+        if ( type != CARDS777_FACEUP )
             len += hostnet777_copybits(1,&summary[len],card.bytes,sizeof(card));
         else len += hostnet777_copybits(1,&summary[len],(void *)bits64,sizeof(bits64));
         switch ( type )
         {
+            case CARDS777_START: break;
+            case CARDS777_RAKES: break;
+            case CARDS777_WINNINGS: break;
+            case CARDS777_FACEUP: break;
+            default: break;
         }
     }
     /*pangea_summary(dp,CARDS777_START,&dp->numhands,sizeof(dp->numhands),&dp->hand.checkprod.txid,sizeof(dp->hand.checkprod.txid));
@@ -310,7 +315,7 @@ uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t tur
         {
             amount = (betsize - sum);
             total = pangea_totalbet(dp);
-            threshold = (100 * amount)/total;
+            threshold = (100 * amount)/(1 + total);
             n++;
             if ( 1 || r/n > threshold )
             {
@@ -608,12 +613,16 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
             dp->summaries |= (1LL << senderind);
         else dp->mismatches |= (1LL << senderind);
     } else dp->mismatches |= (1LL << senderind);
-    if ( hn->server->H.slot == 0 && (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
+    if ( hn->server->H.slot == 0 )
     {
-        printf("hand summary matches.%llx errors.%llx\n",(long long)dp->summaries,(long long)dp->mismatches);
-        //pangea_dispsummary(dp->summary,dp->summarysize);
-        pangea_anotherhand(hn,dp,2);
-    }
+        if ( (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
+        {
+            printf("hand summary matches.%llx errors.%llx\n",(long long)dp->summaries,(long long)dp->mismatches);
+            pangea_dispsummary(dp->summary,dp->summarysize);
+            pangea_anotherhand(hn,dp,2);
+        }
+    } else if ( senderind == 0 )
+        pangea_sendsummary(hn,dp,priv);
     return(0);
 }
 
@@ -730,9 +739,10 @@ int32_t pangea_myrank(struct cards777_pubdata *dp,int32_t senderind)
 
 int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    char hex[1024]; int32_t i,j,n,turni,cardi; uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS],rake,pangearake,amount = 0;
+    char hex[1024]; int32_t i,turni,cardi; uint64_t amount = 0;
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
+    printf("P%d: showdown from sender.%d\n",hn->client->H.slot,senderind);
     if ( dp->hand.betstatus[hn->client->H.slot] != CARDS777_FOLD && ((priv->autoshow != 0 && dp->hand.actions[hn->client->H.slot] != CARDS777_SENTCARDS) || (turni == hn->client->H.slot && dp->hand.lastbettor == hn->client->H.slot)) )
     {
         if ( priv->autoshow == 0 && pangea_myrank(dp,hn->client->H.slot) < 0 )
@@ -749,28 +759,14 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
         pangea_sendsummary(hn,dp,priv);
         return(0);
     }
-    if ( dp->hand.handmask == (1 << dp->N)-1 && dp->hand.finished == 0 )
-    {
-        printf("all players folded or showed cards at %ld\n",time(NULL));
-        dp->hand.finished = (uint32_t)time(NULL);
-        memset(sidepots,0,sizeof(sidepots));
-        n = pangea_sidepots(sidepots,hn,dp);
-        for (pangearake=rake=j=0; j<n; j++)
-            rake += pangea_splitpot(&pangearake,sidepots[j],hn,dp->rakemillis);
-        dp->hostrake += rake;
-        dp->pangearake += pangearake;
-        pangea_summary(dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
-        pangea_sendsummary(hn,dp,priv);
-        return(0);
-    }
-    else if ( hn->client->H.slot == 0 && senderind != 0 )
+    if ( hn->client->H.slot == 0 )
     {
         for (i=0; i<dp->N; i++)
         {
             dp->hand.undergun = (dp->hand.undergun + 1) % dp->N;
             if ( dp->hand.undergun == dp->hand.lastbettor )
             {
-                printf("all players queried with showdown\n");
+                printf("all players queried with showdown handmask.%x finished.%u\n",dp->hand.handmask,dp->hand.finished);
                 return(0);
             }
             if ( dp->hand.betstatus[dp->hand.undergun] != CARDS777_FOLD )
