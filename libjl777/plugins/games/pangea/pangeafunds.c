@@ -985,13 +985,15 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
             sum = dp->hand.bets[sp->myind];
             if ( strcmp(actionstr,"allin") == 0 )
                 amount = dp->balances[sp->myind], action = CARDS777_ALLIN;
+            else if ( strcmp(actionstr,"bet") == 0 )
+                amount = j64bits(json,"amount"), action = 1;
             else
             {
                 if ( dp->hand.betsize == sum )
                 {
                     if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 )
                         action = 0;
-                    else if ( strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 )
+                    else if ( strcmp(actionstr,"raise") == 0 )
                     {
                         action = 1;
                         if ( (amount= dp->hand.lastraise) < j64bits(json,"amount") )
@@ -1003,7 +1005,7 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
                 {
                     if ( strcmp(actionstr,"check") == 0 || strcmp(actionstr,"call") == 0 )
                         action = 1, amount = (dp->hand.betsize - sum);
-                    else if ( strcmp(actionstr,"bet") == 0 || strcmp(actionstr,"raise") == 0 )
+                    else if ( strcmp(actionstr,"raise") == 0 )
                     {
                         action = 2;
                         amount = (dp->hand.betsize - sum);
