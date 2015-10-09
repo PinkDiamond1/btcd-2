@@ -1559,119 +1559,6 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
     return(0);
 }
 
-void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigblind,int64_t ante,int32_t rakemillis)
-{
-    char retbuf[65536]; bits256 privkey,pubkey; int32_t i,slot,threadid; struct pangea_thread *tp; struct hostnet777_client **clients;
-    struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
-    sleep(11);
-    int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
-    numthreads = 9; bigblind = SATOSHIDEN; ante = 0*SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
-    //plugin->sleepmillis = 1;
-    if ( PANGEA_MAXTHREADS > 1 && PANGEA_MAXTHREADS <= 9 )
-        numthreads = PANGEA_MAXTHREADS;
-    else PANGEA_MAXTHREADS = numthreads;
-    if ( plugin->transport[0] == 0 )
-        strcpy(plugin->transport,"tcp");
-    if ( plugin->ipaddr[0] == 0 )
-        strcpy(plugin->ipaddr,"127.0.0.1");
-    if ( plugin->pangeaport == 0 )
-        plugin->pangeaport = 7899;
-    //if ( portable_thread_create((void *)hostnet777_idler,hn) == 0 )
-    //    printf("error launching server thread\n");
-    if ( (clients= calloc(numthreads,sizeof(*clients))) == 0 )
-    {
-        printf("pangea_test: unexpected out of mem\n");
-        return;
-    }
-    for (threadid=0; threadid<PANGEA_MAXTHREADS; threadid++)
-    {
-        if ( (tp= calloc(1,sizeof(*THREADS[threadid]))) == 0 )
-        {
-            printf("pangea_test: unexpected out of mem\n");
-            return;
-        }
-        tp->threadid = threadid;
-        if ( threadid != 0 )
-            tp->nxt64bits = conv_NXTpassword(privkey.bytes,pubkey.bytes,(void *)&threadid,sizeof(threadid));
-        else
-        {
-            tp->nxt64bits = plugin->nxt64bits;
-            memcpy(privkey.bytes,plugin->mypriv,32);
-            memcpy(pubkey.bytes,plugin->mypub,32);
-        }
-        if ( threadid == 0 )
-        {
-            if ( (srv= hostnet777_server(privkey,pubkey,0,0,0,numthreads)) == 0 )
-            {
-                printf("cant create hostnet777 server\n");
-                return;
-            }
-            tp->hn.server = srv;
-            clients[0] = (void *)srv;
-            slot = threadid;
-           // srv->H.privkey = privkey, srv->H.pubkey = pubkey;
-        }
-        else
-        {
-            if ( (slot= hostnet777_register(srv,pubkey,-1)) >= 0 && slot == threadid )
-            {
-                if ( (clients[threadid]= hostnet777_client(privkey,pubkey,srv->ep.endpoint,slot)) == 0 )
-                    printf("error creating clients[%d]\n",threadid);
-                else
-                {
-                    tp->hn.client = clients[threadid];
-                    //tp->hn.client->H.privkey = privkey, tp->hn.client->H.pubkey = pubkey;
-                    //if ( portable_thread_create((void *)hostnet777_idler,hn) == 0 )
-                    //    printf("error launching clients[%d] thread\n",threadid);
-                }
-            } else printf("error slot.%d != threadid.%d\n",slot,threadid);
-        }
-        printf("%llu: slot.%d client.%p -> %llu pubkey.%llx/%llx privkey.%llx/%llx\n",(long long)tp->nxt64bits,slot,clients[threadid],(long long)clients[threadid]->H.nxt64bits,(long long)clients[threadid]->H.pubkey.txid,(long long)pubkey.txid,(long long)clients[threadid]->H.privkey.txid,(long long)privkey.txid);
-        THREADS[threadid] = tp;
-    }
-    bids = cJSON_CreateArray();
-    printf("numthreads.%d notabot.%d\n",numthreads,plugin->notabot);//, getchar();
-    for (i=0; i<numthreads; i++)
-    {
-        item = cJSON_CreateObject();
-        walletitem = cJSON_CreateObject();
-        if ( plugin->notabot != numthreads )
-        {
-            if ( i != plugin->notabot )
-                jaddnum(walletitem,"isbot",1);
-        }
-        jadd64bits(walletitem,"bigblind",bigblind);
-        jadd64bits(walletitem,"ante",ante);
-        jaddnum(walletitem,"rakemillis",rakemillis);
-        //jadd64bits(walletitem,"balance",bigblind * 100);
-        jadd64bits(item,"offerNXT",THREADS[i]->nxt64bits);
-        jadd(item,"wallet",walletitem);
-        jaddi(bids,item);
-    }
-    jadd(testjson,"bids",bids);
-    jadd64bits(testjson,"offerNXT",THREADS[0]->nxt64bits);
-    jadd64bits(testjson,"bigblind",bigblind);
-    jadd64bits(testjson,"ante",ante);
-    jaddnum(testjson,"rakemillis",rakemillis);
-    printf("TEST.(%s)\n",jprint(testjson,0));
-    pangea_start(plugin,retbuf,"BTCD",0,bigblind,ante,rakemillis,i,0,0,testjson);
-    free_json(testjson);
-    testjson = cJSON_Parse(retbuf);
-    //printf("BROADCAST.(%s)\n",retbuf);
-    for (threadid=1; threadid<numthreads; threadid++)
-        pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey,0,0,0,0,0,rakemillis);
-    for (threadid=0; threadid<numthreads; threadid++)
-    {
-        int32_t j; struct cards777_pubdata *dp;
-        tp = THREADS[threadid];
-        dp = tp->hn.client->H.pubdata;
-        for (j=0; j<numthreads; j++)
-            dp->balances[j] = 100 * SATOSHIDEN;
-    }
-    tp = THREADS[0];
-    //pangea_newdeck(&tp->hn);
-}
-
 char *pangea_history(uint64_t my64bits,uint64_t tableid,cJSON *json)
 {
     struct pangea_info *sp;
@@ -1790,6 +1677,119 @@ char *pangea_univ(uint8_t *mypriv,cJSON *json)
     jaddstr(item,"pubkey",pubkeystr);
     jadd(retjson,"NXT",item);
     return(jprint(retjson,1));
+}
+
+void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigblind,int64_t ante,int32_t rakemillis)
+{
+    char retbuf[65536]; bits256 privkey,pubkey; int32_t i,slot,threadid; struct pangea_thread *tp; struct hostnet777_client **clients;
+    struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
+    sleep(11);
+    int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
+    numthreads = 9; bigblind = SATOSHIDEN; ante = 0*SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
+    //plugin->sleepmillis = 1;
+    if ( PANGEA_MAXTHREADS > 1 && PANGEA_MAXTHREADS <= 9 )
+        numthreads = PANGEA_MAXTHREADS;
+    else PANGEA_MAXTHREADS = numthreads;
+    if ( plugin->transport[0] == 0 )
+        strcpy(plugin->transport,"tcp");
+    if ( plugin->ipaddr[0] == 0 )
+        strcpy(plugin->ipaddr,"127.0.0.1");
+    if ( plugin->pangeaport == 0 )
+        plugin->pangeaport = 7899;
+    //if ( portable_thread_create((void *)hostnet777_idler,hn) == 0 )
+    //    printf("error launching server thread\n");
+    if ( (clients= calloc(numthreads,sizeof(*clients))) == 0 )
+    {
+        printf("pangea_test: unexpected out of mem\n");
+        return;
+    }
+    for (threadid=0; threadid<PANGEA_MAXTHREADS; threadid++)
+    {
+        if ( (tp= calloc(1,sizeof(*THREADS[threadid]))) == 0 )
+        {
+            printf("pangea_test: unexpected out of mem\n");
+            return;
+        }
+        tp->threadid = threadid;
+        if ( threadid != 0 )
+            tp->nxt64bits = conv_NXTpassword(privkey.bytes,pubkey.bytes,(void *)&threadid,sizeof(threadid));
+        else
+        {
+            tp->nxt64bits = plugin->nxt64bits;
+            memcpy(privkey.bytes,plugin->mypriv,32);
+            memcpy(pubkey.bytes,plugin->mypub,32);
+        }
+        if ( threadid == 0 )
+        {
+            if ( (srv= hostnet777_server(privkey,pubkey,0,0,0,numthreads)) == 0 )
+            {
+                printf("cant create hostnet777 server\n");
+                return;
+            }
+            tp->hn.server = srv;
+            clients[0] = (void *)srv;
+            slot = threadid;
+            // srv->H.privkey = privkey, srv->H.pubkey = pubkey;
+        }
+        else
+        {
+            if ( (slot= hostnet777_register(srv,pubkey,-1)) >= 0 && slot == threadid )
+            {
+                if ( (clients[threadid]= hostnet777_client(privkey,pubkey,srv->ep.endpoint,slot)) == 0 )
+                    printf("error creating clients[%d]\n",threadid);
+                else
+                {
+                    tp->hn.client = clients[threadid];
+                    //tp->hn.client->H.privkey = privkey, tp->hn.client->H.pubkey = pubkey;
+                    //if ( portable_thread_create((void *)hostnet777_idler,hn) == 0 )
+                    //    printf("error launching clients[%d] thread\n",threadid);
+                }
+            } else printf("error slot.%d != threadid.%d\n",slot,threadid);
+        }
+        printf("%llu: slot.%d client.%p -> %llu pubkey.%llx/%llx privkey.%llx/%llx\n",(long long)tp->nxt64bits,slot,clients[threadid],(long long)clients[threadid]->H.nxt64bits,(long long)clients[threadid]->H.pubkey.txid,(long long)pubkey.txid,(long long)clients[threadid]->H.privkey.txid,(long long)privkey.txid);
+        THREADS[threadid] = tp;
+    }
+    bids = cJSON_CreateArray();
+    printf("numthreads.%d notabot.%d\n",numthreads,plugin->notabot);//, getchar();
+    for (i=0; i<numthreads; i++)
+    {
+        item = cJSON_CreateObject();
+        walletitem = cJSON_CreateObject();
+        if ( plugin->notabot != numthreads )
+        {
+            if ( i != plugin->notabot )
+                jaddnum(walletitem,"isbot",1);
+        }
+        jadd64bits(walletitem,"bigblind",bigblind);
+        jadd64bits(walletitem,"ante",ante);
+        jaddnum(walletitem,"rakemillis",rakemillis);
+        //jadd64bits(walletitem,"balance",bigblind * 100);
+        jadd64bits(item,"offerNXT",THREADS[i]->nxt64bits);
+        jadd(item,"wallet",walletitem);
+        jaddi(bids,item);
+    }
+    jadd(testjson,"bids",bids);
+    jadd64bits(testjson,"offerNXT",THREADS[0]->nxt64bits);
+    jadd64bits(testjson,"bigblind",bigblind);
+    jadd64bits(testjson,"ante",ante);
+    jaddnum(testjson,"rakemillis",rakemillis);
+    printf("TEST.(%s)\n",jprint(testjson,0));
+    pangea_start(plugin,retbuf,"BTCD",0,bigblind,ante,rakemillis,i,0,0,testjson);
+    free_json(testjson);
+    testjson = cJSON_Parse(retbuf);
+    //printf("BROADCAST.(%s)\n",retbuf);
+    for (threadid=1; threadid<numthreads; threadid++)
+        pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey,0,0,0,0,0,rakemillis);
+    for (threadid=0; threadid<numthreads; threadid++)
+    {
+        int32_t j; struct cards777_pubdata *dp;
+        tp = THREADS[threadid];
+        dp = tp->hn.client->H.pubdata;
+        for (j=0; j<numthreads; j++)
+            dp->balances[j] = 100 * SATOSHIDEN;
+    }
+    tp = THREADS[0];
+    //pangea_newdeck(&tp->hn);
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)

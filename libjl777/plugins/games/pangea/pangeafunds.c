@@ -428,9 +428,9 @@ uint64_t pangea_bot(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t tur
         {
             amount = (betsize - sum);
             total = pangea_totalbet(dp);
-            threshold = (100 * amount)/(1 + total);
+            threshold = (1000 * amount)/(1 + total);
             n++;
-            if ( 1 || r/n > threshold )
+            if ( r/n > threshold )
             {
                 action = 1;
                 if ( r/n > 3*threshold && amount < dp->hand.lastraise*2 )
@@ -648,7 +648,7 @@ void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t c
 
 int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    int32_t turni,cardi; char hex[2048]; struct pangea_info *sp = dp->table;
+    int32_t turni,cardi,i; char hex[2048]; uint64_t betsize = 0; struct pangea_info *sp = dp->table;
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
     printf("P%d: got turn.%d from %d | cardi.%d summary[%d] crc.%u\n",hn->server->H.slot,turni,senderind,cardi,dp->summarysize,_crc32(0,dp->summary,dp->summarysize));
@@ -661,6 +661,11 @@ int32_t pangea_turn(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp
         if ( hn->client->H.slot != 0 )
         {
             memcpy(dp->hand.snapshot,data,datalen);
+            for (i=0; i<dp->N; i++)
+                if ( dp->hand.bets[i] > betsize )
+                    betsize = dp->hand.bets[i];
+            if ( betsize != dp->hand.snapshot[dp->N] )
+                printf("ERROR BETSIZE MISMATCH: %.8f vs %.8f\n",dstr(betsize),dstr(dp->hand.snapshot[dp->N]));
             dp->hand.betsize = dp->hand.snapshot[dp->N];
             //printf("player.%d sends confirmturn.%d\n",hn->client->H.slot,turni);
             pangea_sendcmd(hex,hn,"confirmturn",-1,(void *)&sp->tableid,sizeof(sp->tableid),cardi,turni);
