@@ -253,6 +253,7 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
     sum += bet;
     if ( sum > dp->hand.betsize )
     {
+        dp->hand.numactions = 0;
         dp->hand.betsize = sum, dp->hand.lastbettor = player;
         if ( sum > dp->hand.lastraise && action == CARDS777_ALLIN )
             dp->hand.lastraise = sum;

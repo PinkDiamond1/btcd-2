@@ -453,7 +453,7 @@ void hostnet777_mailboxQ(queue_t *mailboxQ,void *cipher,int32_t cipherlen)
 
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len)
 {
-    int32_t cipherlen,datalen,sendsock,i; bits256 seed; uint8_t *data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
+    int32_t cipherlen,datalen,sendsock,i; bits256 seed; uint8_t *d2,*data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
     if ( destpub.txid != 0 )
         destbits = acct777_nxt64bits(destpub);
     else
@@ -473,9 +473,11 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
     }
     if ( 1 )
     {
+        //d2 = calloc(1,len*2);
+        memset(seed.bytes,0,sizeof(seed));
+        
         data = calloc(1,len*2);
         _init_HUFF(hp,len*2,data);
-        memset(seed.bytes,0,sizeof(seed));
         for (i='0'; i<='9'; i++)
             SETBIT(seed.bytes,i);
         for (i='a'; i<='f'; i++)
