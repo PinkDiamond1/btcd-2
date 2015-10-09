@@ -58,7 +58,7 @@ struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidi
 
 struct cards777_pubdata
 {
-    int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS]; uint8_t summary[32768];
+    int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS]; uint8_t summary[65536];
     uint64_t hostrake,bigblind,ante,pangearake,summaries,mismatches; uint32_t button,numhands,rakemillis,minbuyin,maxbuyin,summarysize;
     bits256 *playerpubs; void *table; struct cards777_handinfo hand; char newhand[65536]; bits256 data[];
 };
@@ -453,7 +453,7 @@ void hostnet777_mailboxQ(queue_t *mailboxQ,void *cipher,int32_t cipherlen)
 
 int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t len)
 {
-    int32_t cipherlen,datalen,sendsock,i; bits256 seed; uint8_t *d2,*data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
+    int32_t cipherlen,datalen,sendsock,i; bits256 seed; uint8_t *data=0,*cipher; uint64_t destbits; struct acct777_sig sig; HUFF H,*hp = &H;
     if ( destpub.txid != 0 )
         destbits = acct777_nxt64bits(destpub);
     else
@@ -473,9 +473,7 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
     }
     if ( 1 )
     {
-        //d2 = calloc(1,len*2);
         memset(seed.bytes,0,sizeof(seed));
-        
         data = calloc(1,len*2);
         _init_HUFF(hp,len*2,data);
         for (i='0'; i<='9'; i++)

@@ -89,11 +89,15 @@ void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplay
     struct cards777_pubdata *dp = hn->client->H.pubdata;
     hoststr[0] = 0;
     sprintf(hex,"{\"cmd\":\"%s\",\"millitime\":\"%lld\",\"turni\":%d,\"myind\":%d,\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,%s\"data\":\"",cmdstr,(long long)hostnet777_convmT(&hn->client->H.mT,0),turni,hn->client->H.slot,cardi,destplayer,(long long)hn->client->H.nxt64bits,time(NULL),datalen,hoststr);
-    if ( data != 0 && datalen != 0 )
+    n = (int32_t)strlen(hex);
+    if ( strcmp(cmdstr,"preflop") == 0 )
     {
-        n = (int32_t)strlen(hex);
-        init_hexbytes_noT(&hex[n],data,datalen);
+        memcpy(&hex[n],data,datalen+1);
+        //hexlen = (int32_t)strlen(hex)+1;
+        //printf("HEX.[%s] hexlen.%d n.%d\n",hex,hexlen,datalen);
     }
+    else if ( data != 0 && datalen != 0 )
+        init_hexbytes_noT(&hex[n],data,datalen);
     strcat(hex,"\"}");
     if ( (json= cJSON_Parse(hex)) == 0 )
     {
@@ -510,13 +514,37 @@ int32_t pangea_decoded(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     return(0);
 }
 
+int32_t pangea_zbuf(char *zbuf,uint8_t *data,int32_t datalen)
+{
+    int i,j,n = 0;
+    for (i=0; i<datalen; i++)
+    {
+        if ( data[i] != 0 )
+        {
+            zbuf[n++] = hexbyte((data[i]>>4) & 0xf);
+            zbuf[n++] = hexbyte(data[i] & 0xf);
+        }
+        else
+        {
+            for (j=1; j<32; j++)
+                if ( data[i+j] != 0 )
+                    break;
+            i += (j - 1);
+            zbuf[n++] = 'Z';
+            zbuf[n++] = 'A'+j;
+        }
+    }
+    zbuf[n] = 0;
+    return(n);
+}
+
 int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    char *hex; int32_t i,card,iter,cardi,destplayer,maxlen = (int32_t)(CARDS777_MAXPLAYERS * CARDS777_MAXPLAYERS * CARDS777_MAXCARDS * sizeof(bits256));
+    char *hex,*zbuf; int32_t i,card,len,iter,cardi,destplayer,maxlen = (int32_t)(2 * CARDS777_MAXPLAYERS * CARDS777_MAXPLAYERS * CARDS777_MAXCARDS * sizeof(bits256));
     bits256 cardpriv,audit[CARDS777_MAXPLAYERS];
     if ( data == 0 || datalen != (2 * dp->N) * (dp->N * dp->N * sizeof(bits256)) || (hex= malloc(maxlen)) == 0 )
     {
-        printf("pangea_preflop invalid datalen.%d vs %ld\n",datalen,(2 * dp->N) * sizeof(bits256));
+        printf("pangea_preflop invalid datalen.%d vs %ld\n",datalen,(2 * dp->N) * (dp->N * dp->N * sizeof(bits256)));
         return(-1);
     }
     //printf("preflop player.%d\n",hn->client->H.slot);
@@ -537,7 +565,15 @@ int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
                 pangea_rwaudit(1,audit,priv->audits,cardi,destplayer,dp->N);
             }
         //printf("issue preflop\n");
-        pangea_sendcmd(hex,hn,"preflop",hn->client->H.slot-1,priv->audits[0].bytes,datalen,dp->N * 2 * dp->N,-1);
+        if ( (zbuf= calloc(1,datalen*2+1)) != 0 )
+        {
+            //init_hexbytes_noT(zbuf,priv->audits[0].bytes,datalen);
+            //printf("STARTZBUF.(%s)\n",zbuf);
+            len = pangea_zbuf(zbuf,priv->audits[0].bytes,datalen);
+            printf("datalen.%d -> len.%d zbuf %ld (%s)\n",datalen,len,strlen(zbuf),zbuf);
+            pangea_sendcmd(hex,hn,"preflop",hn->client->H.slot-1,(void *)zbuf,len,dp->N * 2 * dp->N,-1);
+            free(zbuf);
+        }
     }
     else
     {
@@ -592,6 +628,7 @@ int32_t pangea_encoded(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
                         audit[0] = dp->hand.final[cardi*dp->N + destplayer];
                         pangea_rwaudit(1,audit,priv->audits,cardi,destplayer,dp->N);
                     }
+            printf("call preflop %ld\n",(2 * dp->N) * (dp->N * dp->N * sizeof(bits256)));
             pangea_preflop(hn,json,dp,priv,priv->audits[0].bytes,(2 * dp->N) * (dp->N * dp->N * sizeof(bits256)),hn->client->H.slot);
         }
         free(hex);
@@ -852,7 +889,7 @@ void pangea_chat(uint64_t senderbits,void *buf,int32_t len,int32_t senderind)
 int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 *hn)
 {
     char *jsonstr,*hexstr,*cmdstr; cJSON *json; struct cards777_privdata *priv; struct cards777_pubdata *dp;
-    int32_t len,senderind,maxlen; uint8_t *buf;
+    int32_t i,j,len,senderind,maxlen,len2; uint8_t *buf;
     *senderbitsp = 0;
     dp = hn->client->H.pubdata;
     priv = hn->client->H.privdata;
@@ -882,7 +919,28 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
             *timestampp = juint(json,"timestamp");
             hn->client->H.state = juint(json,"state");
             len = juint(json,"n");
-            if ( (hexstr= jstr(json,"data")) != 0 && strlen(hexstr) == (len<<1) )
+            cmdstr = jstr(json,"cmd");
+            if ( cmdstr != 0 && strcmp(cmdstr,"preflop") == 0 )
+            {
+                if ( (hexstr= jstr(json,"data")) != 0 )
+                {
+                    for (len2=i=0; i<len; i+=2)
+                    {
+                        if ( hexstr[i] == 'Z' )
+                        {
+                            for (j=0; j<hexstr[i+1]-'A'; j++)
+                                buf[len2++] = 0;
+                        }
+                        else buf[len2++] = _decode_hex(&hexstr[i]);
+                    }
+                    //char *tmp = calloc(1,len*2+1);
+                    //init_hexbytes_noT(tmp,buf,len2);
+                    printf("zlen %d to len2 %d\n",len,len2);
+                    //free(tmp);
+                    len = len2;
+                }
+            }
+            else if ( (hexstr= jstr(json,"data")) != 0 && strlen(hexstr) == (len<<1) )
             {
                 if ( len > maxlen )
                 {
@@ -891,7 +949,7 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                 }
                 decode_hex(buf,len,hexstr);
             } else printf("len.%d vs hexlen.%ld (%s)\n",len,strlen(hexstr)>>1,hexstr);
-            if ( (cmdstr= jstr(json,"cmd")) != 0 )
+            if ( cmdstr != 0 )
             {
                 if ( strcmp(cmdstr,"newhand") == 0 )
                     pangea_newhand(hn,json,dp,priv,buf,len,senderind);

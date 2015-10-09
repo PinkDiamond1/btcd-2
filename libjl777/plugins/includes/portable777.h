@@ -51,6 +51,8 @@ int32_t OS_getpid();
 int32_t OS_waitpid(int32_t childpid,int32_t *statusp,int32_t flags);
 int32_t OS_conv_unixtime(int32_t *secondsp,time_t timestamp);
 uint32_t OS_conv_datenum(int32_t datenum,int32_t hour,int32_t minute,int32_t second);
+unsigned char _decode_hex(char *hex);
+char hexbyte(int32_t c);
 
 char *nn_typestr(int32_t type);
 
