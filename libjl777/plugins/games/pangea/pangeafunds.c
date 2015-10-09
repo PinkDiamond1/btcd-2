@@ -243,9 +243,12 @@ int32_t pangea_bet(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t play
     else if ( bet >= 2*dp->hand.lastraise )
     {
         dp->hand.lastraise = bet;
-        dp->hand.numactions = 1;
+        dp->hand.numactions = 0;
         if ( action == CARDS777_CHECK )
+        {
             action = CARDS777_FULLRAISE; // allows all players to check/bet again
+            printf("FULLRAISE by player.%d\n",player);
+        }
     }
     sum += bet;
     if ( sum > dp->hand.betsize )

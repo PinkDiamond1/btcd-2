@@ -381,9 +381,18 @@ void pangea_checkstart(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
 
 int32_t pangea_gotdeck(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
+    int32_t i; uint64_t total = 0;
     dp->hand.othercardpubs[senderind] = *(uint64_t *)data;
     if ( Debuglevel > 2 )
-        printf("player.%d got pangea_gotdeck from senderind.%d otherpubs.%llx\n",hn->client->H.slot,senderind,(long long)dp->hand.othercardpubs[senderind]);
+    {
+        for (i=0; i<dp->N; i++)
+        {
+            total += dp->balances[i];
+            printf("(p%d %.8f) ",i,dstr(dp->balances[i]));
+        }
+        printf("balances %.8f [%.8f] | ",dstr(total),dstr(total + dp->hostrake + dp->pangearake));
+        printf("player.%d pangea_gotdeck from P.%d otherpubs.%llx\n",hn->client->H.slot,senderind,(long long)dp->hand.othercardpubs[senderind]);
+    }
     pangea_checkstart(hn,dp,priv);
     return(0);
 }
