@@ -570,7 +570,7 @@ int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
             //init_hexbytes_noT(zbuf,priv->audits[0].bytes,datalen);
             //printf("STARTZBUF.(%s)\n",zbuf);
             len = pangea_zbuf(zbuf,priv->audits[0].bytes,datalen);
-            printf("datalen.%d -> len.%d zbuf %ld (%s)\n",datalen,len,strlen(zbuf),zbuf);
+            //printf("datalen.%d -> len.%d zbuf %ld\n",datalen,len,strlen(zbuf));
             pangea_sendcmd(hex,hn,"preflop",hn->client->H.slot-1,(void *)zbuf,len,dp->N * 2 * dp->N,-1);
             free(zbuf);
         }
@@ -935,7 +935,7 @@ int32_t pangea_poll(uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 
                     }
                     //char *tmp = calloc(1,len*2+1);
                     //init_hexbytes_noT(tmp,buf,len2);
-                    printf("zlen %d to len2 %d\n",len,len2);
+                    //printf("zlen %d to len2 %d\n",len,len2);
                     //free(tmp);
                     len = len2;
                 }
