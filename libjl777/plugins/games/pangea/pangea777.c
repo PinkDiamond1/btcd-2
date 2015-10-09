@@ -249,13 +249,12 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
             pangea_fold(dp,j);
         else
         {
-            dp->button = j;
             smallblindi = j;
-            pangea_bet(hn,dp,dp->button,(dp->bigblind>>1),CARDS777_SMALLBLIND);
+            pangea_bet(hn,dp,smallblindi,(dp->bigblind>>1),CARDS777_SMALLBLIND);
             break;
         }
     }
-    for (i=1; i<dp->N; i++)
+    for (i=0; i<dp->N; i++)
     {
         j = (1 + smallblindi + i) % dp->N;
         if ( dp->balances[j] < dp->bigblind )
@@ -344,8 +343,7 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     }
     if ( hn->server->H.slot != 0 )
         pangea_clearhand(dp,&dp->hand,priv);
-    dp->numhands++;
-    dp->button = (dp->numhands % dp->N);
+    dp->button = (dp->numhands++ % dp->N);
     memcpy(dp->hand.cardpubs,data,(dp->numcards + 1) * sizeof(bits256));
     printf("player.%d NEWHAND.%llx received numhands.%d button.%d cardi.%d\n",hn->client->H.slot,(long long)dp->hand.cardpubs[dp->numcards].txid,dp->numhands,dp->button,dp->hand.cardi);
     dp->hand.checkprod = cards777_pubkeys(dp->hand.cardpubs,dp->numcards,dp->hand.cardpubs[dp->numcards]);
@@ -514,9 +512,9 @@ int32_t pangea_decoded(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
 
 int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    char hex[2 * CARDS777_MAXPLAYERS * CARDS777_MAXCARDS * sizeof(bits256)]; int32_t i,card,iter,cardi,destplayer;
+    char *hex; int32_t i,card,iter,cardi,destplayer,maxlen = (int32_t)(CARDS777_MAXPLAYERS * CARDS777_MAXPLAYERS * CARDS777_MAXCARDS * sizeof(bits256));
     bits256 cardpriv,audit[CARDS777_MAXPLAYERS];
-    if ( data == 0 || datalen != (2 * dp->N) * (dp->N * dp->N * sizeof(bits256)) )
+    if ( data == 0 || datalen != (2 * dp->N) * (dp->N * dp->N * sizeof(bits256)) || (hex= malloc(maxlen)) == 0 )
     {
         printf("pangea_preflop invalid datalen.%d vs %ld\n",datalen,(2 * dp->N) * sizeof(bits256));
         return(-1);
@@ -559,6 +557,7 @@ int32_t pangea_preflop(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
                 else pangea_sendcmd(hex,hn,"card",destplayer,audit[0].bytes,sizeof(bits256)*dp->N,cardi,-1);
             }
     }
+    free(hex);
     return(0);
 }
 
