@@ -785,15 +785,15 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
     if ( matched != 0 )
         dp->summaries |= (1LL << senderind);
     else dp->mismatches |= (1LL << senderind);
-    if ( senderind == 0 && hn->client->H.slot != 0 )
-        pangea_sendsummary(hn,dp,priv);
+    //if ( senderind == 0 && hn->client->H.slot != 0 )
+    //    pangea_sendsummary(hn,dp,priv);
     if ( (dp->mismatches | dp->summaries) == (1LL << dp->N)-1 )
     {
         printf("P%d: hand summary matches.%llx errors.%llx\n",hn->client->H.slot,(long long)dp->summaries,(long long)dp->mismatches);
-        if ( handhist == 0 && (handhist= pangea_dispsummary(1,dp->summary,dp->summarysize,sp->tableid,dp->numhands-1,dp->N)) != 0 )
-            printf("HAND.(%s)\n",handhist), free(handhist);
+        //if ( handhist == 0 && (handhist= pangea_dispsummary(1,dp->summary,dp->summarysize,sp->tableid,dp->numhands-1,dp->N)) != 0 )
+        //    printf("HAND.(%s)\n",handhist), free(handhist);
         if ( hn->server->H.slot == 0 )
-            pangea_anotherhand(hn,dp,0);
+            pangea_anotherhand(hn,dp,3);
     }
     return(0);
 }
@@ -924,7 +924,8 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
     char hex[1024]; int32_t i,turni,cardi; uint64_t amount = 0;
     turni = juint(json,"turni");
     cardi = juint(json,"cardi");
-    printf("P%d: showdown from sender.%d\n",hn->client->H.slot,senderind);
+    if ( Debuglevel > 2 )
+        printf("P%d: showdown from sender.%d\n",hn->client->H.slot,senderind);
     if ( dp->hand.betstatus[hn->client->H.slot] != CARDS777_FOLD && ((priv->autoshow != 0 && dp->hand.actions[hn->client->H.slot] != CARDS777_SENTCARDS) || (turni == hn->client->H.slot && dp->hand.lastbettor == hn->client->H.slot)) )
     {
         if ( priv->autoshow == 0 && pangea_myrank(dp,hn->client->H.slot) < 0 )
@@ -1006,8 +1007,8 @@ char *pangea_input(uint64_t my64bits,uint64_t tableid,cJSON *json)
                     {
                         action = 2;
                         amount = (dp->hand.betsize - sum);
-                        if ( amount < 2*dp->hand.lastraise )
-                            amount = 2*dp->hand.lastraise;
+                        if ( amount < dp->hand.lastraise )
+                            amount = dp->hand.lastraise;
                         if ( j64bits(json,"amount") > amount )
                             amount = j64bits(json,"amount");
                     }

@@ -371,6 +371,7 @@ void pangea_checkstart(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
         }
         if ( i == dp->N )
         {
+            sleep(5);
             dp->hand.encodestarted = (uint32_t)time(NULL);
             printf("SERVERSTATE issues encoded %llx\n",(long long)dp->hand.checkprod.txid);
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
@@ -701,7 +702,10 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
 {
     int32_t i,j,n;
     if ( dp->hand.finished != 0 && time(NULL) > dp->hand.finished+PANGEA_HANDGAP )
-        pangea_anotherhand(hn,dp,0);
+    {
+        printf("HANDGAP\n");
+        pangea_anotherhand(hn,dp,3);
+    }
     if ( dp->hand.betstarted == 0 && dp->newhand[0] == 0 )
     {
         static uint32_t disptime;
@@ -1019,9 +1023,9 @@ int32_t pangea_idle(struct plugin_info *plugin)
                             dp->hand.hostrake = rake;
                             dp->hand.pangearake = pangearake;
                             pangea_summary(dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
+                            pangea_sendsummary(hn,dp,hn->client->H.privdata);
                             if ( hn->client->H.slot == 0 )
-                                pangea_sendsummary(hn,dp,hn->client->H.privdata);
-                            printf("%s\n",jprint(pangea_tablestatus(dp->table),1));
+                                printf("%s\n",jprint(pangea_tablestatus(dp->table),1));
                         }
                         if ( hn->client->H.slot == 0 )
                             pangea_serverstate(hn,dp,hn->server->H.privdata);
