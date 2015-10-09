@@ -1373,6 +1373,12 @@ char *InstantDEX_tradesequence(char *activenxt,char *secret,cJSON *json)
     {
         if ( n > sizeof(trades)/sizeof(*trades) )
             return(clonestr("{\"error\":\"exceeded max trades possible in a tradesequence\"}"));
+        if ( n == 1 && is_cJSON_Array(jitem(array,0)) != 0 )
+        {
+            printf("NESTED ARRAY DETECTED\n");
+            array = jitem(array,0);
+            n = cJSON_GetArraySize(array);
+        }
         timestamp = (uint32_t)time(NULL);
         for (i=0; i<n; i++)
         {
