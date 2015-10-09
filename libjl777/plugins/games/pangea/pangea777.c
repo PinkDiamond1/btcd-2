@@ -244,7 +244,7 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
     }
     for (i=0; i<dp->N; i++)
     {
-        j = (dp->button + i) % dp->N;
+        j = (1 + dp->button + i) % dp->N;
         if ( dp->balances[j] < (dp->bigblind >> 1) )
             pangea_fold(dp,j);
         else
@@ -256,7 +256,7 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
     }
     for (i=1; i<dp->N; i++)
     {
-        j = (dp->button + i) % dp->N;
+        j = (1 + dp->button + i) % dp->N;
         if ( dp->balances[j] < dp->bigblind )
             pangea_fold(dp,j);
         else
