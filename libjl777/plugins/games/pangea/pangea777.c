@@ -226,7 +226,7 @@ void pangea_clearhand(struct cards777_pubdata *dp,struct cards777_handinfo *hand
 
 void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
 {
-    int32_t i,j;
+    int32_t i,j,smallblindi = 0;
     for (i=0; i<dp->N; i++)
         if ( dp->balances[i] <= 0 )
             pangea_fold(dp,i);
@@ -250,13 +250,14 @@ void pangea_antes(union hostnet777 *hn,struct cards777_pubdata *dp)
         else
         {
             dp->button = j;
+            smallblindi = j;
             pangea_bet(hn,dp,dp->button,(dp->bigblind>>1),CARDS777_SMALLBLIND);
             break;
         }
     }
     for (i=1; i<dp->N; i++)
     {
-        j = (1 + dp->button + i) % dp->N;
+        j = (1 + smallblindi + i) % dp->N;
         if ( dp->balances[j] < dp->bigblind )
             pangea_fold(dp,j);
         else
@@ -1507,7 +1508,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
     sleep(11);
     int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
-    numthreads = 9; bigblind = SATOSHIDEN; ante = SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
+    numthreads = 9; bigblind = SATOSHIDEN; ante = 0*SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
     //plugin->sleepmillis = 1;
     if ( PANGEA_MAXTHREADS > 1 && PANGEA_MAXTHREADS <= 9 )
         numthreads = PANGEA_MAXTHREADS;

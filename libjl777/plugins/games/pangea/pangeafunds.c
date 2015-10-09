@@ -635,7 +635,7 @@ void pangea_startbets(union hostnet777 *hn,struct cards777_pubdata *dp,int32_t c
     now = (uint32_t)time(NULL);
     memset(dp->hand.actions,0,sizeof(dp->hand.actions));
     memset(dp->hand.turnis,0xff,sizeof(dp->hand.turnis));
-    dp->hand.undergun = ((dp->button + 2) % dp->N);
+    dp->hand.undergun = ((dp->button + 3) % dp->N);
     for (i=0; i<dp->N; i++)
         dp->hand.snapshot[i] = dp->hand.bets[i];
     pangea_sendcmd(hex,hn,"turn",-1,(void *)&dp->hand.betsize,sizeof(dp->hand.betsize),cardi,dp->hand.undergun);
