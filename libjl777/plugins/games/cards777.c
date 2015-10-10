@@ -217,8 +217,8 @@ bits256 cards777_pubkeys(bits256 *pubkeys,int32_t numcards,bits256 cmppubkey)
     if ( cmppubkey.txid != 0 )
     {
         if ( memcmp(check.bytes,cmppubkey.bytes,sizeof(check)) != 0 )
-            printf("permicheck.%llx != prod.%llx\n",(long long)check.txid,(long long)pubkey.txid);
-        else printf("pubkeys matched\n");
+            printf("cards777_pubkeys: mismatched pubkeys permicheck.%llx != prod.%llx\n",(long long)check.txid,(long long)pubkey.txid);
+        //else printf("pubkeys matched\n");
     }
     return(check);
 }
