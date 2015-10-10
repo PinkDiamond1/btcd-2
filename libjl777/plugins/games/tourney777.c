@@ -27,7 +27,7 @@
 struct tourney777
 {
     char transport[16],ipaddr[64],name[128];
-    uint16_t port; uint32_t started,finished;
+    uint32_t started,finished; uint64_t tableids[128]; uint16_t port,numtables;
     union hostnet777 hn[];
 } *Tournament;
 
@@ -42,42 +42,50 @@ struct tourney777
 #undef DEFINES_ONLY
 #endif
 
-int32_t hostnet777_init2(bits256 privkey,union hostnet777 *hn,bits256 *pubkeys,int32_t num,int32_t launchflag)
+
+int32_t tourney777_findtable(struct tourney777 *tp,uint64_t tableid)
 {
-    bits256 pubkey; int32_t slot,i; struct hostnet777_server *srv;
-    for (i=0; i<num; i++)
+    int32_t i;
+    if ( tp->numtables >  0 )
     {
-        if ( i == 0 )
-        {
-            pubkey = acct777_pubkey(privkey);
-            if ( (srv= hostnet777_server(privkey,pubkey,0,0,0,num)) == 0 )
-            {
-                printf("cant create hostnet777 server\n");
-                return(-1);
-            }
-            hn[0].server = srv;
-            srv->H.privkey = privkey, srv->H.pubkey = pubkey;
-            if ( launchflag != 0 && portable_thread_create((void *)hostnet777_idler,&hn[0]) == 0 )
-                printf("error launching server thread\n");
-        }
-        else
-        {
-            if ( (slot= hostnet777_register(srv,pubkeys[i],-1)) >= 0 )
-            {
-                hn[i].client = calloc(1,sizeof(*hn[i].client));
-                hn[i].client->H.slot = slot;
-                hn[i].client->H.pubkey = hn[i].client->my.pubkey = pubkeys[i];
-                hn[i].client->my.nxt64bits = acct777_nxt64bits(pubkeys[i]);
-                hn[i].client->my.lastcontact = (uint32_t)time(NULL);
-            }
-        }
+        for (i=0; i<tp->numtables; i++)
+            if ( tp->tableids[i] == tableid )
+                return(i);
     }
-    return(num);
+    return(-1);
+}
+
+void tourney777_newhand(union hostnet777 *hn,uint64_t tableid,cJSON *json,uint8_t *data,int32_t datalen)
+{
+    char *handhist; int32_t i,handid,numplayers,n,busted,rebuy; cJSON *handjson,*array,*item;
+    handid = juint(json,"handid");
+    numplayers = juint(json,"numplayers");
+    if ( (handhist= pangea_dispsummary(1,data,datalen,tableid,handid,numplayers)) != 0 )
+    {
+        printf("GOT HANDHIST.(%s)\n",handhist);
+        if ( (handjson= cJSON_Parse(handhist)) != 0 )
+        {
+            if ( (array= jarray(&n,handjson,"hand")) != 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    item = jitem(array,i);
+                    rebuy = juint(item,"rebuy");
+                    if ( (busted= juint(item,"busted")) != 0 )
+                    {
+                        
+                    }
+                }
+            }
+            free_json(handjson);
+        }
+        free(handhist);
+    }
 }
 
 void tourney777_poll(union hostnet777 *hn)
 {
-    char *jsonstr; uint64_t senderbits; uint8_t *buf=0; int32_t maxlen,len,senderind; uint32_t timestamp; char *cmdstr,*hexstr; cJSON *json;
+    char *jsonstr; uint64_t senderbits,tableid; uint8_t *buf=0; int32_t maxlen,len,senderind; uint32_t timestamp; char *cmdstr,*hexstr; cJSON *json;
     maxlen = 65536;
     if ( (buf= malloc(maxlen)) == 0 )
     {
@@ -89,6 +97,9 @@ void tourney777_poll(union hostnet777 *hn)
         printf("tourney slot.%d GOT.(%s)\n",hn->client->H.slot,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
+            tableid = j64bits(json,"tableid");
+            if ( tourney777_findtable(Tournament,tableid) < 0 )
+                return;
             senderbits = j64bits(json,"sender");
             if ( (senderind= juint(json,"myind")) < 0 || senderind >= hn->server->num )
             {
@@ -110,6 +121,8 @@ void tourney777_poll(union hostnet777 *hn)
             } else printf("len.%d vs hexlen.%ld (%s)\n",len,strlen(hexstr)>>1,hexstr);
             if ( cmdstr != 0 )
             {
+                if ( strcmp(cmdstr,"newhand") == 0 )
+                    tourney777_newhand(hn,tableid,json,buf,len);
             }
 cleanup:
             free_json(json);
@@ -164,16 +177,47 @@ char *tourney777_start(char *name,cJSON *json)
 
 char *tourney777_register(char *name,bits256 pubkey,cJSON *json)
 {
-    if ( Tournament != 0 && strcmp(Tournament->name,name) == 0 )
+    int32_t i; struct hostnet777_server *srv;
+    if ( Tournament != 0 && strcmp(Tournament->name,name) == 0 && (srv= Tournament->hn[0].server) != 0 )
     {
         if ( Tournament->started != 0 )
             return(clonestr("{\"error\":\"tournament already started\"}"));
         else
         {
+            for (i=0; i<srv->num; i++)
+                if ( memcmp(pubkey.bytes,srv->clients[i].pubkey.bytes,sizeof(bits256)) == 0 )
+                    return(clonestr("{\"error\":\"already registered in tournament\"}"));
+            srv->clients[srv->num].pubkey = pubkey;
+            srv->clients[srv->num].nxt64bits = acct777_nxt64bits(pubkey);
+            srv->clients[srv->num].lastcontact = (uint32_t)time(NULL);
+            srv->num++;
             return(clonestr("{\"result\":\"registered in tournament\"}"));
         }
     } else return(clonestr("{\"error\":\"no matching tournament\"}"));
 }
+
+char *tourney777_deregister(char *name,bits256 pubkey,cJSON *json)
+{
+    int32_t i; struct hostnet777_server *srv;
+    if ( Tournament != 0 && strcmp(Tournament->name,name) == 0 && (srv= Tournament->hn[0].server) != 0 )
+    {
+        if ( Tournament->started != 0 )
+            return(clonestr("{\"error\":\"tournament already started\"}"));
+        else
+        {
+            for (i=0; i<srv->num; i++)
+                if ( memcmp(pubkey.bytes,srv->clients[i].pubkey.bytes,sizeof(bits256)) == 0 )
+                {
+                    memset(&srv->clients[i],0,sizeof(srv->clients[i]));
+                    if ( i == srv->num-1 )
+                        srv->num--;
+                    return(clonestr("{\"result\":\"deregistered from tournament\"}"));
+                }
+            return(clonestr("{\"error\":\"not registered in tournament\"}"));
+        }
+    } else return(clonestr("{\"error\":\"no matching tournament\"}"));
+}
+
 
 #endif
 #endif

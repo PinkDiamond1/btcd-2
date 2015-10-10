@@ -251,7 +251,7 @@ int32_t pangea_newdeck(union hostnet777 *src)
 
 int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *dp,struct cards777_privdata *priv,uint8_t *data,int32_t datalen,int32_t senderind)
 {
-    char *nrs; char hex[1024];
+    char *nrs; char hex[1024]; int32_t handid;
     if ( data == 0 || datalen != (dp->numcards + 1) * sizeof(bits256) )
     {
         printf("pangea_newhand invalid datalen.%d vs %ld\n",datalen,(dp->numcards + 1) * sizeof(bits256));
@@ -265,7 +265,8 @@ int32_t pangea_newhand(union hostnet777 *hn,cJSON *json,struct cards777_pubdata 
     dp->hand.checkprod = cards777_pubkeys(dp->hand.cardpubs,dp->numcards,dp->hand.cardpubs[dp->numcards]);
     memset(dp->summary,0,sizeof(dp->summary));
     dp->summaries = dp->mismatches = dp->summarysize = 0;
-    pangea_summary(hn,dp,CARDS777_START,&dp->numhands,sizeof(dp->numhands),&dp->hand.checkprod.txid,sizeof(dp->hand.checkprod.txid));
+    handid = dp->numhands - 1;
+    pangea_summary(hn,dp,CARDS777_START,&handid,sizeof(handid),&dp->hand.checkprod.txid,sizeof(dp->hand.checkprod.txid));
     //printf("player.%d (%llx vs %llx) got cardpubs.%llx\n",hn->client->H.slot,(long long)hn->client->H.pubkey.txid,(long long)dp->playerpubs[hn->client->H.slot].txid,(long long)dp->checkprod.txid);
     if ( (nrs= jstr(json,"sharenrs")) != 0 )
         decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
@@ -973,8 +974,8 @@ char *pangea_status(uint64_t my64bits,uint64_t tableid,cJSON *json)
 
 int32_t pangea_idle(struct plugin_info *plugin)
 {
-    int32_t i,j,n,m,pinggap = 1; uint64_t senderbits; uint32_t timestamp; struct pangea_thread *tp; union hostnet777 *hn;
-    struct cards777_pubdata *dp; char hex[1024]; uint64_t sidepots[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS],rake,pangearake;
+    int32_t i,n,m,pinggap = 1; uint64_t senderbits; uint32_t timestamp; struct pangea_thread *tp; union hostnet777 *hn;
+    struct cards777_pubdata *dp; char hex[1024];
     while ( 1 )
     {
         for (i=n=m=0; i<_PANGEA_MAXTHREADS; i++)
@@ -1004,19 +1005,7 @@ int32_t pangea_idle(struct plugin_info *plugin)
                         if ( dp->hand.handmask == ((1 << dp->N) - 1) && dp->hand.finished == 0 && dp->hand.pangearake == 0 )
                         {
                             printf("P%d: all players folded or showed cards at %ld | rakemillis %d\n",hn->client->H.slot,time(NULL),dp->rakemillis);
-                            dp->hand.finished = (uint32_t)time(NULL);
-                            memset(sidepots,0,sizeof(sidepots));
-                            n = pangea_sidepots(1,sidepots,dp,dp->hand.bets);
-                            for (pangearake=rake=j=0; j<n; j++)
-                                rake += pangea_splitpot(dp->hand.won,&pangearake,sidepots[j],hn,dp->rakemillis);
-                            dp->hostrake += rake;
-                            dp->pangearake += pangearake;
-                            dp->hand.hostrake = rake;
-                            dp->hand.pangearake = pangearake;
-                            pangea_summary(hn,dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
-                            pangea_sendsummary(hn,dp,hn->client->H.privdata);
-                            if ( hn->client->H.slot == 0 )
-                                printf("%s\n",jprint(pangea_tablestatus(dp->table),1));
+                            pangea_finish(hn,dp,0,0);
                         }
                         if ( hn->client->H.slot == 0 )
                             pangea_serverstate(hn,dp,hn->server->H.privdata);
@@ -1489,7 +1478,7 @@ char *pangea_history(uint64_t my64bits,uint64_t tableid,cJSON *json)
     if ( (sp= pangea_find64(tableid,my64bits)) != 0 && sp->dp != 0 )
     {
         if ( jobj(json,"handid") == 0 )
-            return(pangea_dispsummary(juint(json,"verbose"),sp->dp->summary,sp->dp->summarysize,tableid,sp->dp->numhands,sp->dp->N));
+            return(pangea_dispsummary(juint(json,"verbose"),sp->dp->summary,sp->dp->summarysize,tableid,sp->dp->numhands-1,sp->dp->N));
         else return(pangea_dispsummary(juint(json,"verbose"),sp->dp->summary,sp->dp->summarysize,tableid,juint(json,"handid"),sp->dp->N));
     }
     return(clonestr("{\"error\":\"cant find tableid\"}"));

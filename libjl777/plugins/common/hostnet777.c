@@ -43,6 +43,7 @@
 #define CARDS777_FACEUP 12
 #define CARDS777_WINNINGS 13
 #define CARDS777_RAKES 14
+#define CARDS777_CHANGES 15
 
 struct cards777_handinfo
 {
@@ -58,7 +59,7 @@ struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidi
 
 struct cards777_pubdata
 {
-    int64_t balances[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS]; uint8_t summary[65536];
+    int64_t balances[CARDS777_MAXPLAYERS],snapshot[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS]; uint8_t summary[65536];
     uint64_t hostrake,bigblind,ante,pangearake,summaries,mismatches; uint32_t button,numhands,rakemillis,minbuyin,maxbuyin,summarysize;
     bits256 *playerpubs; void *table; struct cards777_handinfo hand; char newhand[65536]; bits256 data[];
 };
@@ -118,6 +119,7 @@ void *hostnet777_idler(union hostnet777 *ptr);
 int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout);
 void free_queueitem(void *itemptr);
+char *pangea_dispsummary(int32_t verbose,uint8_t *summary,int32_t summarysize,uint64_t tableid,int32_t handid,int32_t numplayers);
 
 extern int32_t Debuglevel;
 
