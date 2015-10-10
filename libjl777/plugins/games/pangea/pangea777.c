@@ -35,6 +35,7 @@
 #define PANGEA_USERTIMEOUT 60
 #define PANGEA_MAX_HOSTRAKE 10
 #define PANGEA_HANDGAP 30
+#define PANGEA_PAUSE 2
 
 struct pangea_info
 {
@@ -286,7 +287,7 @@ void pangea_checkstart(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
         }
         if ( i == dp->N )
         {
-            sleep(5);
+            sleep(PANGEA_PAUSE);
             dp->hand.encodestarted = (uint32_t)time(NULL);
             printf("SERVERSTATE issues encoded %llx\n",(long long)dp->hand.checkprod.txid);
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
@@ -709,15 +710,16 @@ void pangea_serverstate(union hostnet777 *hn,struct cards777_pubdata *dp,struct 
                 if ( dp->balances[i] < dp->minbuyin*dp->bigblind || dp->balances[i] > dp->maxbuyin*dp->bigblind )
                     break;
             }
-            if ( i == dp->N )
+            if ( i == dp->N && dp->numhands < 2 )
             {
-                if ( time(NULL) > dp->hand.startdecktime+10 )
+                if ( time(NULL) > dp->hand.startdecktime+60 )
                 {
                     printf("send newdeck len.%ld\n",strlen(dp->newhand));
                     pangea_newdeck(hn);
                     printf("sent newdeck %ld\n",strlen(dp->newhand));
                 }
-            } else if ( disptime != time(NULL) && (time(NULL) % 60) == 0 )
+            }
+            else if ( disptime != time(NULL) && (time(NULL) % 60) == 0 )
             {
                 disptime = (uint32_t)time(NULL);
                 for (j=0; j<dp->N; j++)
@@ -814,6 +816,7 @@ int32_t pangea_anotherhand(union hostnet777 *hn,struct cards777_pubdata *dp,int3
     {
         if ( sleepflag != 0 )
             sleep(sleepflag);
+        //dp->hand.betstarted = 0;
         pangea_newdeck(hn);
         if ( sleepflag != 0 )
             sleep(sleepflag);
@@ -1029,7 +1032,7 @@ void pangea_buyins(uint32_t *minbuyinp,uint32_t *maxbuyinp)
     if ( *minbuyinp == 0 && *maxbuyinp == 0 )
     {
         *minbuyinp = 100;
-        *maxbuyinp = 250;
+        *maxbuyinp = 1000;
     }
     else
     {
@@ -1699,7 +1702,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
         tp = THREADS[threadid];
         dp = tp->hn.client->H.pubdata;
         for (j=0; j<numthreads; j++)
-            dp->balances[j] = 100 * SATOSHIDEN;
+            dp->balances[j] = 1000 * SATOSHIDEN;
     }
     tp = THREADS[0];
     //pangea_newdeck(&tp->hn);

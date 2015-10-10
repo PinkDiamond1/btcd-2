@@ -82,7 +82,7 @@ struct hostnet777_hdr
     uint32_t lastping; int32_t slot,done,state,ind;
 };
 
-struct hostnet777_client { struct hostnet777_hdr H; int32_t subsock; struct hostnet777_id my; };
+struct hostnet777_client { struct hostnet777_hdr H; int32_t subsock; struct hostnet777_id my; uint64_t balance,tableid; };
 
 struct hostnet777_server
 {
@@ -120,6 +120,7 @@ int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout);
 void free_queueitem(void *itemptr);
 char *pangea_dispsummary(int32_t verbose,uint8_t *summary,int32_t summarysize,uint64_t tableid,int32_t handid,int32_t numplayers);
+struct pangea_info *pangea_find(uint64_t tableid,int32_t threadid);
 
 extern int32_t Debuglevel;
 
