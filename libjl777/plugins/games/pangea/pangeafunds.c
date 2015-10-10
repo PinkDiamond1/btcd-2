@@ -1250,7 +1250,7 @@ int32_t pangea_showdown(union hostnet777 *hn,cJSON *json,struct cards777_pubdata
         pangea_sendsummary(hn,dp,priv);
         return(0);
     }
-    if ( hn->client->H.slot == 0 )
+    if ( hn->client->H.slot == 0 && senderind != 0 )
     {
         for (i=0; i<dp->N; i++)
         {

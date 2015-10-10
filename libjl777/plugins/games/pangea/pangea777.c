@@ -320,7 +320,8 @@ void pangea_checkstart(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
         }
         if ( i == dp->N )
         {
-            sleep(PANGEA_PAUSE);
+            if ( PANGEA_PAUSE > 0 )
+                sleep(PANGEA_PAUSE);
             dp->hand.encodestarted = (uint32_t)time(NULL);
             printf("SERVERSTATE issues encoded %llx\n",(long long)dp->hand.checkprod.txid);
             pangea_sendcmd(dp->newhand,hn,"encoded",1,priv->outcards[0].bytes,sizeof(bits256)*dp->N*dp->numcards,dp->N*dp->numcards,-1);
