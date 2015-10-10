@@ -143,6 +143,7 @@ struct MGWstate
 #define MGW_DEPOSITDONE 4
 #define MGW_PENDINGREDEEM 8
 #define MGW_WITHDRAWDONE 16
+#define MGW_ALREADYSPENT 32
 #define MGW_IGNORE 128
 #define MGW_ERRORSTATUS 0x8000
 struct extra_info { uint64_t assetidbits,txidbits,senderbits,receiverbits,amount; int32_t ind,vout,flags; uint32_t height; char coindata[128]; };

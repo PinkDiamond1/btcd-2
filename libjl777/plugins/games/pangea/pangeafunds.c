@@ -983,7 +983,7 @@ int32_t pangea_lastman(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
             printf("DUPLICATE LASTMAN!\n");
             return(1);
         }
-        if ( hn->server->H.slot == activej && priv->autoshow != 0 )
+        if ( 0 && hn->server->H.slot == activej && priv->autoshow != 0 )
         {
             pangea_sendcmd(hex,hn,"faceup",-1,priv->holecards[0].bytes,sizeof(priv->holecards[0]),priv->cardis[0],priv->cardis[0] != 0xff);
             pangea_sendcmd(hex,hn,"faceup",-1,priv->holecards[1].bytes,sizeof(priv->holecards[1]),priv->cardis[1],priv->cardis[0] != 0xff);
@@ -1096,7 +1096,10 @@ int32_t pangea_gotsummary(union hostnet777 *hn,cJSON *json,struct cards777_pubda
         //if ( handhist == 0 && (handhist= pangea_dispsummary(1,dp->summary,dp->summarysize,sp->tableid,dp->numhands-1,dp->N)) != 0 )
         //    printf("HAND.(%s)\n",handhist), free(handhist);
         if ( hn->server->H.slot == 0 )
+        {
+            dp->mismatches = dp->summaries = 0;
             pangea_anotherhand(hn,dp,3);
+        }
     }
     return(0);
 }

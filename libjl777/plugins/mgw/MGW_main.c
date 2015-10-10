@@ -44,9 +44,9 @@ int32_t MGW_idle(struct plugin_info *plugin)
 char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method);
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
-char *PLUGNAME(_pubmethods)[] = { "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
-char *PLUGNAME(_authmethods)[] = { "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_methods)[] = { "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
+char *PLUGNAME(_pubmethods)[] = { "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
+char *PLUGNAME(_authmethods)[] = { "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
@@ -1495,19 +1495,21 @@ int32_t mgw_clearunspent(char *txidstr,int32_t vout)
     return(db777_write(0,DB_MGW,key,keylen,&status,sizeof(status)));
 }
 
-int32_t mgw_clearstate(struct coin777 *coin,char *txidstr,int32_t vout)
+int32_t mgw_setstate(struct coin777 *coin,char *txidstr,int32_t vout,int32_t newstatus)
 {
     int32_t i,n,flag = 0; struct extra_info extra;
-    mgw_clearunspent(txidstr,vout);
-    NXT_revassettxid(&extra,coin->mgw.assetidbits,0), n = extra.ind;
+    if ( newstatus == 0 )
+        mgw_clearunspent(txidstr,vout);
+    else mgw_markunspent(txidstr,vout,newstatus);
+    NXT_revassettxid(&extra,coin->mgw.assetidbits,newstatus), n = extra.ind;
     for (i=1; i<=n; i++)
     {
         if ( NXT_revassettxid(&extra,coin->mgw.assetidbits,i) == sizeof(extra) )
         {
             if ( extra.vout == vout && strcmp(txidstr,extra.coindata) == 0 )
             {
-                printf("clear revassettxid.%d %llu for (%s/v%d)\n",i,(long long)extra.txidbits,extra.coindata,extra.vout);
-                extra.flags = 0;
+                printf("set %d revassettxid.%d %llu for (%s/v%d)\n",newstatus,i,(long long)extra.txidbits,extra.coindata,extra.vout);
+                extra.flags = newstatus;
                 NXT_set_revassettxid(coin->mgw.assetidbits,i,&extra);
             }
         } else printf("error loading assettxid[%d] for %llu\n",i,(long long)coin->mgw.assetidbits);
@@ -1725,6 +1727,8 @@ uint64_t mgw_unspentsfunc(struct coin777 *coin,void *args,uint32_t addrind,struc
         if ( (vout= coin777_unspentmap(&txidind,txidstr,coin,unspentind)) >= 0 )
         {
             Ustatus = mgw_unspentstatus(txidstr,vout);
+            if ( (Ustatus & MGW_ALREADYSPENT) != 0 )
+                continue;
             if ( (Ustatus & (MGW_DEPOSITDONE | MGW_ISINTERNAL | MGW_IGNORE)) == 0 )
             {
                 if ( (status= mgw_isinternal(coin,msig,addrind,unspentind,txidstr,vout,0)) != 0 )
@@ -2424,8 +2428,23 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             {
                 if ( (coin= coin777_find(coinstr,0)) != 0 )
                 {
-                    mgw_clearstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0));
+                    mgw_setstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0),0);
                     sprintf(retbuf,"{\"result\":\"clearstate issued\"}");
+                }
+                else sprintf(retbuf,"{\"error\":\"coin not active\"}");
+            }
+        }
+        else if ( strcmp(methodstr,"markspent") == 0 )
+        {
+            struct coin777 *coin;
+            if ( sender[0] != 0 )
+                sprintf(retbuf,"{\"error\":\"markspent can only be done locally\"}");
+            else
+            {
+                if ( (coin= coin777_find(coinstr,0)) != 0 )
+                {
+                    mgw_setstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0),MGW_ALREADYSPENT);
+                    sprintf(retbuf,"{\"result\":\"markspent issued\"}");
                 }
                 else sprintf(retbuf,"{\"error\":\"coin not active\"}");
             }
