@@ -538,14 +538,18 @@ uint64_t pangea_winnings(int32_t player,uint64_t *pangearakep,uint64_t *hostrake
     {
         split = (total * (1000 - rakemillis)) / (1000 * numwinners);
         pangearake = (total - split*numwinners);
+        if ( pangearake > maxrake )
+        {
+            pangearake = maxrake;
+            split = (total - pangearake) / numwinners;
+            pangearake = (total - split*numwinners);
+        }
     }
     else
     {
         split = 0;
         pangearake = total;
     }
-    if ( pangearake > maxrake )
-        pangearake = maxrake;
     if ( rakemillis > PANGEA_MINRAKE_MILLIS )
     {
         rake = (pangearake * (rakemillis - PANGEA_MINRAKE_MILLIS)) / rakemillis;
@@ -650,8 +654,7 @@ int64_t pangea_splitpot(int64_t *won,uint64_t *pangearakep,uint64_t sidepot[CARD
         printf("pangea_splitpot error: numwinners.0\n");
     else
     {
-        uint64_t maxrakes[CARDS777_MAXPLAYERS+1] = { 0, 0, 1, 2, 2, 3, 3, 3, 3, 3 };
-        // 2players 1BB, 3-4players, 2BB, 5+players 3BB?
+        uint64_t maxrakes[CARDS777_MAXPLAYERS+1] = { 0, 0, 1, 2, 2, 3, 3, 3, 3, 3 }; // 2players 1BB, 3-4players, 2BB, 5+players 3BB
         for (j=n=0; j<dp->N; j++)
             if ( dp->snapshot[j] > 0 )
                 n++;
@@ -1127,21 +1130,6 @@ int32_t pangea_lastman(union hostnet777 *hn,struct cards777_pubdata *dp,struct c
             pangea_sendcmd(hex,hn,"faceup",-1,priv->holecards[1].bytes,sizeof(priv->holecards[1]),priv->cardis[1],priv->cardis[1] != 0xff);
         }
         pangea_finish(hn,dp);
-        /*total = pangea_totalbet(dp);
-        split = pangea_winnings(hn->server->H.slot,&pangearake,&rake,total,1,dp->rakemillis);
-        tmp = activej;
-        pangea_summary(hn,dp,CARDS777_WINNINGS,&tmp,sizeof(tmp),(void *)&split,sizeof(split));
-        dp->hand.won[activej] = split;
-        if ( activej >= 0 )
-            dp->balances[activej] += split;
-        dp->hand.finished = (uint32_t)time(NULL);
-        dp->hostrake += rake;
-        dp->pangearake += pangearake;
-        dp->hand.hostrake = rake;
-        dp->hand.pangearake = pangearake;
-        pangea_summary(hn,dp,CARDS777_RAKES,(void *)&rake,sizeof(rake),(void *)&pangearake,sizeof(pangearake));
-        printf("player.%d lastman standing, wins %.8f hostrake %.8f pangearake %.8f\n",activej,dstr(split),dstr(rake),dstr(pangearake));
-        printf("%s\n",jprint(pangea_tablestatus(dp->table),1));*/
         return(1);
     }
     return(0);
