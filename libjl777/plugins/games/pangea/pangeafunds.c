@@ -659,7 +659,13 @@ int64_t pangea_splitpot(int64_t *won,uint64_t *pangearakep,uint64_t sidepot[CARD
             if ( dp->snapshot[j] > 0 )
                 n++;
         if ( (maxrake= maxrakes[n] * dp->bigblind) > dp->maxrake )
+        {
             maxrake = dp->maxrake;
+            if ( strcmp(dp->coinstr,"BTC") == 0 && maxrake < SATOSHIDEN/100 )
+                maxrake = SATOSHIDEN/100;
+            else if ( maxrake < 3*SATOSHIDEN )
+                maxrake = 3*SATOSHIDEN;
+        }
         split = pangea_winnings(hn->client->H.slot,&pangearake,&rake,total,numwinners,rakemillis,maxrake);
         (*pangearakep) += pangearake;
         for (j=0; j<numwinners; j++)
@@ -803,6 +809,7 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jaddnum(json,"numcards",dp->numcards);
     jaddnum(json,"numhands",dp->numhands);
     jaddnum(json,"rake",(double)dp->rakemillis/10.);
+    jaddnum(json,"maxrake",dstr(dp->maxrake));
     jaddnum(json,"hostrake",dstr(dp->hostrake));
     jaddnum(json,"pangearake",dstr(dp->pangearake));
     jaddnum(json,"bigblind",dstr(dp->bigblind));

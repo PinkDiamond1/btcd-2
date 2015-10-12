@@ -39,7 +39,7 @@
 
 struct pangea_info
 {
-    uint32_t timestamp,numaddrs,minbuyin,maxbuyin; uint64_t basebits,bigblind,ante,maxrake,addrs[CARDS777_MAXPLAYERS],tableid; char base[16]; int32_t myind;
+    uint32_t timestamp,numaddrs,minbuyin,maxbuyin; uint64_t basebits,bigblind,ante,addrs[CARDS777_MAXPLAYERS],tableid; char base[16]; int32_t myind;
     struct pangea_thread *tp; struct cards777_privdata *priv; struct cards777_pubdata *dp;
 } *TABLES[100];
 
@@ -1070,7 +1070,7 @@ void pangea_buyins(uint32_t *minbuyinp,uint32_t *maxbuyinp)
     }
 }
 
-struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp,char *base,uint32_t timestamp,uint64_t *addrs,int32_t numaddrs,uint64_t bigblind,uint64_t ante,uint64_t *isbot,uint32_t minbuyin,uint32_t maxbuyin,int32_t hostrake,uint64_t maxrake)
+struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp,char *base,uint32_t timestamp,uint64_t *addrs,int32_t numaddrs,uint64_t bigblind,uint64_t ante,uint64_t *isbot,uint32_t minbuyin,uint32_t maxbuyin,int32_t hostrake)
 {
     struct pangea_info *sp = 0; bits256 hash; int32_t i,j,numcards,firstslot = -1; struct cards777_privdata *priv; struct cards777_pubdata *dp;
     if ( createdflagp != 0 )
@@ -1093,17 +1093,10 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
         sp->tp = tp;
         numcards = CARDS777_MAXCARDS;
         pangea_buyins(&minbuyin,&maxbuyin);
-        if ( maxrake != 0 )
-        {
-            if ( strcmp(base,"BTC") == 0 && maxrake < SATOSHIDEN/100 )
-                maxrake = SATOSHIDEN/100;
-            else if ( maxrake < SATOSHIDEN )
-                maxrake = SATOSHIDEN;
-        }
         tp->numcards = numcards, tp->N = numaddrs;
         sp->dp = dp = cards777_allocpub((numaddrs >> 1) + 1,numcards,numaddrs);
-        dp->minbuyin = minbuyin, dp->maxbuyin = maxbuyin, dp->maxrake = maxrake;
-        sp->minbuyin = minbuyin, sp->maxbuyin = maxbuyin, sp->maxrake = maxrake;
+        dp->minbuyin = minbuyin, dp->maxbuyin = maxbuyin;
+        sp->minbuyin = minbuyin, sp->maxbuyin = maxbuyin;
         dp->rakemillis = hostrake;
         if ( dp->rakemillis > PANGEA_MAX_HOSTRAKE )
             dp->rakemillis = PANGEA_MAX_HOSTRAKE;
@@ -1147,7 +1140,7 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
         sp->basebits = stringbits(base);
         sp->bigblind = dp->bigblind = bigblind, sp->ante = dp->ante = ante;
         memcpy(sp->addrs,addrs,numaddrs * sizeof(sp->addrs[0]));
-        vcalc_sha256(0,hash.bytes,(uint8_t *)sp,numaddrs * sizeof(sp->addrs[0]) + 4*sizeof(uint32_t) + 4*sizeof(uint64_t));
+        vcalc_sha256(0,hash.bytes,(uint8_t *)sp,numaddrs * sizeof(sp->addrs[0]) + 4*sizeof(uint32_t) + 3*sizeof(uint64_t));
         sp->tableid = hash.txid;
         for (i=0; i<sizeof(TABLES)/sizeof(*TABLES); i++)
         {
@@ -1216,7 +1209,7 @@ cJSON *pangea_sharenrs(uint8_t *sharenrs,int32_t n)
     return(array);
 }
 
-char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 privkey,bits256 pubkey,char *transport,char *ipaddr,uint16_t port,uint32_t minbuyin,uint32_t maxbuyin,int32_t hostrake,uint64_t maxrake)
+char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 privkey,bits256 pubkey,char *transport,char *ipaddr,uint16_t port,uint32_t minbuyin,uint32_t maxbuyin,int32_t hostrake)
 {
     int32_t createdflag,num,i,myind= -1; uint64_t tableid,addrs[CARDS777_MAXPLAYERS],isbot[CARDS777_MAXPLAYERS];
     struct pangea_info *sp; cJSON *array; struct pangea_thread *tp; char *base,*str,*hexstr,*endpoint,hex[1024]; uint32_t timestamp;
@@ -1288,7 +1281,7 @@ char *pangea_newtable(int32_t threadid,cJSON *json,uint64_t my64bits,bits256 pri
         }
         else memset(isbot,0,sizeof(isbot));
         printf("call pangea_create\n");
-        if ( (sp= pangea_create(tp,&createdflag,base,timestamp,addrs,num,j64bits(json,"bigblind"),j64bits(json,"ante"),isbot,minbuyin,maxbuyin,hostrake,maxrake)) == 0 )
+        if ( (sp= pangea_create(tp,&createdflag,base,timestamp,addrs,num,j64bits(json,"bigblind"),j64bits(json,"ante"),isbot,minbuyin,maxbuyin,hostrake)) == 0 )
         {
             printf("cant create table.(%s) numaddrs.%d\n",base,num);
             return(clonestr("{\"error\":\"cant create table\"}"));
@@ -1371,7 +1364,7 @@ struct pangea_thread *pangea_threadinit(struct plugin_info *plugin,int32_t maxpl
     return(tp);
 }
 
-int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t hostrake,int32_t maxplayers,uint32_t minbuyin,uint32_t maxbuyin,uint64_t maxrake,cJSON *json)
+int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t timestamp,uint64_t bigblind,uint64_t ante,int32_t hostrake,int32_t maxplayers,uint32_t minbuyin,uint32_t maxbuyin,cJSON *json)
 {
     char *addrstr,*ciphers,*playerpubs,*isbotstr,destNXT[64]; struct pangea_thread *tp; struct cards777_pubdata *dp;
     int32_t createdflag,addrtype,haspubkey,i,j,slot,n,myind=-1,r,num=0,threadid=0; uint64_t addrs[512],isbot[512],tmp;
@@ -1459,7 +1452,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         addrs[r + 1] = addrs[num];
     }
     printf("pangea numplayers.%d\n",num);
-    if ( (sp= pangea_create(tp,&createdflag,base,timestamp,addrs,num,bigblind,ante,isbot,minbuyin,maxbuyin,hostrake,maxrake)) == 0 )
+    if ( (sp= pangea_create(tp,&createdflag,base,timestamp,addrs,num,bigblind,ante,isbot,minbuyin,maxbuyin,hostrake)) == 0 )
     {
         printf("cant create table.(%s) numaddrs.%d\n",base,num);
         strcpy(retbuf,"{\"error\":\"cant create table, make sure all players have published NXT pubkeys\"}");
@@ -1496,7 +1489,7 @@ int32_t pangea_start(struct plugin_info *plugin,char *retbuf,char *base,uint32_t
         ciphers = jprint(pangea_ciphersjson(dp,sp->priv),1);
         playerpubs = jprint(pangea_playerpubs(dp->playerpubs,num),1);
         dp->readymask |= (1 << sp->myind);
-        sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"minbuyin\":\"%d\",\"maxbuyin\":\"%u\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"isbot\":%s,\"millitime\":\"%lld\",\"maxrake\":\"%lld\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->minbuyin,dp->maxbuyin,dp->rakemillis,(long long)ante,playerpubs,addrstr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->H.mT,0),(long long)maxrake); //\"pluginrequest\":\"SuperNET\",
+        sprintf(retbuf,"{\"cmd\":\"newtable\",\"broadcast\":\"allnodes\",\"myind\":%d,\"pangea_endpoint\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"pangea\",\"method\":\"busdata\",\"submethod\":\"newtable\",\"my64bits\":\"%llu\",\"tableid\":\"%llu\",\"timestamp\":%u,\"M\":%d,\"N\":%d,\"base\":\"%s\",\"bigblind\":\"%llu\",\"minbuyin\":\"%d\",\"maxbuyin\":\"%u\",\"rakemillis\":\"%u\",\"ante\":\"%llu\",\"playerpubs\":%s,\"addrs\":%s,\"isbot\":%s,\"millitime\":\"%lld\"}",sp->myind,tp->hn.server->ep.endpoint,(long long)tp->nxt64bits,(long long)sp->tableid,sp->timestamp,dp->M,dp->N,sp->base,(long long)bigblind,dp->minbuyin,dp->maxbuyin,dp->rakemillis,(long long)ante,playerpubs,addrstr,isbotstr,(long long)hostnet777_convmT(&tp->hn.server->H.mT,0)); //\"pluginrequest\":\"SuperNET\",
 #ifdef BUNDLED
         {
             char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
@@ -1642,8 +1635,8 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     char retbuf[65536]; bits256 privkey,pubkey; int32_t i,slot,threadid; struct pangea_thread *tp; struct hostnet777_client **clients;
     struct hostnet777_server *srv; cJSON *item,*bids,*walletitem,*testjson = cJSON_CreateObject();
     sleep(11);
-    int32_t numthreads; int64_t bigblind,ante,maxrake; int32_t rakemillis;
-    numthreads = 9; bigblind = SATOSHIDEN; ante = 0*SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE, maxrake = 0;
+    int32_t numthreads; int64_t bigblind,ante; int32_t rakemillis;
+    numthreads = 9; bigblind = SATOSHIDEN; ante = 0*SATOSHIDEN/10; rakemillis = PANGEA_MAX_HOSTRAKE;
     //plugin->sleepmillis = 1;
     //if ( PANGEA_MAXTHREADS > 1 && PANGEA_MAXTHREADS <= 9 )
     //    numthreads = PANGEA_MAXTHREADS;
@@ -1737,12 +1730,12 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     jadd64bits(testjson,"ante",ante);
     jaddnum(testjson,"rakemillis",rakemillis);
     printf("TEST.(%s)\n",jprint(testjson,0));
-    pangea_start(plugin,retbuf,"BTC",0,bigblind,ante,rakemillis,i,0,0,maxrake,testjson);
+    pangea_start(plugin,retbuf,"BTC",0,bigblind,ante,rakemillis,i,0,0,testjson);
     free_json(testjson);
     testjson = cJSON_Parse(retbuf);
     //printf("BROADCAST.(%s)\n",retbuf);
     for (threadid=1; threadid<numthreads; threadid++)
-        pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey,0,0,0,0,0,rakemillis,maxrake);
+        pangea_newtable(threadid,testjson,THREADS[threadid]->nxt64bits,THREADS[threadid]->hn.client->H.privkey,THREADS[threadid]->hn.client->H.pubkey,0,0,0,0,0,rakemillis);
     for (threadid=0; threadid<numthreads; threadid++)
     {
         int32_t j; struct cards777_pubdata *dp;
@@ -1806,7 +1799,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
         else if ( strcmp(methodstr,"newtable") == 0 )
-            retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport,juint(json,"minbuyin"),juint(json,"maxbuyin"),juint(json,"rakemillis"),j64bits(json,"maxrake"));
+            retstr = pangea_newtable(juint(json,"threadid"),json,plugin->nxt64bits,*(bits256 *)plugin->mypriv,*(bits256 *)plugin->mypub,plugin->transport,plugin->ipaddr,plugin->pangeaport,juint(json,"minbuyin"),juint(json,"maxbuyin"),juint(json,"rakemillis"));
         else if ( sender == 0 || sender[0] == 0 )
         {
             if ( strcmp(methodstr,"start") == 0 )
@@ -1819,8 +1812,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     else if ( maxplayers > CARDS777_MAXPLAYERS )
                         maxplayers = CARDS777_MAXPLAYERS;
                     if ( jstr(json,"resubmit") == 0 )
-                        sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"rakemillis\":\"%u\"}, {\"maxplayers\":%d}, {\"minbuyin\":%d}, {\"maxbuyin\":%d}, {\"maxrake\":%llu}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,juint(json,"minbuyin"),juint(json,"maxbuyin"),j64bits(json,"maxrake"));
-                    else if ( pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,juint(json,"minbuyin"),juint(json,"maxbuyin"),juint(json,"maxrake"),json) < 0 )
+                        sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"rakemillis\":\"%u\"}, {\"maxplayers\":%d}, {\"minbuyin\":%d}, {\"maxbuyin\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,juint(json,"minbuyin"),juint(json,"maxbuyin"));
+                    else if ( pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,juint(json,"minbuyin"),juint(json,"maxbuyin"),json) < 0 )
                         ;
                 } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
             }
