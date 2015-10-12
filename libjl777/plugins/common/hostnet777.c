@@ -44,12 +44,13 @@
 #define CARDS777_WINNINGS 13
 #define CARDS777_RAKES 14
 #define CARDS777_CHANGES 15
+#define CARDS777_SNAPSHOT 16
 
 struct cards777_handinfo
 {
     bits256 checkprod,*cardpubs,*final,community256[5],cards[CARDS777_MAXPLAYERS][2]; uint64_t othercardpubs[CARDS777_MAXPLAYERS];
     int64_t havemasks[CARDS777_MAXPLAYERS],betsize,hostrake,pangearake,lastraise,bets[CARDS777_MAXPLAYERS],snapshot[CARDS777_MAXPLAYERS+1],won[CARDS777_MAXPLAYERS];
-    uint32_t starttime,handmask,lastbettor,startdecktime,readymask,betstarted,finished,encodestarted;
+    uint32_t starttime,handmask,lastbettor,startdecktime,betstarted,finished,encodestarted;
     uint32_t cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
     int8_t betstatus[CARDS777_MAXPLAYERS],actions[CARDS777_MAXPLAYERS],turnis[CARDS777_MAXPLAYERS];
     uint8_t numactions,undergun,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
@@ -60,15 +61,20 @@ struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidi
 struct cards777_pubdata
 {
     int64_t balances[CARDS777_MAXPLAYERS],snapshot[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS]; uint8_t summary[65536];
-    uint64_t hostrake,bigblind,ante,pangearake,summaries,mismatches; uint32_t button,numhands,rakemillis,minbuyin,maxbuyin,summarysize;
-    bits256 *playerpubs; void *table; struct cards777_handinfo hand; char newhand[65536]; bits256 data[];
+    uint64_t hostrake,bigblind,ante,pangearake,summaries,mismatches; uint32_t button,readymask,numhands,rakemillis,minbuyin,maxbuyin,summarysize;
+    bits256 *playerpubs; void *table; struct cards777_handinfo hand;
+    char coinstr[16],multisigaddr[64],scriptPubKey[128],redeemScript[4096]; uint8_t addrtype,p2shtype,wiftype;
+    int32_t buyinvouts[CARDS777_MAXPLAYERS]; uint64_t buyinamounts[CARDS777_MAXPLAYERS];
+    char buyintxids[CARDS777_MAXPLAYERS][128],coinaddrs[CARDS777_MAXPLAYERS][67],pubkeys[CARDS777_MAXPLAYERS][67];
+    char newhand[65536]; bits256 data[];
 };
 
 struct cards777_privdata
 {
     bits256 holecards[2],*audits,*outcards,*xoverz;
+    char btcpubkeystr[67],wipstr[64];
     //,*reconstructed[CARDS777_MAXPLAYERS],*mofn[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS];
-    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,hole[2],cardis[2],autoshow,autofold; bits256 data[];
+    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,btcpub[33],hole[2],cardis[2],autoshow,autofold; bits256 data[];
 };
 
 struct hostnet777_endpoint { char endpoint[128],transport[16],ipaddr[64]; uint16_t port; };

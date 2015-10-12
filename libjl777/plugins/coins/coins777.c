@@ -55,7 +55,7 @@ struct rawblock
 
 #define MAX_COINTX_INPUTS 256
 #define MAX_COINTX_OUTPUTS 256
-struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
+struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[4096]; uint64_t value; uint32_t sequence; char used; };
 struct cointx_info
 {
     uint32_t crc; // MUST be first
