@@ -616,7 +616,7 @@ int32_t pangea_sidepots(int32_t dispflag,uint64_t sidepots[CARDS777_MAXPLAYERS][
 int64_t pangea_splitpot(int64_t *won,uint64_t *pangearakep,uint64_t sidepot[CARDS777_MAXPLAYERS],union hostnet777 *hn,int32_t rakemillis)
 {
     int32_t winners[CARDS777_MAXPLAYERS],j,n,numwinners = 0; uint32_t bestrank,rank; uint8_t tmp;
-    uint64_t total = 0,bet,split,rake=0,pangearake=0; char handstr[128],besthandstr[128]; struct cards777_pubdata *dp;
+    uint64_t total = 0,bet,split,maxrake,rake=0,pangearake=0; char handstr[128],besthandstr[128]; struct cards777_pubdata *dp;
     dp = hn->client->H.pubdata;
     bestrank = 0;
     besthandstr[0] = 0;
@@ -658,7 +658,9 @@ int64_t pangea_splitpot(int64_t *won,uint64_t *pangearakep,uint64_t sidepot[CARD
         for (j=n=0; j<dp->N; j++)
             if ( dp->snapshot[j] > 0 )
                 n++;
-        split = pangea_winnings(hn->client->H.slot,&pangearake,&rake,total,numwinners,rakemillis,maxrakes[n] * dp->bigblind);
+        if ( (maxrake= maxrakes[n] * dp->bigblind) > dp->maxrake )
+            maxrake = dp->maxrake;
+        split = pangea_winnings(hn->client->H.slot,&pangearake,&rake,total,numwinners,rakemillis,maxrake);
         (*pangearakep) += pangearake;
         for (j=0; j<numwinners; j++)
         {

@@ -265,15 +265,22 @@ bits256 cards777_initdeck(bits256 *cards,bits256 *cardpubs,int32_t numcards,int3
     return(fcontract(prod));
 }
 
-uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uint8_t *myshares[],uint8_t *sharenrs,int32_t M,bits256 *ciphers,int32_t numcards,int32_t N)
+uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uint8_t *myshares[],uint8_t sharenrs[255],int32_t M,bits256 *ciphers,int32_t numcards,int32_t N)
 {
     bits256 shuffled[CARDS777_MAXCARDS * CARDS777_MAXPLAYERS];
     cards777_shuffle(shuffled,ciphers,numcards,N);
     cards777_layer(encoded,xoverz,shuffled,numcards,N);
+    memset(sharenrs,0,255);
+    init_sharenrs(sharenrs,0,N,N);
     cards777_calcmofn(allshares,myshares,sharenrs,M,xoverz,numcards,N);
     memcpy(ciphers,shuffled,numcards * N * sizeof(bits256));
-    if ( 0 )
+    if ( 1 )
     {
+        /*{
+            init_hexbytes_noT(nrs,dp->hand.sharenrs,dp->N);
+            if ( (nrs= jstr(json,"sharenrs")) != 0 )
+                decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
+        }*/
         int32_t i,j,m,size; uint8_t *recover,*testshares[CARDS777_MAXPLAYERS],testnrs[255];
         size = N * sizeof(bits256) * numcards;
         for (j=0; j<1; j++)

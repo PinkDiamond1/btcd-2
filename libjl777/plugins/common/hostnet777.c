@@ -53,20 +53,21 @@ struct cards777_handinfo
     uint32_t starttime,handmask,lastbettor,startdecktime,betstarted,finished,encodestarted;
     uint32_t cardi,userinput_starttime,handranks[CARDS777_MAXPLAYERS];
     int8_t betstatus[CARDS777_MAXPLAYERS],actions[CARDS777_MAXPLAYERS],turnis[CARDS777_MAXPLAYERS];
-    uint8_t numactions,undergun,community[5],sharenrs[255],hands[CARDS777_MAXPLAYERS][7];
+    uint8_t numactions,undergun,community[5],sharenrs[CARDS777_MAXPLAYERS][255],hands[CARDS777_MAXPLAYERS][7];
 };
 
 struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidiff; };
 
 struct cards777_pubdata
 {
-    int64_t balances[CARDS777_MAXPLAYERS],snapshot[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS]; uint8_t summary[65536];
-    uint64_t hostrake,bigblind,ante,pangearake,summaries,mismatches; uint32_t button,readymask,numhands,rakemillis,minbuyin,maxbuyin,summarysize;
+    int64_t balances[CARDS777_MAXPLAYERS],snapshot[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS];
+    uint64_t maxrake,hostrake,bigblind,ante,pangearake,summaries,mismatches;
+    uint32_t button,readymask,numhands,rakemillis,minbuyin,maxbuyin,summarysize;
     bits256 *playerpubs; void *table; struct cards777_handinfo hand;
     char coinstr[16],multisigaddr[64],scriptPubKey[128],redeemScript[4096]; uint8_t addrtype,p2shtype,wiftype;
     int32_t buyinvouts[CARDS777_MAXPLAYERS]; uint64_t buyinamounts[CARDS777_MAXPLAYERS];
     char buyintxids[CARDS777_MAXPLAYERS][128],coinaddrs[CARDS777_MAXPLAYERS][67],pubkeys[CARDS777_MAXPLAYERS][67];
-    char newhand[65536]; bits256 data[];
+    char newhand[65536]; uint8_t summary[65536]; bits256 data[];
 };
 
 struct cards777_privdata
@@ -82,8 +83,8 @@ struct hostnet777_id { bits256 pubkey; uint64_t nxt64bits; void *privdata,*pubda
 union hostnet777 { struct hostnet777_server *server; struct hostnet777_client *client; };
 struct hostnet777_hdr
 {
-    queue_t Q,Q2,Q3[2]; bits256 privkey,pubkey; struct hostnet777_mtime mT;
-    void *privdata,*pubdata; uint64_t nxt64bits,recvhashes[64];
+    queue_t Q; bits256 privkey,pubkey; struct hostnet777_mtime mT;
+    void *privdata,*pubdata; uint64_t nxt64bits;//,recvhashes[64];
     void (*pollfunc)(union hostnet777 *hn);
     uint32_t lastping; int32_t slot,done,state,ind;
 };
@@ -93,7 +94,7 @@ struct hostnet777_client { struct hostnet777_hdr H; int32_t subsock; struct host
 struct hostnet777_server
 {
     struct hostnet777_hdr H;
-    int32_t num,max,pubsock; struct hostnet777_endpoint ep; queue_t mailboxQ[CARDS777_MAXPLAYERS];
+    int32_t num,max,pubsock; struct hostnet777_endpoint ep; //queue_t mailboxQ[CARDS777_MAXPLAYERS];
     struct hostnet777_id clients[];
 };
 
@@ -293,8 +294,19 @@ uint8_t *hostnet777_encode(int32_t *cipherlenp,void *str,int32_t len,bits256 des
     uint8_t *buf,*nonce,*cipher,*ptr; uint64_t destbits; int32_t totalsize,hdrlen; long extra = crypto_box_NONCEBYTES + crypto_box_ZEROBYTES + sizeof(sig);
     destbits = (memcmp(destpubkey.bytes,GENESIS_PUBKEY.bytes,sizeof(destpubkey)) != 0) ? acct777_nxt64bits(destpubkey) : 0;
     totalsize = (int32_t)(len + sizeof(mypubkey) + sizeof(senderbits) + sizeof(destbits) + sizeof(timestamp));
-    buf = calloc(1,totalsize + extra);
-    ptr = cipher = calloc(1,totalsize + extra);
+    *cipherlenp = 0;
+    if ( (buf= calloc(1,totalsize + extra)) == 0 )
+    {
+        printf("hostnet777_encode: outof mem for buf[%ld]\n",totalsize+extra);
+        return(0);
+    }
+    if ( (cipher= calloc(1,totalsize + extra)) == 0 )
+    {
+        printf("hostnet777_encode: outof mem for cipher[%ld]\n",totalsize+extra);
+        free(buf);
+        return(0);
+    }
+    ptr = cipher;
     hdrlen = hostnet777_serialize(0,&mypubkey,&senderbits,&sig,&timestamp,&destbits,cipher);
     if ( senderbits != 0 )
         totalsize += sizeof(sig);//, printf("totalsize.%d extra.%ld add %ld\n",totalsize-len,extra,sizeof(sig) + sizeof(timestamp));
@@ -342,10 +354,15 @@ int32_t hostnet777_decrypt(bits256 *senderpubp,uint64_t *senderbitsp,uint32_t *t
     uint8_t *buf; int32_t hdrlen,i,diff,newlen = -1; HUFF H,*hp = &H; struct acct777_sig checksig;
     *senderbitsp = 0;
     my64bits = acct777_nxt64bits(mypub);
-    buf = calloc(1,maxlen);
+    if ( (buf = calloc(1,maxlen)) == 0 )
+    {
+        printf("hostnet777_decrypt cant allocate maxlen.%d\n",maxlen);
+        return(-1);
+    }
     hdrlen = hostnet777_serialize(1,senderpubp,&senderbits,&sig,timestampp,&destbits,src);
     if ( destbits != 0 && my64bits != destbits && destbits != acct777_nxt64bits(GENESIS_PUBKEY) )
     {
+        free(buf);
         printf("hostnet777_decrypt received destination packet.%llu when my64bits.%llu len.%d\n",(long long)destbits,(long long)my64bits,len);
         return(-1);
     }
@@ -422,14 +439,18 @@ int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
     return(-1);
 }
 
-void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recvhashes[64],queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag,struct hostnet777_mtime *mT)
+void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag,struct hostnet777_mtime *mT)
 {
     char *jsonstr = 0; bits256 sig; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr=0; cJSON *json; long extra;
     extra = sizeof(*senderpubp) + sizeof(*destbitsp) + sizeof(sig) + sizeof(senderbits) + sizeof(timestamp);
     if ( (len= origlen) > extra )
     {
         //printf("got msglen.%d\n",origlen);
-        ptr = malloc(len*4 + 8192 + sizeof(struct queueitem) - extra);
+        if ( (ptr= malloc(len*4 + 8192 + sizeof(struct queueitem) - extra)) == 0 )
+        {
+            printf("hostnet777_processmsg cant alloc queueitem\n");
+            return;
+        }
         if ( (len= hostnet777_decrypt(senderpubp,&senderbits,&timestamp,mypriv,mypub,&ptr[sizeof(struct queueitem)],len*4,msg,len)) > 1 && len < len*4 )
         {
             jsonstr = (char *)&ptr[sizeof(struct queueitem)];
@@ -457,14 +478,14 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recv
         free(ptr);
 }
 
-void hostnet777_mailboxQ(queue_t *mailboxQ,void *cipher,int32_t cipherlen)
+/*void hostnet777_mailboxQ(queue_t *mailboxQ,void *cipher,int32_t cipherlen)
 {
     uint16_t *ptr; struct queueitem *item = calloc(1,sizeof(struct queueitem) + cipherlen + sizeof(uint16_t));
     ptr = (uint16_t *)((long)item + sizeof(struct queueitem));
     ptr[0] = cipherlen;
     memcpy(&ptr[1],cipher,cipherlen);
     queue_enqueue("mailboxQ",mailboxQ,item);
-}
+}*/
 
 #define hostnet777_broadcast(ptr,mypriv,mypub,msg,len) hostnet777_sendmsg(ptr,zeropoint,mypriv,mypub,msg,len)
 #define hostnet777_blindcast(ptr,msg,len) hostnet777_sendmsg(ptr,zeropoint,zeropoint,zeropoint,msg,len)
@@ -506,27 +527,7 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
     else data = msg, datalen = len;
     if ( (cipher= hostnet777_encode(&cipherlen,data,datalen,destpub,mypriv,mypub,sig.signer64bits,sig.sigbits,sig.timestamp)) != 0 )
     {
-        //printf("my.(priv.%llx pub.%llx) -> dest %llu pub.%llx cipherlen.%d %llx sendsock %d linksock.%d\n",(long long)pangea_privkey(player).txid,(long long)pangea_pubkey(player).txid,(long long)destbits,(long long)destpub.txid,cipherlen,*(long long *)cipher,sendsock,linksock);
-        /*if ( 0 && destbits != 0 && ptr->server->H.slot == 0 )
-        {
-            dp = ptr->server->H.pubdata;
-            if ( dp->addrs != 0 )
-            {
-                for (i=0; i<dp->N; i++)
-                    if ( dp->addrs[i] == destbits )
-                        break;
-                if ( i == dp->N )
-                    i = -1;
-            }
-            else i = pangea_tableaddr(dp,destbits);
-            if ( i >= 0 )
-            {
-                printf("Q.%p mailbox[%d] origlen.%d len.%d crc.%08x orig crc.%08x\n",&ptr->server->mailboxQ[i],i,len,cipherlen,_crc32(0,cipher,cipherlen),_crc32(0,msg,len));
-                hostnet777_mailboxQ(&ptr->server->mailboxQ[i],cipher,cipherlen);
-            }
-            else printf("cant find destbits.%llu\n",(long long)destbits);
-        }
-        else */hostnet777_send(sendsock,cipher,cipherlen);
+        hostnet777_send(sendsock,cipher,cipherlen);
         free(cipher);
     }
     if ( data != msg )
@@ -546,7 +547,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
             hostnet777_copybits(1,msg,(void *)&destbits,sizeof(uint64_t));
             //printf("client got pub len.%d\n",len);
             if ( destbits == 0 || destbits == hn->client->H.nxt64bits )
-                hostnet777_processmsg(&destbits,&senderpub,hn->client->H.recvhashes,&hn->client->H.Q,mypriv,mypub,msg,len,0,&hn->client->H.mT), n++;
+                hostnet777_processmsg(&destbits,&senderpub,&hn->client->H.Q,mypriv,mypub,msg,len,0,&hn->client->H.mT), n++;
             nn_freemsg(msg);
         } else if ( hn->client->H.pollfunc != 0 )
             (*hn->client->H.pollfunc)(hn);
@@ -563,7 +564,7 @@ int32_t hostnet777_idle(union hostnet777 *hn)
                 hostnet777_copybits(1,msg,(void *)&destbits,sizeof(uint64_t));
                 if ( destbits == 0 || destbits == hn->server->H.nxt64bits )
                 {
-                    hostnet777_processmsg(&destbits,&senderpub,hn->server->H.recvhashes,&hn->server->H.Q,mypriv,mypub,msg,len,1,&hn->server->H.mT);
+                    hostnet777_processmsg(&destbits,&senderpub,&hn->server->H.Q,mypriv,mypub,msg,len,1,&hn->server->H.mT);
                     hostnet777_lastcontact(hn->server,senderpub);
                 }
                 hostnet777_send(hn->server->pubsock,msg,len);
@@ -782,7 +783,7 @@ int32_t hostnet777_init(union hostnet777 *hn,bits256 *privkeys,int32_t num,int32
 int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uint32_t *timestampp,union hostnet777 *hn,uint8_t *data,int32_t len,uint8_t *buf,int32_t maxmicro,int32_t blind,int32_t revealed)
 {
     static int32_t errs;
-    char *jsonstr,*hexstr,*cmdstr,*nrs,*handstr,tmp[128]; cJSON *json; void *val; struct cards777_privdata *priv; struct cards777_pubdata *dp;
+    char *jsonstr,*hexstr,*cmdstr,*handstr,tmp[128]; cJSON *json; void *val; struct cards777_privdata *priv; struct cards777_pubdata *dp;
     int32_t i,j,cardi,bestj,destplayer,card,senderslot,retval = -1; bits256 cardpriv; uint32_t rank,bestrank;
     *senderbitsp = 0;
     if ( hn == 0 || hn->client == 0 )
@@ -819,8 +820,8 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                 {
                                     //printf("player.%d got pubstr\n",hn->client->H.slot);
                                     memcpy(dp->hand.cardpubs,buf,len);
-                                    if ( (nrs= jstr(json,"sharenrs")) != 0 )
-                                        decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
+                                    //if ( (nrs= jstr(json,"sharenrs")) != 0 )
+                                    //    decode_hex(dp->hand.sharenrs,(int32_t)strlen(nrs)>>1,nrs);
                                     memset(dp->hand.handranks,0,sizeof(dp->hand.handranks));
                                     memset(priv->hole,0,sizeof(priv->hole));
                                     memset(priv->holecards,0,sizeof(priv->holecards));
@@ -836,7 +837,7 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                 {
                                     if ( Debuglevel > 2 )
                                         printf("player.%d encodes\n",hn->client->H.slot);
-                                    cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs,dp->M,(void *)buf,dp->numcards,dp->N);
+                                    cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs[hn->client->H.slot],dp->M,(void *)buf,dp->numcards,dp->N);
                                 }
                                 else if ( strcmp(cmdstr,"final") == 0 )
                                 {
@@ -1016,14 +1017,11 @@ int32_t hostnet777_testiter(struct hostnet777_server *srv,struct hostnet777_clie
             {
                 if ( iter == 0 )
                 {
-                    memset(dp->hand.sharenrs,0,sizeof(dp->hand.sharenrs));
-                    init_sharenrs(dp->hand.sharenrs,0,dp->N,dp->N);
                     dp->hand.checkprod = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
-                    init_hexbytes_noT(nrs,dp->hand.sharenrs,dp->N);
                     cmdstr = "pubstr";
                     srcbits = srv->H.nxt64bits;
                     len = dp->numcards*sizeof(bits256);
-                    sprintf(hex,"{\"cmd\":\"%s\",\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"sharenrs\":\"%s\",\"n\":%u,\"data\":\"",cmdstr,cardi,destplayer,(long long)srcbits,time(NULL),nrs,len);
+                    sprintf(hex,"{\"cmd\":\"%s\",\"cardi\":%d,\"dest\":%d,\"sender\":\"%llu\",\"timestamp\":\"%lu\",\"n\":%u,\"data\":\"",cmdstr,cardi,destplayer,(long long)srcbits,time(NULL),len);
                     n = (int32_t)strlen(hex);
                     memcpy(data,dp->hand.cardpubs,len);
                     init_hexbytes_noT(&hex[n],data,len);
