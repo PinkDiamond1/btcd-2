@@ -661,10 +661,10 @@ int64_t pangea_splitpot(int64_t *won,uint64_t *pangearakep,uint64_t sidepot[CARD
         if ( (maxrake= maxrakes[n] * dp->bigblind) > dp->maxrake )
         {
             maxrake = dp->maxrake;
-            if ( strcmp(dp->coinstr,"BTC") == 0 && maxrake < SATOSHIDEN/100 )
-                maxrake = SATOSHIDEN/100;
-            else if ( maxrake < 3*SATOSHIDEN )
-                maxrake = 3*SATOSHIDEN;
+            if ( strcmp(dp->coinstr,"BTC") == 0 && maxrake < PANGEA_BTCMAXRAKE )
+                maxrake = PANGEA_BTCMAXRAKE;
+            else if ( maxrake < PANGEA_MAXRAKE )
+                maxrake = PANGEA_MAXRAKE;
         }
         split = pangea_winnings(hn->client->H.slot,&pangearake,&rake,total,numwinners,rakemillis,maxrake);
         (*pangearakep) += pangearake;

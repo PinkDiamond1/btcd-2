@@ -34,6 +34,8 @@
 #define PANGEA_MINRAKE_MILLIS 5
 #define PANGEA_USERTIMEOUT 60
 #define PANGEA_MAX_HOSTRAKE 5
+#define PANGEA_BTCMAXRAKE (SATOSHIDEN / 100)
+#define PANGEA_MAXRAKE (3 * SATOSHIDEN)
 #define PANGEA_HANDGAP 30
 #define PANGEA_PAUSE 2
 
@@ -1730,7 +1732,7 @@ void pangea_test(struct plugin_info *plugin)//,int32_t numthreads,int64_t bigbli
     jadd64bits(testjson,"ante",ante);
     jaddnum(testjson,"rakemillis",rakemillis);
     printf("TEST.(%s)\n",jprint(testjson,0));
-    pangea_start(plugin,retbuf,"BTC",0,bigblind,ante,rakemillis,i,0,0,testjson);
+    pangea_start(plugin,retbuf,"BTCD",0,bigblind,ante,rakemillis,i,0,0,testjson);
     free_json(testjson);
     testjson = cJSON_Parse(retbuf);
     //printf("BROADCAST.(%s)\n",retbuf);
@@ -1812,7 +1814,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     else if ( maxplayers > CARDS777_MAXPLAYERS )
                         maxplayers = CARDS777_MAXPLAYERS;
                     if ( jstr(json,"resubmit") == 0 )
-                        sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"rakemillis\":\"%u\"}, {\"maxplayers\":%d}, {\"minbuyin\":%d}, {\"maxbuyin\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"BTCD\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,juint(json,"minbuyin"),juint(json,"maxbuyin"));
+                        sprintf(retbuf,"{\"resubmit\":[{\"method\":\"start\"}, {\"bigblind\":\"%llu\"}, {\"ante\":\"%llu\"}, {\"rakemillis\":\"%u\"}, {\"maxplayers\":%d}, {\"minbuyin\":%d}, {\"maxbuyin\":%d}],\"pluginrequest\":\"SuperNET\",\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"base\":\"%s\",\"exchange\":\"pangea\",\"allfields\":1}",(long long)j64bits(json,"bigblind"),(long long)j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,juint(json,"minbuyin"),juint(json,"maxbuyin"),jstr(json,"base")!=0?jstr(json,"base"):"BTCD");
                     else if ( pangea_start(plugin,retbuf,base,0,j64bits(json,"bigblind"),j64bits(json,"ante"),juint(json,"rakemillis"),maxplayers,juint(json,"minbuyin"),juint(json,"maxbuyin"),json) < 0 )
                         ;
                 } else strcpy(retbuf,"{\"error\":\"no base specified\"}");
