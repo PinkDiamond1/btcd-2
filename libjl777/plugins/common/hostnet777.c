@@ -424,7 +424,7 @@ int32_t hostnet777_hashes(uint64_t *hashes,int32_t n,uint8_t *msg,int32_t len)
 
 void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recvhashes[64],queue_t *Q,bits256 mypriv,bits256 mypub,uint8_t *msg,int32_t origlen,int32_t pmflag,struct hostnet777_mtime *mT)
 {
-    char *jsonstr = 0; bits256 sig; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr; cJSON *json; long extra;
+    char *jsonstr = 0; bits256 sig; uint32_t timestamp; int32_t len; uint64_t senderbits,now,millitime; uint8_t *ptr=0; cJSON *json; long extra;
     extra = sizeof(*senderpubp) + sizeof(*destbitsp) + sizeof(sig) + sizeof(senderbits) + sizeof(timestamp);
     if ( (len= origlen) > extra )
     {
@@ -439,19 +439,22 @@ void hostnet777_processmsg(uint64_t *destbitsp,bits256 *senderpubp,uint64_t recv
                 now = hostnet777_convmT(mT,millitime);
                 //printf("now.%lld vs millitime.%lld lag.%lld\n",(long long)now,(long long)millitime,(long long)(millitime - now));
                 if ( pmflag != 0 && juint(json,"timestamp") != timestamp && juint(json,"timestamp")+1 != timestamp )
-                    printf("msg.(%s) timestamp.%u mismatch | now.%ld\n",jsonstr,timestamp,time(NULL)), free(ptr);
+                    printf("msg.(%s) timestamp.%u mismatch | now.%ld\n",jsonstr,timestamp,time(NULL));
                 else if ( pmflag != 0 && j64bits(json,"sender") != senderbits )
-                    printf("msg.(%ld) sender.%llu mismatch vs json.%llu\n",strlen(jsonstr),(long long)senderbits,(long long)j64bits(json,"sender")), free(ptr);
+                    printf("msg.(%ld) sender.%llu mismatch vs json.%llu\n",strlen(jsonstr),(long long)senderbits,(long long)j64bits(json,"sender"));
                 else
                 {
                     //printf("%llu: QUEUE msg.%d\n",(long long)acct777_nxt64bits(mypub),len);
                     //if ( hostnet777_hashes(recvhashes,64,ptr,len) < 0 )
                         queue_enqueue("host777",Q,(void *)ptr);
+                    ptr = 0;
                 }
                 free_json(json);
             } else printf("parse error.(%s)\n",jsonstr);
-        } else free(ptr), printf("decrypt error len.%d origlen.%d\n",len,origlen);
+        } else printf("decrypt error len.%d origlen.%d\n",len,origlen);
     } else printf("origlen.%d\n",origlen);
+    if ( ptr != 0 )
+        free(ptr);
 }
 
 void hostnet777_mailboxQ(queue_t *mailboxQ,void *cipher,int32_t cipherlen)

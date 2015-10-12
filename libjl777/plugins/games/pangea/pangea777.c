@@ -33,7 +33,7 @@
 #define _PANGEA_MAXTHREADS 9
 #define PANGEA_MINRAKE_MILLIS 5
 #define PANGEA_USERTIMEOUT 60
-#define PANGEA_MAX_HOSTRAKE 10
+#define PANGEA_MAX_HOSTRAKE 5
 #define PANGEA_HANDGAP 30
 #define PANGEA_PAUSE 2
 
@@ -1030,10 +1030,10 @@ int32_t pangea_idle(struct plugin_info *plugin)
                                 hn->client->H.lastping = (uint32_t)time(NULL);
                             }
                         }
-                        if ( dp->hand.handmask == ((1 << dp->N) - 1) && dp->hand.finished == 0 && dp->hand.pangearake == 0 )
+                        if ( dp->hand.handmask == ((1 << dp->N) - 1) && dp->hand.finished == 0 )//&& dp->hand.pangearake == 0 )
                         {
                             printf("P%d: all players folded or showed cards at %ld | rakemillis %d\n",hn->client->H.slot,time(NULL),dp->rakemillis);
-                            pangea_finish(hn,dp,0,0);
+                            pangea_finish(hn,dp);
                         }
                         if ( hn->client->H.slot == 0 )
                             pangea_serverstate(hn,dp,hn->server->H.privdata);
