@@ -1093,6 +1093,13 @@ struct pangea_info *pangea_create(struct pangea_thread *tp,int32_t *createdflagp
         sp->tp = tp;
         numcards = CARDS777_MAXCARDS;
         pangea_buyins(&minbuyin,&maxbuyin);
+        if ( maxrake != 0 )
+        {
+            if ( strcmp(base,"BTC") == 0 && maxrake < SATOSHIDEN/100 )
+                maxrake = SATOSHIDEN/100;
+            else if ( maxrake < SATOSHIDEN )
+                maxrake = SATOSHIDEN;
+        }
         tp->numcards = numcards, tp->N = numaddrs;
         sp->dp = dp = cards777_allocpub((numaddrs >> 1) + 1,numcards,numaddrs);
         dp->minbuyin = minbuyin, dp->maxbuyin = maxbuyin, dp->maxrake = maxrake;
