@@ -60,22 +60,18 @@ struct hostnet777_mtime { uint32_t starttime; int64_t millistart; double millidi
 
 struct cards777_pubdata
 {
-    int64_t balances[CARDS777_MAXPLAYERS],snapshot[CARDS777_MAXPLAYERS]; uint8_t M,N,numcards,isbot[CARDS777_MAXPLAYERS];
+    int64_t snapshot[CARDS777_MAXPLAYERS]; 
     uint64_t maxrake,hostrake,bigblind,ante,pangearake,summaries,mismatches;
     uint32_t button,readymask,numhands,rakemillis,minbuyin,maxbuyin,summarysize;
-    bits256 *playerpubs; void *table; struct cards777_handinfo hand;
-    char coinstr[16],multisigaddr[64],scriptPubKey[128],redeemScript[4096]; uint8_t addrtype,p2shtype,wiftype;
-    int32_t buyinvouts[CARDS777_MAXPLAYERS]; uint64_t buyinamounts[CARDS777_MAXPLAYERS];
-    char buyintxids[CARDS777_MAXPLAYERS][128],coinaddrs[CARDS777_MAXPLAYERS][67],pubkeys[CARDS777_MAXPLAYERS][67];
-    char newhand[65536]; uint8_t summary[65536]; bits256 data[];
+    void *table; struct cards777_handinfo hand;
+    char newhand[65536],coinstr[16]; uint8_t M,N,numcards,summary[65536]; bits256 data[];
 };
 
 struct cards777_privdata
 {
     bits256 holecards[2],*audits,*outcards,*xoverz;
-    char btcpubkeystr[67],wipstr[64];
     //,*reconstructed[CARDS777_MAXPLAYERS],*mofn[CARDS777_MAXPLAYERS][CARDS777_MAXPLAYERS];
-    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,btcpub[33],hole[2],cardis[2],autoshow,autofold; bits256 data[];
+    uint8_t *myshares[CARDS777_MAXPLAYERS],*allshares,hole[2],cardis[2],autoshow,autofold; bits256 data[];
 };
 
 struct hostnet777_endpoint { char endpoint[128],transport[16],ipaddr[64]; uint16_t port; };
@@ -100,7 +96,7 @@ struct hostnet777_server
 
 void hostnet777_msg(uint64_t destbits,bits256 destpub,union hostnet777 *src,int32_t blindflag,char *jsonstr,int32_t len);
 
-int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_client **clients,int32_t N,int32_t numcards);
+int32_t cards777_testinit(struct hostnet777_server *srv,int32_t M,struct hostnet777_client **clients,int32_t N,int32_t numcards);
 bits256 cards777_decode(bits256 *seedp,bits256 *xoverz,int32_t destplayer,bits256 cipher,bits256 *outcards,int32_t numcards,int32_t N);
 bits256 cards777_cardpriv(bits256 playerpriv,bits256 *cardpubs,int32_t numcards,bits256 cipher);
 uint8_t *cards777_encode(bits256 *encoded,bits256 *xoverz,uint8_t *allshares,uint8_t *myshares[],uint8_t *sharenrs,int32_t M,bits256 *ciphers,int32_t numcards,int32_t N);
@@ -126,8 +122,9 @@ void *hostnet777_idler(union hostnet777 *ptr);
 int32_t nn_socket_status(int32_t sock,int32_t timeoutmillis);
 int32_t nn_createsocket(char *endpoint,int32_t bindflag,char *name,int32_t type,uint16_t port,int32_t sendtimeout,int32_t recvtimeout);
 void free_queueitem(void *itemptr);
-char *pangea_dispsummary(int32_t verbose,uint8_t *summary,int32_t summarysize,uint64_t tableid,int32_t handid,int32_t numplayers);
 struct pangea_info *pangea_find(uint64_t tableid,int32_t threadid);
+int32_t pangea_ind(struct pangea_info *sp,int32_t slot);
+int32_t pangea_slot(struct pangea_info *sp,int32_t ind);
 
 extern int32_t Debuglevel;
 
@@ -180,8 +177,10 @@ int32_t hostnet777_send(int32_t sock,void *ptr,int32_t len)
     if ( sock >= 0 )
     {
         for (j=0; j<10; j++)
-            if ( (nn_socket_status(sock,10) & NN_POLLOUT) != 0 )
+        {
+            if ( (nn_socket_status(sock,100) & NN_POLLOUT) != 0 )
                 break;
+        }
         if ( j == 10 )
         {
             printf("socket.%d not ready\n",sock);
@@ -537,9 +536,9 @@ int32_t hostnet777_sendmsg(union hostnet777 *ptr,bits256 destpub,bits256 mypriv,
 
 int32_t hostnet777_idle(union hostnet777 *hn)
 {
-    int32_t len,ind,sock,n = 0; bits256 senderpub,mypriv,mypub; uint64_t destbits; uint8_t *msg;
+    int32_t len,slot,sock,n = 0; bits256 senderpub,mypriv,mypub; uint64_t destbits; uint8_t *msg;
     long extra = sizeof(bits256)+sizeof(uint64_t);
-    if ( (ind= hn->client->H.slot) != 0 )
+    if ( (slot= hn->client->H.slot) != 0 )
     {
         mypriv = hn->client->H.privkey, mypub = hn->client->H.pubkey;
         if ( (sock= hn->client->subsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
@@ -556,11 +555,12 @@ int32_t hostnet777_idle(union hostnet777 *hn)
     {
         //printf("server idle %.0f\n",milliseconds());
         mypriv = hn->server->H.privkey, mypub = hn->server->H.pubkey;
-        for (ind=1; ind<hn->server->num; ind++)
+        for (slot=1; slot<hn->server->num; slot++)
         {
             //printf("check ind.%d %.0f\n",ind,milliseconds());
-            if ( (sock= hn->server->clients[ind].pmsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
+            if ( (sock= hn->server->clients[slot].pmsock) >= 0 && (len= nn_recv(sock,&msg,NN_MSG,0)) > extra )
             {
+                //printf("server got pm[%d] %d\n",slot,len);
                 hostnet777_copybits(1,msg,(void *)&destbits,sizeof(uint64_t));
                 if ( destbits == 0 || destbits == hn->server->H.nxt64bits )
                 {
@@ -644,10 +644,10 @@ struct hostnet777_client *hostnet777_client(bits256 privkey,bits256 pubkey,char 
     endbuf[strlen(endbuf)-4] = 0;
     port = atoi(&srvendpoint[strlen(endbuf)]);
     sprintf(endbuf2,"%s%u",endbuf,port + 1 + slot);
-    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,10,10);
+    ptr->my.pmsock = nn_createsocket(endbuf2,0,"NN_PUSH",NN_PUSH,0,10,1);
     printf("NN_PUSH %d from (%s) port.%d\n",ptr->my.pmsock,endbuf2,port+1+slot);
     sprintf(endbuf2,"%s%u",endbuf,port);
-    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,10,10);
+    ptr->subsock = nn_createsocket(endbuf2,0,"NN_SUB",NN_SUB,0,10,1);
     printf("SUB %d from (%s) port.%d\n",ptr->subsock,endbuf2,port);
     nn_setsockopt(ptr->subsock,NN_SUB,NN_SUB_SUBSCRIBE,"",0);
     //sprintf(endbuf2,"%s%u",endbuf,port);
@@ -703,7 +703,7 @@ struct hostnet777_server *hostnet777_server(bits256 srvprivkey,bits256 srvpubkey
     sprintf(ep->endpoint,"%s://%s:%u",transport,ipaddr,port);
     //sprintf(buf,"%s://127.0.0.1:%u",transport,port);
     strcpy(buf,ep->endpoint);
-    srv->pubsock = nn_createsocket(buf,1,"NN_PUB",NN_PUB,port,10,10);
+    srv->pubsock = nn_createsocket(buf,1,"NN_PUB",NN_PUB,port,10,1);
     printf("PUB.%d to (%s) pangeaport.%d\n",srv->pubsock,ep->endpoint,port);
     srv->num = 1;
     return(srv);
@@ -784,7 +784,7 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
 {
     static int32_t errs;
     char *jsonstr,*hexstr,*cmdstr,*handstr,tmp[128]; cJSON *json; void *val; struct cards777_privdata *priv; struct cards777_pubdata *dp;
-    int32_t i,j,cardi,bestj,destplayer,card,senderslot,retval = -1; bits256 cardpriv; uint32_t rank,bestrank;
+    int32_t i,j,cardi,bestj,destplayer,card,senderslot,retval = -1; bits256 cardpriv; uint32_t rank,bestrank; struct pangea_info *sp;
     *senderbitsp = 0;
     if ( hn == 0 || hn->client == 0 )
     {
@@ -792,6 +792,7 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
         return(-1);
     }
     dp = srv->clients[hn->client->H.slot].pubdata;
+    sp = dp->table;
     priv = srv->clients[hn->client->H.slot].privdata;
     for (i=0; i<maxmicro; i++)
     {
@@ -831,31 +832,28 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                     dp->button++;
                                     if ( dp->button >= dp->N )
                                         dp->button = 0;
-                                    dp->balances[dp->button]--, dp->balances[(dp->button + 1) % dp->N] -= 2;
+                                    exit(1);
+                                    printf("deprecatd\n");
+                                    //sp->balances[pangea_slot(dp->button)]--, dp->balances[(pangea_slot(dp->button) + 1) % dp->N] -= 2;
                                 }
                                 else if ( strcmp(cmdstr,"encode") == 0 )
                                 {
                                     if ( Debuglevel > 2 )
                                         printf("player.%d encodes\n",hn->client->H.slot);
-                                    cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs[hn->client->H.slot],dp->M,(void *)buf,dp->numcards,dp->N);
+                                    cards777_encode(priv->outcards,priv->xoverz,priv->allshares,priv->myshares,dp->hand.sharenrs[pangea_ind(dp->table,hn->client->H.slot)],dp->M,(void *)buf,dp->numcards,dp->N);
                                 }
                                 else if ( strcmp(cmdstr,"final") == 0 )
-                                {
                                     memcpy(dp->hand.final,buf,sizeof(*dp->hand.final) * dp->N * dp->numcards);
-                                    //if ( hn->client->H.slot == dp->N-1 )
-                                    //    memcpy(priv->incards,buf,sizeof(*priv->incards) * dp->N * dp->numcards);
-                                    //printf("player.%d got final crc.%04x %llx\n",hn->client->H.slot,_crc32(0,buf,len),(long long)dp->final[1].txid);
-                                }
                                 else if ( strcmp(cmdstr,"decode") == 0 )
                                 {
-                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
+                                    if ( (card= cards777_checkcard(&cardpriv,cardi,pangea_ind(dp->table,hn->client->H.slot),destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
                                         printf("ERROR: player.%d got card.[%d]\n",hn->client->H.slot,card);
                                     printf("deprecated incards, change to audits\n");
                                     //memcpy(&priv->incards[cardi*dp->N + destplayer],buf,sizeof(bits256));
                                 }
                                 else if ( strcmp(cmdstr,"card") == 0 )
                                 {
-                                    if ( (card= cards777_checkcard(&cardpriv,cardi,hn->client->H.slot,destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
+                                    if ( (card= cards777_checkcard(&cardpriv,cardi,pangea_ind(dp->table,hn->client->H.slot),destplayer,hn->client->H.privkey,dp->hand.cardpubs,dp->numcards,*(bits256 *)buf)) >= 0 )
                                     {
                                         //printf("player.%d got card.[%d]\n",hn->client->H.slot,card);
                                         printf("deprecated incards, change to audits\n");
@@ -909,8 +907,9 @@ int32_t hostnet777_block(struct hostnet777_server *srv,uint64_t *senderbitsp,uin
                                                         //printf("(%2d %2d).%d ",dp->hands[j][5],dp->hands[j][6],(int32_t)dp->balances[j]);
                                                     }
                                                     rank = set_handstr(tmp,dp->hand.hands[bestj],0);
-                                                    dp->balances[bestj] += 3;
-                                                    printf("->P%d $%-5lld %s N%d p%d $%d\n",bestj,(long long)dp->balances[bestj],tmp,dp->numhands,hn->client->H.slot,(int32_t)dp->balances[hn->client->H.slot]);
+                                                    printf("deprecated\n");
+                                                    /*dp->balances[bestj] += 3;
+                                                    printf("->P%d $%-5lld %s N%d p%d $%d\n",bestj,(long long)dp->balances[bestj],tmp,dp->numhands,hn->client->H.slot,(int32_t)dp->balances[pangea_ind(dp->table,hn->client->H.slot)]);*/
                                                 } else printf("bestrank.%u mismatch %u\n",bestrank,rank);
                                             }
                                             //printf("player.%d got rank %u (%s) from %d\n",hn->client->H.slot,rank,handstr,senderslot);
@@ -1017,7 +1016,12 @@ int32_t hostnet777_testiter(struct hostnet777_server *srv,struct hostnet777_clie
             {
                 if ( iter == 0 )
                 {
-                    dp->hand.checkprod = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,dp->playerpubs,0);
+                    printf("deprecated\n");
+                    exit(1);
+                    /*bits256 playerpubs[CARDS777_MAXPLAYERS];
+                    for (i=0; i<dp->N; i++)
+                        playerpubs[i] = *dp->playerpubs[i];
+                    dp->hand.checkprod = cards777_initdeck(priv->outcards,dp->hand.cardpubs,dp->numcards,dp->N,playerpubs,0);*/
                     cmdstr = "pubstr";
                     srcbits = srv->H.nxt64bits;
                     len = dp->numcards*sizeof(bits256);
@@ -1181,7 +1185,7 @@ void hostnet777_test(int32_t numclients,int32_t numiters,int32_t mode)
     for (i=1; i<numclients; i++)
         addrs[1] = clients[i]->H.nxt64bits;
     if ( mode != 0 )
-        cards777_init(srv,numclients/2+1,clients,numclients,52);
+        cards777_testinit(srv,numclients/2+1,clients,numclients,52);
     printf("srv.%p %llu M.%d N.%d\n",srv,(long long)srv->H.nxt64bits,numclients/2+1,numclients);
     if ( i >= numclients )
     {

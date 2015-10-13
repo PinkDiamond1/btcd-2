@@ -44,9 +44,9 @@ int32_t MGW_idle(struct plugin_info *plugin)
 char *fix_msigaddr(struct coin777 *coin,char *NXTaddr,char *method);
 
 STRUCTNAME MGW;
-char *PLUGNAME(_methods)[] = { "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
-char *PLUGNAME(_pubmethods)[] = { "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
-char *PLUGNAME(_authmethods)[] = { "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
+char *PLUGNAME(_methods)[] = { "markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
+char *PLUGNAME(_pubmethods)[] = { "markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status", "findmsigaddr" };
+char *PLUGNAME(_authmethods)[] = { "markdeposited", "markspent", "clearstate", "myacctpubkeys", "myacctpubkey", "askacctpubkey", "msigaddr", "status" };
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON *json)
 {
@@ -2391,6 +2391,21 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 {
                     mgw_setstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0),MGW_ALREADYSPENT);
                     sprintf(retbuf,"{\"result\":\"markspent issued\"}");
+                }
+                else sprintf(retbuf,"{\"error\":\"coin not active\"}");
+            }
+        }
+        else if ( strcmp(methodstr,"markdeposited") == 0 )
+        {
+            struct coin777 *coin;
+            if ( sender[0] != 0 )
+                sprintf(retbuf,"{\"error\":\"markdeposited can only be done locally\"}");
+            else
+            {
+                if ( (coin= coin777_find(coinstr,0)) != 0 )
+                {
+                    mgw_setstate(coin,cJSON_str(cJSON_GetObjectItem(json,"txid")),get_API_uint(cJSON_GetObjectItem(json,"vout"),0),MGW_DEPOSITDONE);
+                    sprintf(retbuf,"{\"result\":\"markdeposited issued\"}");
                 }
                 else sprintf(retbuf,"{\"error\":\"coin not active\"}");
             }
