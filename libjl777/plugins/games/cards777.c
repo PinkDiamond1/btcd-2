@@ -106,7 +106,7 @@ int32_t cards777_validate(bits256 cardpriv,bits256 final,bits256 *cardpubs,int32
     checkcard = fcontract(val);
     if ( memcmp(checkcard.bytes,audit[0].bytes,sizeof(checkcard)) != 0 )
     {
-        printf("cards777_validate: checkcard not validated %llx vs %llx\n",(long long)checkcard.txid,(long long)audit[0].txid);
+        printf("cards777_validate: checkcard not validated %llx vs %llx numplayers.%d\n",(long long)checkcard.txid,(long long)audit[0].txid,numplayers);
         return(-1);
     }
     ver = cards777_initcrypt(cardpriv,cardpriv,playerpub,0);

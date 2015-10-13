@@ -125,6 +125,7 @@ void free_queueitem(void *itemptr);
 struct pangea_info *pangea_find(uint64_t tableid,int32_t threadid);
 int32_t pangea_ind(struct pangea_info *sp,int32_t slot);
 int32_t pangea_slot(struct pangea_info *sp,int32_t ind);
+int32_t hostnet777_replace(struct hostnet777_server *srv,bits256 clientpub,int32_t slot);
 
 extern int32_t Debuglevel;
 
@@ -577,9 +578,24 @@ int32_t hostnet777_idle(union hostnet777 *hn)
     return(n);
 }
 
+int32_t hostnet777_replace(struct hostnet777_server *srv,bits256 clientpub,int32_t slot)
+{
+    char endpoint[128],buf[128]; uint64_t nxt64bits = acct777_nxt64bits(clientpub);
+    sprintf(endpoint,"%s://%s:%u",srv->ep.transport,srv->ep.ipaddr,srv->ep.port + slot + 1);
+    //sprintf(buf,"%s://127.0.0.1:%u",srv->ep.transport,srv->ep.port + slot + 1);
+    strcpy(buf,endpoint);
+    if ( srv->clients[slot].pmsock < 0 )
+        srv->clients[slot].pmsock = nn_createsocket(buf,1,"NN_PULL",NN_PULL,srv->ep.port + slot + 1,10,10);
+    printf("NN_PULL.%d for slot.%d\n",srv->clients[slot].pmsock,slot);
+    srv->clients[slot].pubkey = clientpub;
+    srv->clients[slot].nxt64bits = nxt64bits;
+    srv->clients[slot].lastcontact = (uint32_t)time(NULL);
+    return(srv->clients[slot].pmsock);
+}
+
 int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int32_t slot)
 {
-    int32_t i,n; struct hostnet777_id *ptr; char endpoint[128],buf[128]; uint64_t nxt64bits = acct777_nxt64bits(clientpub);
+    int32_t i,n; struct hostnet777_id *ptr;
     if ( slot < 0 )
     {
         if ( (ptr= hostnet777_find(srv,clientpub)) != 0 )
@@ -604,7 +620,7 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
     }
     if ( (ptr= hostnet777_find(srv,clientpub)) != 0 )
     {
-        printf("hostnet777_register: cant register duplicate %llu\n",(long long)nxt64bits);
+        printf("hostnet777_register: cant register duplicate %llu\n",(long long)acct777_nxt64bits(clientpub));
         return((int32_t)(((long)ptr - (long)srv->clients) / sizeof(*srv->clients)));
     }
     if ( slot != srv->num )
@@ -612,14 +628,7 @@ int32_t hostnet777_register(struct hostnet777_server *srv,bits256 clientpub,int3
         printf("hostnet777_register: cant register slot.%d vs num.%d vs max.%d\n",slot,srv->num,srv->max);
         return(-1);
     }
-    sprintf(endpoint,"%s://%s:%u",srv->ep.transport,srv->ep.ipaddr,srv->ep.port + slot + 1);
-    //sprintf(buf,"%s://127.0.0.1:%u",srv->ep.transport,srv->ep.port + slot + 1);
-    strcpy(buf,endpoint);
-    srv->clients[slot].pmsock = nn_createsocket(buf,1,"NN_PULL",NN_PULL,srv->ep.port + slot + 1,10,10);
-    printf("NN_PULL.%d for slot.%d\n",srv->clients[slot].pmsock,slot);
-    srv->clients[slot].pubkey = clientpub;
-    srv->clients[slot].nxt64bits = nxt64bits;
-    srv->clients[slot].lastcontact = (uint32_t)time(NULL);
+    hostnet777_replace(srv,clientpub,slot);
     srv->num++;
     for (i=n=0; i<srv->max; i++)
         if ( srv->clients[i].nxt64bits != 0 )
