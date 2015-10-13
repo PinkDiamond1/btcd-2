@@ -353,22 +353,22 @@ struct cards777_privdata *cards777_allocpriv(int32_t numcards,int32_t N)
 struct cards777_pubdata *cards777_allocpub(int32_t M,int32_t numcards,int32_t N)
 {
     struct cards777_pubdata *dp;
-    if ( (dp= calloc(1,sizeof(*dp) + sizeof(bits256) * ((N + numcards + 1) + (N * numcards)))) == 0 )
+    if ( (dp= calloc(1,sizeof(*dp) + sizeof(bits256) * ((numcards + 1) + (N * numcards)))) == 0 )
     {
         printf("cards777_allocpub: unexpected out of memory error\n");
         return(0);
     }
     dp->M = M, dp->N = N, dp->numcards = numcards;
-    dp->playerpubs = &dp->data[0];
-    dp->hand.cardpubs = &dp->playerpubs[N];
+    dp->hand.cardpubs = &dp->data[0];
     dp->hand.final = &dp->hand.cardpubs[numcards + 1];
     return(dp);
 }
 
-int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_client **clients,int32_t N,int32_t numcards)
+int32_t cards777_testinit(struct hostnet777_server *srv,int32_t M,struct hostnet777_client **clients,int32_t N,int32_t numcards)
 {
-    int32_t i,j; uint8_t sharenrs[255]; //,destplayer,cardibits256 *ciphers,cardpriv,card; uint64_t mask = 0;
-    struct cards777_pubdata *dp; struct cards777_privdata *priv;
+    //static int64_t balances[9];
+    int32_t i; uint8_t sharenrs[255]; //,destplayer,cardibits256 *ciphers,cardpriv,card; uint64_t mask = 0;
+    struct cards777_pubdata *dp; struct cards777_privdata *priv; struct pangea_info *sp;
     if ( srv->num != N )
     {
         printf("srv->num.%d != N.%d\n",srv->num,N);
@@ -379,11 +379,16 @@ int32_t cards777_init(struct hostnet777_server *srv,int32_t M,struct hostnet777_
     for (i=0; i<N; i++)
     {
         dp = srv->clients[i].pubdata = cards777_allocpub(M,numcards,N);
+        sp = dp->table;
         memcpy(dp->hand.sharenrs,sharenrs,dp->N);
+        /*for (j=0; j<N; j++)
+            sp->playerpubs[j] = srv->clients[j].pubkey;
         for (j=0; j<N; j++)
-            dp->playerpubs[j] = srv->clients[j].pubkey;
-        for (j=0; j<N; j++)
-            dp->balances[j] = 100;
+        {
+            balances[j] = 100;
+            dp->balances[j] = &balances[j];
+        }*/
+        printf("deprecated, need to init sp->\n");
         priv = srv->clients[i].privdata = cards777_allocpriv(numcards,N);
         //priv->privkey = (i == 0) ? srv->H.privkey : clients[i]->H.privkey;
         /*if ( i == 0 )

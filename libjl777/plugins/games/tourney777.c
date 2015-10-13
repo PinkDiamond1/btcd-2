@@ -202,10 +202,12 @@ void tourney777_rebalance(struct tourney777 *tp,int32_t delta)
 
 void tourney777_newhand(union hostnet777 *hn,uint64_t tableid,cJSON *json,uint8_t *data,int32_t datalen)
 {
+    struct pangea_info *pangea_find(uint64_t tableid,int32_t threadid);
+    char *pangea_dispsummary(struct pangea_info *sp,int32_t verbose,uint8_t *summary,int32_t summarysize,uint64_t tableid,int32_t handid,int32_t numplayers);
     char *handhist; int32_t i,j,handid,numplayers,n,m,busted,rebuy; cJSON *handjson,*array,*balances,*item; struct tourney777_table *table;
     handid = juint(json,"handid");
     numplayers = juint(json,"numplayers");
-    if ( (handhist= pangea_dispsummary(1,data,datalen,tableid,handid,numplayers)) != 0 )
+    if ( (handhist= pangea_dispsummary(pangea_find(tableid,0),1,data,datalen,tableid,handid,numplayers)) != 0 )
     {
         printf("GOT HANDHIST.(%s)\n",handhist);
         if ( (handjson= cJSON_Parse(handhist)) != 0 )
