@@ -235,10 +235,13 @@ char *pangea_dispsummary(struct pangea_info *sp,int32_t verbose,uint8_t *summary
             jadd64bits(json,"tableid",tableid);
         if ( 0 && sp != 0 )
         {
-            array = cJSON_CreateArray();
+            //array = cJSON_CreateArray();
+            //for (i=0; i<sp->numactive; i++)
+            //    jaddi64bits(array,sp->active[i]);
+            //jadd(json,"active",array);
             for (i=0; i<sp->numactive; i++)
-                jaddi64bits(array,sp->active[i]);
-            jadd(json,"active",array);
+                printf("%llu ",(long long)sp->active[i]);
+            printf("sp->numactive[%d]\n",sp->numactive);
         }
         jaddnum(json,"size",summarysize);
         jaddnum(json,"handid",handid);
@@ -823,15 +826,15 @@ cJSON *pangea_tablestatus(struct pangea_info *sp)
     jaddnum(json,"ante",dstr(dp->ante));
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
-        jaddi64bits(array,sp->addrs[i]);
+        jaddi64bits(array,sp->active[i]);
     jadd(json,"addrs",array);
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
         jaddinum(array,dp->hand.turnis[i]);
     jadd(json,"turns",array);
     array = cJSON_CreateArray();
-    for (i=0; i<dp->N; i++)
-        jaddinum(array,dstr(sp->balances[pangea_slot(sp,i)]));
+    for (i=0; i<sp->numaddrs; i++)
+        jaddinum(array,dstr(sp->balances[i]));
     jadd(json,"balances",array);
     array = cJSON_CreateArray();
     for (i=0; i<dp->N; i++)
@@ -1112,6 +1115,8 @@ void pangea_finish(union hostnet777 *hn,struct cards777_pubdata *dp)
         for (j=busted=rebuy=0; j<dp->N; j++)
         {
             balances[j] = sp->balances[pangea_slot(sp,j)];
+            //balances[j] += dp->hand.won[j];
+            //sp->balances[pangea_slot(sp,j)] = balances[j];
             if ( dp->snapshot[j] > 0 && balances[j] <= 0 )
                 busted |= (1 << j);
             else if ( dp->snapshot[j] <= 0 && balances[j] > 0 )
@@ -1236,7 +1241,7 @@ int32_t pangea_action(union hostnet777 *hn,cJSON *json,struct cards777_pubdata *
         dp->hand.undergun = j;
         if ( dp->hand.numactions < dp->N )
         {
-            printf("T%d: senderind.%d i.%d j.%d -> undergun.%d numactions.%d\n",hn->client->H.slot,senderind,i,j,dp->hand.undergun,dp->hand.numactions);
+            //printf("T%d: senderind.%d i.%d j.%d -> undergun.%d numactions.%d\n",hn->client->H.slot,senderind,i,j,dp->hand.undergun,dp->hand.numactions);
             //if ( senderind != 0 )
                 pangea_sendcmd(hex,hn,"turn",-1,(void *)dp->hand.snapshot,sizeof(uint64_t)*(dp->N+1),dp->hand.cardi,dp->hand.undergun);
         }
