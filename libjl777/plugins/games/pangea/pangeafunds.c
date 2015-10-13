@@ -1118,7 +1118,11 @@ void pangea_finish(union hostnet777 *hn,struct cards777_pubdata *dp)
             //balances[j] += dp->hand.won[j];
             //sp->balances[pangea_slot(sp,j)] = balances[j];
             if ( dp->snapshot[j] > 0 && balances[j] <= 0 )
+            {
                 busted |= (1 << j);
+                pangea_inactivate(dp,sp,sp->active[j]);
+                printf("INACTIVATE.[%d] %llu\n",j,(long long)sp->active[j]);
+            }
             else if ( dp->snapshot[j] <= 0 && balances[j] > 0 )
                 rebuy |= (1 << j);
         }

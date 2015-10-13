@@ -200,6 +200,21 @@ int32_t pangea_neworder(struct cards777_pubdata *dp,struct pangea_info *sp,uint6
     return(numactive);
 }
 
+int32_t pangea_inactivate(struct cards777_pubdata *dp,struct pangea_info *sp,uint64_t nxt64bits)
+{
+    int32_t i,n; uint64_t active[CARDS777_MAXPLAYERS];
+    for (i=n=0; i<sp->numactive; i++)
+    {
+        if ( sp->active[i] == nxt64bits )
+            continue;
+        active[n++] = sp->active[i];
+    }
+    if ( n != sp->numactive-1 )
+        printf("pangea_inactivate: cant find %llu\n",(long long)nxt64bits);
+    pangea_neworder(dp,sp,active,n);
+    return(n);
+}
+
 void pangea_sendcmd(char *hex,union hostnet777 *hn,char *cmdstr,int32_t destplayer,uint8_t *data,int32_t datalen,int32_t cardi,int32_t turni)
 {
     int32_t n,hexlen,blindflag = 0; uint64_t destbits; bits256 destpub; cJSON *json; char hoststr[1024]; struct pangea_info *sp;
