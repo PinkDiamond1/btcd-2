@@ -4281,6 +4281,8 @@ extern "C" char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp);
 //int32_t launch_SuperNET(char *myip);
 void init_jl777(char *myip)
 {
+    std::string SuperNET_Path = GetArg("-SuperNET", "SuperNET.conf");
+
     static char ipaddr[64];
     char *str;
     strcpy(ipaddr,myip);
@@ -4290,7 +4292,7 @@ void init_jl777(char *myip)
         printf("peggybase returns.(%s)\n",str);
         free(str);
     }
-    SuperNET_start((char *)"SuperNET.conf",ipaddr);
+    SuperNET_start((char *)SuperNET_Path.c_str(),ipaddr);
     //launch_SuperNET(myip);
     SuperNET_retval = 1;
     std::cout << "back from start" << std::endl;
