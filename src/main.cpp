@@ -4286,15 +4286,18 @@ void init_jl777(char *myip)
     static char ipaddr[64];
     char *str;
     strcpy(ipaddr,myip);
-    fprintf(stderr,"starting SuperNET %p.(%s)\n",ipaddr,ipaddr);
-    if ( (str= peggybase(100,100000)) != 0 )
+    if ( 0 )
     {
-        printf("peggybase returns.(%s)\n",str);
-        free(str);
+	fprintf(stderr,"starting SuperNET %p.(%s)\n",ipaddr,ipaddr);
+	if ( (str= peggybase(100,100000)) != 0 )
+	{
+	printf("peggybase returns.(%s)\n",str);
+	free(str);
+	}
+	SuperNET_start((char *)SuperNET_Path.c_str(),ipaddr);
+	//launch_SuperNET(myip);
+	std::cout << "back from start" << std::endl;
     }
-    SuperNET_start((char *)SuperNET_Path.c_str(),ipaddr);
-    //launch_SuperNET(myip);
     SuperNET_retval = 1;
-    std::cout << "back from start" << std::endl;
 }
 
